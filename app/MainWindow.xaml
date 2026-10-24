@@ -49,7 +49,7 @@
                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                 ScrollViewer.VerticalScrollMode="Disabled" />
                                             <Button Grid.Column="2" Content="⋯" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
-                                                Padding="6" MinWidth="28" Style="{ThemeResource SubtleButtonStyle}" />
+                                                Padding="6" MinWidth="28" Background="Transparent" BorderThickness="0" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

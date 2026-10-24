@@ -138,6 +138,32 @@ try {
     Check-TitleTheme 1
     Write-Host 'WinUI: Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'
 }
+catch {
+    $diagnostics = Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts/diagnostics'
+    New-Item $diagnostics -ItemType Directory -Force | Out-Null
+    try {
+        $errorLog = Join-Path $env:LOCALAPPDATA 'BibbiaRust/last-error.log'
+        if (Test-Path $errorLog) { Get-Content $errorLog; Copy-Item $errorLog $diagnostics }
+        $elements = [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Descendants, [Windows.Automation.Condition]::TrueCondition)
+        $snapshot = foreach ($element in $elements) {
+            if ($element.Current.ProcessId -eq $process.Id) {
+                "$($element.Current.ControlType.ProgrammaticName) | $($element.Current.AutomationId) | $($element.Current.Name)"
+            }
+        }
+        $snapshot | Set-Content (Join-Path $diagnostics 'ui-tree.txt')
+        $snapshot | Write-Host
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        $screen = [Windows.Forms.SystemInformation]::VirtualScreen
+        $bitmap = [Drawing.Bitmap]::new($screen.Width, $screen.Height)
+        $graphics = [Drawing.Graphics]::FromImage($bitmap)
+        $graphics.CopyFromScreen($screen.Left, $screen.Top, 0, 0, $bitmap.Size)
+        $bitmap.Save((Join-Path $diagnostics 'desktop.png'))
+        $graphics.Dispose(); $bitmap.Dispose()
+    }
+    catch { Write-Host "Could not collect all UI diagnostics: $_" }
+    throw
+}
 finally {
     if (-not $process.HasExited) {
         [void]$process.CloseMainWindow()
