@@ -8,6 +8,18 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public static class DesktopProbe {
+    [StructLayout(LayoutKind.Sequential)] private struct Point { public int x,y; }
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point point);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+    public static string CursorState() {
+        Point point; GetCursorPos(out point);
+        uint hit, foreground;
+        GetWindowThreadProcessId(WindowFromPoint(point),out hit);
+        GetWindowThreadProcessId(GetForegroundWindow(),out foreground);
+        return string.Format("cursor={0},{1} hit pid={2} foreground pid={3}",point.x,point.y,hit,foreground);
+    }
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
     [StructLayout(LayoutKind.Sequential)] private struct MouseInput {
         public int x, y;
@@ -81,6 +93,7 @@ function Check-TitleTheme([int]$expected) {
     $result = [DesktopProbe]::DwmGetWindowAttribute($process.MainWindowHandle, 20, [ref]$actual, 4)
     if ($result -ne 0 -or $actual -ne $expected) { throw "Native title bar theme: expected $expected, got $actual (HRESULT $result)." }
 }
+$env:BIBBIA_UI_DIAGNOSTICS = '1'
 $process = Start-Process (Resolve-Path $Executable).Path -PassThru
 try {
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
@@ -116,6 +129,7 @@ try {
         Start-Sleep -Milliseconds 25
     }
     [DesktopProbe]::Mouse([int]($x + $dragWidth), $y, 4)
+    Write-Host "Expected app pid=$($process.Id); $([DesktopProbe]::CursorState())"
     # Avoid RichEdit's legacy UIA text-range provider on Server 2022: it can
     # return invalid native range handles. Check the result through the Rust
     # bridge after closing the UI instead (Bibbia.UiState).
@@ -166,6 +180,8 @@ catch {
     try {
         $errorLog = Join-Path $env:LOCALAPPDATA 'BibbiaRust/last-error.log'
         if (Test-Path $errorLog) { Get-Content $errorLog; Copy-Item $errorLog $diagnostics }
+        $eventLog = Join-Path $env:LOCALAPPDATA 'BibbiaRust/ui-events.log'
+        if (Test-Path $eventLog) { Get-Content $eventLog; Copy-Item $eventLog $diagnostics }
         $elements = [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Descendants, [Windows.Automation.Condition]::TrueCondition)
         $snapshot = foreach ($element in $elements) {
             if ($element.Current.ProcessId -eq $process.Id) {

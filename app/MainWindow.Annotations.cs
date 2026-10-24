@@ -17,6 +17,16 @@ public sealed partial class MainWindow
     private readonly Dictionary<int,RichEditBox> liveEditors = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? selectionTimer;
     private RichEditBox? selectionEditor;
+    private static readonly bool selectionDiagnostics = Environment.GetEnvironmentVariable("BIBBIA_UI_DIAGNOSTICS") == "1";
+    private void TraceSelection(string stage, RichEditBox editor)
+    {
+        if (!selectionDiagnostics || editor.DataContext is not VerseRow {Index:0}) return;
+        try {
+            Directory.CreateDirectory(dataDirectory);
+            var range = editor.Document.Selection;
+            File.AppendAllText(Path.Combine(dataDirectory,"ui-events.log"),$"{DateTime.UtcNow:O} {stage} start={range.StartPosition} end={range.EndPosition} readonly={editor.IsReadOnly} loaded={editor.IsLoaded} focus={editor.FocusState} mouse={(GetAsyncKeyState(1)&0x8000)!=0}\n");
+        } catch { }
+    }
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int key);
     private static global::Windows.UI.Color MarkColor(string? color) => color switch {
@@ -30,6 +40,8 @@ public sealed partial class MainWindow
         if (sender is RichEditBox editor) {
             editor.RemoveHandler(UIElement.PointerReleasedEvent,new PointerEventHandler(VersePointerReleased));
             editor.AddHandler(UIElement.PointerReleasedEvent,new PointerEventHandler(VersePointerReleased),true);
+            editor.RemoveHandler(UIElement.PointerPressedEvent,new PointerEventHandler(VersePointerPressed));
+            editor.AddHandler(UIElement.PointerPressedEvent,new PointerEventHandler(VersePointerPressed),true);
         }
         BindVerseEditor(sender);
     }
@@ -39,23 +51,33 @@ public sealed partial class MainWindow
         if (sender is not RichEditBox editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
         foreach (var key in liveEditors.Where(x => ReferenceEquals(x.Value,editor)).Select(x => x.Key).ToList()) liveEditors.Remove(key);
         liveEditors[row.Index] = editor;
+        if (ReferenceEquals(editor.Tag,row)) return;
+        editor.Tag = row;
         UpdateDocument(editor,() => editor.Document.SetText(TextSetOptions.None,row.Text));
         AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
         AutomationProperties.SetName(editor,row.Text);
         ApplyTextStyles(editor,row);
         editor.SelectionFlyout = AnnotationToolbar(editor,row,true);
         editor.ContextFlyout = AnnotationToolbar(editor,row,true);
+        TraceSelection("bound",editor);
+    }
+    private void VersePointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is RichEditBox editor) TraceSelection("pointer pressed",editor);
     }
     private void VersePointerReleased(object sender, PointerRoutedEventArgs e)
     {
         if (sender is not RichEditBox editor) return;
+        TraceSelection("pointer released",editor);
         var point = e.GetCurrentPoint(editor).Position;
         // RichEdit updates its selection while handling the mouse release.
         DispatcherQueue.TryEnqueue(() => ShowSelectionToolbar(editor,point));
     }
     private void VerseSelectionChanged(object sender, RoutedEventArgs e)
     {
-        if (sender is not RichEditBox editor || (GetAsyncKeyState(1) & 0x8000) == 0) return;
+        if (sender is not RichEditBox editor) return;
+        TraceSelection("selection changed",editor);
+        if ((GetAsyncKeyState(1) & 0x8000) == 0) return;
         selectionEditor = editor;
         // RichEdit can consume routed pointer releases. Observe the document
         // selection too, and wait for the drag to finish before opening a menu.
@@ -73,11 +95,13 @@ public sealed partial class MainWindow
     }
     private void ShowSelectionToolbar(RichEditBox editor, global::Windows.Foundation.Point? point = null) => Guard(() =>
     {
+        TraceSelection("show requested",editor);
         if (closed || !editor.IsLoaded || editor.Document.Selection.Length == 0 || editor.SelectionFlyout.IsOpen) return;
         selectionTimer?.Stop();
         var options = new FlyoutShowOptions {Placement=FlyoutPlacementMode.Top};
         if (point is { } position) options.Position = position;
         editor.SelectionFlyout.ShowAt(editor,options);
+        TraceSelection("show complete",editor);
     });
     private static void UpdateDocument(RichEditBox editor, Action update)
     {
