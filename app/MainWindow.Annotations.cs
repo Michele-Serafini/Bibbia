@@ -31,10 +31,10 @@ public sealed partial class MainWindow
     private void VerseEditorDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs e) => BindVerseEditor(sender);
     private void BindVerseEditor(object sender)
     {
-        if (sender is not RichEditBox editor || editor.DataContext is not VerseRow row) return;
+        if (sender is not RichEditBox editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
         foreach (var key in liveEditors.Where(x => ReferenceEquals(x.Value,editor)).Select(x => x.Key).ToList()) liveEditors.Remove(key);
         liveEditors[row.Index] = editor;
-        editor.Document.SetText(TextSetOptions.None,row.Text);
+        UpdateDocument(editor,() => editor.Document.SetText(TextSetOptions.None,row.Text));
         AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
         AutomationProperties.SetName(editor,row.Text);
         ApplyTextStyles(editor,row);
@@ -51,7 +51,17 @@ public sealed partial class MainWindow
                 editor.SelectionFlyout.ShowAt(editor,new FlyoutShowOptions {Position=point,Placement=FlyoutPlacementMode.Top});
         });
     }
-    private void ApplyTextStyles(RichEditBox editor, VerseRow row)
+    private static void UpdateDocument(RichEditBox editor, Action update)
+    {
+        // WinUI rejects document writes while IsReadOnly is true, including
+        // programmatic text/format changes. Keep user editing disabled outside
+        // this synchronous update on the UI thread.
+        var readOnly = editor.IsReadOnly;
+        editor.IsReadOnly = false;
+        try { update(); }
+        finally { editor.IsReadOnly = readOnly; }
+    }
+    private void ApplyTextStyles(RichEditBox editor, VerseRow row) => UpdateDocument(editor,() =>
     {
         var whole = editor.Document.GetRange(0,row.Text.Length);
         var a = row.Annotation;
@@ -74,7 +84,7 @@ public sealed partial class MainWindow
                 range.CharacterFormat.ForegroundColor = Colors.Black;
             }
         }
-    }
+    });
     private CommandBarFlyout AnnotationToolbar(RichEditBox editor, VerseRow row, bool selection)
     {
         var flyout = new CommandBarFlyout();

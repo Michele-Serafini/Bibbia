@@ -83,6 +83,7 @@ try {
     $verses = Wait-Control $window 'VerseList'
     $firstVerse = 'Al principio cre' + [char]0xF2 + ' Dio il cielo e la terra.'
     Wait-Text $verses $firstVerse | Out-Null
+    Write-Host 'WinUI: Catholic Italian chapter rendered.'
 
     # Drag the mouse over part of the text, rather than invoking a whole-verse menu.
     $editor = Wait-Control $window 'VerseText_0'
@@ -103,6 +104,7 @@ try {
     $underline = Wait-Control $window 'UnderlineSelection' -Popup
     if ($underline.Current.BoundingRectangle.Height -gt 100) { throw 'Selection toolbar is unexpectedly large.' }
     Invoke-Control $underline
+    Write-Host 'WinUI: mouse selection opened its toolbar and underline was invoked.'
 
     Invoke-Control (Wait-Control $window 'VerseMenu_0')
     Invoke-Control (Wait-Control $window 'NoteVerse' -Popup)
@@ -112,12 +114,14 @@ try {
     Invoke-Control (Wait-Control $window 'SaveNote' -Popup)
     Invoke-Control (Wait-Control $window 'VerseMenu_0')
     Invoke-Control (Wait-Control $window 'BookmarkVerse' -Popup)
+    Write-Host 'WinUI: compact note popup and bookmark actions invoked.'
 
     Select-Page 'SearchNavigation'
     $queryBox = Wait-Control $window 'SearchBox'
     $queryBox.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue('talmente amato il mondo')
     Invoke-Control (Wait-Control $window 'SearchButton')
     Wait-Text (Wait-Control $window 'ResultList') 'Giovanni 3:16' | Out-Null
+    Write-Host 'WinUI: Catholic Italian search verified.'
 
     Select-Page 'SettingsNavigation'
     Select-Option 'ThemePicker' 'Chiaro'
