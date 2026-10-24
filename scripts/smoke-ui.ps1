@@ -9,6 +9,8 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public static class DesktopProbe {
+    [StructLayout(LayoutKind.Sequential)] public struct Rect { public int left,top,right,bottom; }
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr window,out Rect rect);
     [StructLayout(LayoutKind.Sequential)] private struct Point { public int x,y; }
     [DllImport("user32.dll")] private static extern bool GetCursorPos(out Point point);
     [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point point);
@@ -96,11 +98,12 @@ function Check-TitleTheme([int]$expected) {
     if ($result -ne 0 -or $actual -ne $expected) { throw "Native title bar theme: expected $expected, got $actual (HRESULT $result)." }
     $deadline = [DateTime]::UtcNow.AddSeconds(3)
     do {
-        $bounds = $window.Current.BoundingRectangle
+        $bounds = [DesktopProbe+Rect]::new()
+        if (-not [DesktopProbe]::GetWindowRect($process.MainWindowHandle,[ref]$bounds)) { throw 'Window bounds unavailable.' }
         $bitmap = [Drawing.Bitmap]::new(1, 1)
         $graphics = [Drawing.Graphics]::FromImage($bitmap)
         try {
-            $graphics.CopyFromScreen([int]($bounds.Left + $bounds.Width / 2), [int]($bounds.Top + 14), 0, 0, [Drawing.Size]::new(1, 1))
+            $graphics.CopyFromScreen([int](($bounds.left + $bounds.right) / 2), [int]($bounds.top + 18), 0, 0, [Drawing.Size]::new(1, 1))
             $brightness = $bitmap.GetPixel(0, 0).GetBrightness()
         }
         finally { $graphics.Dispose(); $bitmap.Dispose() }
@@ -188,6 +191,19 @@ try {
     Select-Page 'ReadNavigation'
     Wait-Text (Wait-Control $window 'VerseList') $firstVerse | Out-Null
     Check-TitleTheme 1
+    $maximize = Find-Control $window 'MaximizeWindowButton'
+    if ($null -ne $maximize -and -not $maximize.Current.IsOffscreen) {
+        $before = [DesktopProbe+Rect]::new()
+        [void][DesktopProbe]::GetWindowRect($process.MainWindowHandle,[ref]$before)
+        Invoke-Control $maximize
+        $after = [DesktopProbe+Rect]::new()
+        [void][DesktopProbe]::GetWindowRect($process.MainWindowHandle,[ref]$after)
+        if ($after.right-$after.left -le $before.right-$before.left) { throw 'Title bar maximize button did not maximize the window.' }
+        Invoke-Control (Wait-Control $window 'MaximizeWindowButton')
+        [void][DesktopProbe]::GetWindowRect($process.MainWindowHandle,[ref]$after)
+        if ([Math]::Abs(($after.right-$after.left)-($before.right-$before.left)) -gt 2) { throw 'Title bar restore button did not restore the window.' }
+        Check-TitleTheme 1
+    }
     Write-Host 'WinUI: Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'
 }
 catch {

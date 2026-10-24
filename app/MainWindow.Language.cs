@@ -7,6 +7,7 @@ namespace Bibbia.Windows;
 public sealed record EditionOption(string Id, string Language, bool Catholic)
 {
     public string Name => Id;
+    public override string ToString() => Name;
 }
 
 public sealed partial class MainWindow
@@ -20,6 +21,7 @@ public sealed partial class MainWindow
         ["Leggi con calma."]="Take a moment to read.", ["Trova le parole."]="Find the words.", ["Portale con te."]="Keep them close.", ["Come piace a te."]="Make it yours.",
         ["UNO SPAZIO PER LA PAROLA"]="A PLACE FOR THE WORD", ["Il tuo modo di leggere"]="Your reading experience", ["Lingua dell’app"]="App language", ["Lingua della Bibbia"]="Bible language",
         ["Tema"]="Theme", ["Come Windows"]="Use Windows setting", ["Chiaro"]="Light", ["Scuro"]="Dark", ["Dimensione del testo"]="Text size", ["Traduzione"]="Translation", ["Tutte"]="All languages",
+        ["Riduci a icona"]="Minimize", ["Ingrandisci"]="Maximize", ["Ripristina"]="Restore", ["Chiudi"]="Close",
         ["← Precedente"]="← Previous", ["Successivo →"]="Next →", ["Una parola o una frase…"]="A word or a phrase…", ["Libro"]="Book", ["Capitolo"]="Chapter",
         ["Offline · {0} · {1} versetti · Seleziona parole o frasi per annotarle"]="Offline · {0} · {1} verses · Select words or phrases to annotate",
         ["Cerca in {0}. Fino a 200 risultati per ricerca."]="Search {0}. Up to 200 results per search.", ["Ricerca in corso…"]="Searching…",
@@ -79,6 +81,15 @@ public sealed partial class MainWindow
         ((ComboBoxItem)BibleLanguagePicker.Items[2]).Content = T("Tutte");
         ThemePicker.Header = T("Tema");
         for (int i=0;i<3;i++) ((ComboBoxItem)ThemePicker.Items[i]).Content = T(new[]{"Come Windows","Chiaro","Scuro"}[i]);
+        var wasChanging = changing; changing = true;
+        try {
+            // ComboBox caches its selection display when item content changes.
+            var selectedTheme = ThemePicker.SelectedIndex;
+            ThemePicker.SelectedIndex = -1; ThemePicker.SelectedIndex = selectedTheme;
+            var selectedBibleLanguage = BibleLanguagePicker.SelectedIndex;
+            BibleLanguagePicker.SelectedIndex = -1; BibleLanguagePicker.SelectedIndex = selectedBibleLanguage;
+        } finally { changing = wasChanging; }
+        RefreshCaptionButtons();
         FontSlider.Header = T("Dimensione del testo"); EditionPicker.Header = T("Traduzione");
         PreviousButton.Content = T("← Precedente"); NextButton.Content = T("Successivo →");
         SearchBox.PlaceholderText = T("Una parola o una frase…"); SearchButton.Content = T("Cerca");
