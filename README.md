@@ -59,7 +59,10 @@ La build non è firmata digitalmente; Windows può mostrare un avviso SmartScree
 
 Richiesti Windows 10 2004 (build 19041) o Windows 11 **x64**, PowerShell 7,
 SDK .NET **8.0.426** (fissato in `global.json`), Rust 1.99.1 MSVC e Visual Studio 2022 Build Tools con il workload
-**Desktop development with C++**, strumenti MSVC x64 e Windows SDK.
+**Desktop development with C++**, strumenti MSVC x64, Windows SDK e strumenti
+di compilazione **UWP/WinUI** (inclusi i task Appx/PRI di Visual Studio).
+Lo script individua e usa MSBuild di Visual Studio; `dotnet publish` da solo
+non dispone dei task PRI necessari a questa versione di WinUI.
 Usare un terminale Developer PowerShell x64 se il linker non viene trovato.
 
 ```powershell
