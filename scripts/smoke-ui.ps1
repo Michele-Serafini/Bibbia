@@ -199,11 +199,13 @@ try {
     Select-Option 'ThemePicker' 'Scuro'
     Check-TitleTheme 1
     $font = Wait-Control $window 'FontSlider'
-    $font.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern).SetValue(26)
+    # RichEditBox has a 32px minimum height; use the maximum font size so
+    # a real text resize exceeds that floor and changes its rendered bounds.
+    $font.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern).SetValue(32)
     Start-Sleep -Milliseconds 300
     Select-Page 'ReadNavigation'
     $resized = Wait-Control $window 'VerseText_0'
-    if ($resized.Current.BoundingRectangle.Height -le $originalTextHeight + 2) { throw 'Text size did not update the rendered document.' }
+    if ($resized.Current.BoundingRectangle.Height -le $originalTextHeight + 2) { throw "Text size did not update the rendered document: before=$originalTextHeight after=$($resized.Current.BoundingRectangle.Height)." }
     Select-Page 'SettingsNavigation'
     Select-Option 'AppLanguagePicker' 'English'
     Wait-Text $window 'Your reading experience' | Out-Null

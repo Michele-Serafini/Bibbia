@@ -14,7 +14,7 @@ try
     Check(settings.GetProperty("language").GetString() == "en", "Lingua interfaccia non salvata.");
     Check(settings.GetProperty("bibleLanguage").GetString() == "it", "Lingua Bibbia non salvata.");
     Check(settings.GetProperty("theme").GetString() == "Dark", "Tema non salvato.");
-    Check(settings.GetProperty("fontSize").GetInt32() == 26, "Dimensione testo non salvata.");
+    Check(settings.GetProperty("fontSize").GetInt32() == 32, "Dimensione testo non salvata.");
     const string edition = "Martini 1781 (cattolica)";
     Check(settings.GetProperty("position").GetProperty("edition").GetString() == edition, "Edizione cattolica non salvata.");
     var first = BibleEngine.Call(new { op = "chapter", edition, book = 0, chapter = 0 })[0];

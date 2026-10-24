@@ -25,7 +25,7 @@ public sealed partial class MainWindow
         try {
             Directory.CreateDirectory(dataDirectory);
             var range = editor.Document.Selection;
-            File.AppendAllText(Path.Combine(dataDirectory,"ui-events.log"),$"{DateTime.UtcNow:O} {stage} start={range.StartPosition} end={range.EndPosition} readonly={editor.IsReadOnly} loaded={editor.IsLoaded} focus={editor.FocusState} mouse={(GetAsyncKeyState(1)&0x8000)!=0}\n");
+            File.AppendAllText(Path.Combine(dataDirectory,"ui-events.log"),$"{DateTime.UtcNow:O} {stage} start={range.StartPosition} end={range.EndPosition} readonly={editor.IsReadOnly} loaded={editor.IsLoaded} focus={editor.FocusState} font={editor.FontSize} points={editor.Document.GetRange(0,editor.DataContext is VerseRow v ? v.Text.Length : 0).CharacterFormat.Size} mouse={(GetAsyncKeyState(1)&0x8000)!=0}\n");
         } catch { }
     }
     [DllImport("user32.dll")]
