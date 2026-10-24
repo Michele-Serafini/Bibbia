@@ -28,6 +28,7 @@ jobs:
       - run: dotnet run --project tests/Bibbia.InteropSmoke -- target/release/libbible_core.so
   windows:
     runs-on: windows-2022
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -38,6 +39,8 @@ jobs:
           toolchain: '1.99.1'
           targets: x86_64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - name: Build native application
         shell: pwsh
         run: ./scripts/build.ps1

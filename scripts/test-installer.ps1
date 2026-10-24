@@ -22,7 +22,7 @@ try {
     $noteFixture = Join-Path $dataDirectory 'note-da-conservare.txt'
     [IO.File]::WriteAllText($noteFixture, 'Appunti di prova: perché c''è speranza.')
     Invoke-Setup $installerPath "/S /D=$installDirectory"
-    foreach ($file in @('Bibbia.Windows.exe', 'bible_core.dll', 'resources.pri', 'Uninstall.exe')) {
+    foreach ($file in @('Bibbia.Windows.exe', 'bible_core.dll', 'Bibbia.Windows.pri', 'Uninstall.exe')) {
         if (-not (Test-Path (Join-Path $installDirectory $file))) { throw "File installato mancante: $file" }
     }
     if (-not (Test-Path $shortcut)) { throw 'Collegamento Start mancante.' }
