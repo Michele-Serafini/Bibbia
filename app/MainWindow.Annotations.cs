@@ -17,6 +17,7 @@ public sealed partial class MainWindow
     private readonly Dictionary<int,RichEditBox> liveEditors = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? selectionTimer;
     private RichEditBox? selectionEditor;
+    private CommandBarFlyout? activeSelectionFlyout;
     private static readonly bool selectionDiagnostics = Environment.GetEnvironmentVariable("BIBBIA_UI_DIAGNOSTICS") == "1";
     private void TraceSelection(string stage, RichEditBox editor)
     {
@@ -57,7 +58,9 @@ public sealed partial class MainWindow
         AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
         AutomationProperties.SetName(editor,row.Text);
         ApplyTextStyles(editor,row);
-        editor.SelectionFlyout = AnnotationToolbar(editor,row,true);
+        // The text control dismisses its own SelectionFlyout on focus loss.
+        // Own the annotation popup separately so its buttons can receive focus.
+        editor.SelectionFlyout = null;
         editor.ContextFlyout = AnnotationToolbar(editor,row,true);
         TraceSelection("bound",editor);
     }
@@ -96,11 +99,14 @@ public sealed partial class MainWindow
     private void ShowSelectionToolbar(RichEditBox editor, global::Windows.Foundation.Point? point = null) => Guard(() =>
     {
         TraceSelection("show requested",editor);
-        if (closed || !editor.IsLoaded || editor.Document.Selection.Length == 0 || editor.SelectionFlyout.IsOpen) return;
+        if (closed || !editor.IsLoaded || editor.Document.Selection.Length == 0 || activeSelectionFlyout?.IsOpen == true || editor.DataContext is not VerseRow row) return;
         selectionTimer?.Stop();
-        var options = new FlyoutShowOptions {Placement=FlyoutPlacementMode.Top};
+        var flyout = AnnotationToolbar(editor,row,true);
+        activeSelectionFlyout = flyout;
+        flyout.Closed += (_,_) => { if (ReferenceEquals(activeSelectionFlyout,flyout)) activeSelectionFlyout = null; TraceSelection("popup closed",editor); };
+        var options = new FlyoutShowOptions {Placement=FlyoutPlacementMode.Top,ShowMode=FlyoutShowMode.Transient};
         if (point is { } position) options.Position = position;
-        editor.SelectionFlyout.ShowAt(editor,options);
+        flyout.ShowAt(editor,options);
         TraceSelection("show complete",editor);
     });
     private static void UpdateDocument(RichEditBox editor, Action update)

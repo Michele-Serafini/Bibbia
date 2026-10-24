@@ -86,6 +86,7 @@ function Select-Option([string]$id, [string]$name) {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -eq $item) { throw "Combo option not found: $id / $name" }
     $item.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    $combo.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
     Start-Sleep -Milliseconds 300
 }
 function Check-TitleTheme([int]$expected) {

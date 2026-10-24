@@ -141,6 +141,8 @@ public sealed partial class MainWindow : Window
     {
         selectionTimer?.Stop();
         selectionEditor = null;
+        activeSelectionFlyout?.Hide();
+        activeSelectionFlyout = null;
         liveEditors.Clear();
         var rows = BibleEngine.Call(new { op = "chapter", edition, book, chapter }).EnumerateArray().Select(x =>
             new VerseRow { Index = x.GetProperty("verse").GetInt32(), Text = x.GetProperty("text").GetString()!,
