@@ -1,0 +1,52 @@
+name: Publish verified installer
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Check and build run containing the tested installer
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the tested binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          gh run view "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion,status,headSha,headBranch,workflowName > "$RUNNER_TEMP/bibbia-build.json"
+          build_sha=$(python3 - "$RUNNER_TEMP/bibbia-build.json" <<'PY'
+          import json, sys
+          run = json.load(open(sys.argv[1]))
+          assert run['status'] == 'completed' and run['conclusion'] == 'success', 'Build not successful'
+          assert run['headBranch'] == 'main' and run['workflowName'] == 'Check and build', 'Unexpected build source'
+          print(run['headSha'])
+          PY
+          )
+          git fetch --no-tags --depth=1 origin "$build_sha"
+          git show "$build_sha:app/Bibbia.Windows.csproj" > "$RUNNER_TEMP/bibbia-tested.csproj"
+          build_version=$(python3 - "$RUNNER_TEMP/bibbia-tested.csproj" <<'PY'
+          import re, sys, xml.etree.ElementTree as ET
+          version = ET.parse(sys.argv[1]).findtext('./PropertyGroup/Version')
+          assert version and re.fullmatch(r'\d+\.\d+\.\d+', version), 'Invalid version'
+          print(version)
+          PY
+          )
+          build_tag="v$build_version"
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name Bibbia-Installer-x64 --dir "$RUNNER_TEMP/bibbia-installer"
+          cd "$RUNNER_TEMP/bibbia-installer"
+          installer_file="Bibbia-Setup-$build_version-x64.exe"
+          test -f "$installer_file"
+          sha256sum -c "$installer_file.sha256"
+          notes_file="$GITHUB_WORKSPACE/docs/releases/$build_tag.md"
+          test -f "$notes_file"
+          gh release create "$build_tag" "$installer_file" "$installer_file.sha256" --repo "$GITHUB_REPOSITORY" --target "$build_sha" --title "Bibbia $build_version per Windows" --notes-file "$notes_file"
