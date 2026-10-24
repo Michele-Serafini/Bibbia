@@ -1,0 +1,152 @@
+using Microsoft.UI;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using System.Text.Json;
+using Microsoft.UI.Text;
+using Windows.ApplicationModel.DataTransfer;
+
+namespace Bibbia.Windows;
+
+public sealed partial class MainWindow
+{
+    private readonly Dictionary<int,RichEditBox> liveEditors = [];
+    private static global::Windows.UI.Color MarkColor(string? color) => color switch {
+        "yellow"=>global::Windows.UI.Color.FromArgb(255,225,191,65),
+        "green"=>global::Windows.UI.Color.FromArgb(255,151,207,145),
+        "blue"=>global::Windows.UI.Color.FromArgb(255,142,192,237),
+        _=>global::Windows.UI.Color.FromArgb(255,236,168,195)
+    };
+    private void VerseEditorLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is RichEditBox editor) {
+            editor.RemoveHandler(UIElement.PointerReleasedEvent,new PointerEventHandler(VersePointerReleased));
+            editor.AddHandler(UIElement.PointerReleasedEvent,new PointerEventHandler(VersePointerReleased),true);
+        }
+        BindVerseEditor(sender);
+    }
+    private void VerseEditorDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs e) => BindVerseEditor(sender);
+    private void BindVerseEditor(object sender)
+    {
+        if (sender is not RichEditBox editor || editor.DataContext is not VerseRow row) return;
+        foreach (var key in liveEditors.Where(x => ReferenceEquals(x.Value,editor)).Select(x => x.Key).ToList()) liveEditors.Remove(key);
+        liveEditors[row.Index] = editor;
+        editor.Document.SetText(TextSetOptions.None,row.Text);
+        AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
+        AutomationProperties.SetName(editor,row.Text);
+        ApplyTextStyles(editor,row);
+        editor.SelectionFlyout = AnnotationToolbar(editor,row,true);
+        editor.ContextFlyout = AnnotationToolbar(editor,row,true);
+    }
+    private void VersePointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not RichEditBox editor) return;
+        var point = e.GetCurrentPoint(editor).Position;
+        // RichEdit updates its selection while handling the mouse release.
+        DispatcherQueue.TryEnqueue(() => {
+            if (!closed && editor.IsLoaded && editor.Document.Selection.Length > 0)
+                editor.SelectionFlyout.ShowAt(editor,new FlyoutShowOptions {Position=point,Placement=FlyoutPlacementMode.Top});
+        });
+    }
+    private void ApplyTextStyles(RichEditBox editor, VerseRow row)
+    {
+        var whole = editor.Document.GetRange(0,row.Text.Length);
+        var a = row.Annotation;
+        var bg = EditorBackground();
+        editor.Background = new SolidColorBrush(bg);
+        whole.CharacterFormat.BackgroundColor = bg;
+        whole.CharacterFormat.ForegroundColor = Root.ActualTheme == ElementTheme.Dark ? Colors.White : Colors.Black;
+        whole.CharacterFormat.Underline = a.GetProperty("underline").GetBoolean() ? UnderlineType.Single : UnderlineType.None;
+        if (a.GetProperty("highlight").GetString() is string color) {
+            whole.CharacterFormat.BackgroundColor = MarkColor(color);
+            whole.CharacterFormat.ForegroundColor = Colors.Black;
+        }
+        foreach (var mark in a.GetProperty("ranges").EnumerateArray())
+        {
+            int start = mark.GetProperty("start").GetInt32(), length = mark.GetProperty("length").GetInt32();
+            var range = editor.Document.GetRange(start,start+length);
+            if (mark.GetProperty("underline").GetBoolean()) range.CharacterFormat.Underline = UnderlineType.Single;
+            if (mark.GetProperty("highlight").GetString() is string highlight) {
+                range.CharacterFormat.BackgroundColor = MarkColor(highlight);
+                range.CharacterFormat.ForegroundColor = Colors.Black;
+            }
+        }
+    }
+    private CommandBarFlyout AnnotationToolbar(RichEditBox editor, VerseRow row, bool selection)
+    {
+        var flyout = new CommandBarFlyout();
+        var start = 0; var length = row.Text.Length;
+        flyout.Opening += (_,_) => {
+            if (selection) {
+                start = Math.Clamp(editor.Document.Selection.StartPosition,0,row.Text.Length);
+                var end = Math.Clamp(editor.Document.Selection.EndPosition,start,row.Text.Length);
+                length = end-start;
+                if (length == 0) { start = 0; length = row.Text.Length; }
+            }
+            currentVerse = row.Index;
+            Guard(SavePosition);
+        };
+        AppBarButton Button(string label, Symbol symbol, string id)
+        {
+            var b = new AppBarButton { Label=T(label), Icon=new SymbolIcon(symbol) };
+            AutomationProperties.SetAutomationId(b,id);
+            ToolTipService.SetToolTip(b,T(label)); return b;
+        }
+        void Mark(string action) => Guard(() => {
+            row.Annotation = BibleEngine.Call(new {op="mark",edition,book,chapter,verse=row.Index,start,length,action});
+            ApplyTextStyles(editor,row); flyout.Hide();
+        });
+        var underline = Button("Sottolinea",Symbol.Underline,"UnderlineSelection");
+        underline.Click += (_,_) => Mark("underline");
+        flyout.PrimaryCommands.Add(underline);
+        var highlight = Button("Evidenzia",Symbol.Highlight,"HighlightSelection");
+        var colors = new MenuFlyout();
+        foreach (var (key,label) in new[]{("yellow","Giallo"),("green","Verde"),("blue","Blu"),("pink","Rosa")}) {
+            var item = new MenuFlyoutItem { Text=T(label), Icon=new FontIcon {Glyph="●",Foreground=new SolidColorBrush(MarkColor(key))} };
+            item.Click += (_,_) => Mark(key); colors.Items.Add(item);
+        }
+        highlight.Flyout = colors; flyout.PrimaryCommands.Add(highlight);
+        var bookmark = Button("Segnalibro",Symbol.Bookmarks,"BookmarkVerse");
+        bookmark.Click += (_,_) => Guard(() => {
+            var a = row.Annotation;
+            row.Annotation = BibleEngine.Call(new {op="annotate",edition,book,chapter,verse=row.Index,annotation=new {
+                highlight=a.GetProperty("highlight"),underline=a.GetProperty("underline"),bookmark=!a.GetProperty("bookmark").GetBoolean(),note=a.GetProperty("note"),ranges=a.GetProperty("ranges")}});
+            flyout.Hide();
+        }); flyout.PrimaryCommands.Add(bookmark);
+        var copy = Button("Copia",Symbol.Copy,"CopySelection");
+        copy.Click += (_,_) => Guard(() => {
+            var data = new DataPackage(); data.SetText(row.Text.Substring(start,length)); Clipboard.SetContent(data); flyout.Hide();
+        }); flyout.PrimaryCommands.Add(copy);
+        var note = Button("Nota",Symbol.Edit,"NoteVerse");
+        note.Click += (_,_) => { flyout.Hide(); ShowNote(editor,row); };
+        flyout.PrimaryCommands.Add(note);
+        var clear = Button("Rimuovi formattazione",Symbol.Clear,"ClearSelection");
+        clear.Click += (_,_) => Mark("clear"); flyout.SecondaryCommands.Add(clear);
+        return flyout;
+    }
+    private void VerseMenuClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || !liveEditors.TryGetValue((int)button.Tag,out var editor) || editor.DataContext is not VerseRow row) return;
+        AnnotationToolbar(editor,row,false).ShowAt(button);
+    }
+    private void ShowNote(RichEditBox editor, VerseRow row)
+    {
+        var flyout = new Flyout();
+        var content = new StackPanel { Width=300,Spacing=12 };
+        content.Children.Add(new TextBlock {Text=$"{books[book].Name} {chapter+1}:{row.Index+1}",FontWeight=Microsoft.UI.Text.FontWeights.SemiBold});
+        var input = new TextBox {Header=T("La tua nota"),Text=row.Annotation.GetProperty("note").GetString(),AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Height=130,MaxLength=8000};
+        AutomationProperties.SetAutomationId(input,"NoteText"); content.Children.Add(input);
+        var save = new Button {Content=T("Salva"),HorizontalAlignment=HorizontalAlignment.Right};
+        AutomationProperties.SetAutomationId(save,"SaveNote");
+        save.Click += (_,_) => Guard(() => {
+            var a=row.Annotation;
+            row.Annotation=BibleEngine.Call(new {op="annotate",edition,book,chapter,verse=row.Index,annotation=new {
+                highlight=a.GetProperty("highlight"),underline=a.GetProperty("underline"),bookmark=a.GetProperty("bookmark"),note=input.Text,ranges=a.GetProperty("ranges")}});
+            flyout.Hide();
+        }); content.Children.Add(save); flyout.Content=content;
+        DispatcherQueue.TryEnqueue(() => flyout.ShowAt(editor));
+    }
+}

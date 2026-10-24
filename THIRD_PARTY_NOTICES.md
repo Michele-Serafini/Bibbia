@@ -1,5 +1,25 @@
 # Testi e dipendenze
 
+## Antonio Martini (1781), cattolica
+
+Traduzione italiana storica dalla Vulgata, di Antonio Martini (1720–1809),
+arcivescovo di Firenze. Testo di **pubblico dominio**, con 73 libri, 1.334 capitoli
+e 35.763 versetti, compresi i deuterocanonici e le aggiunte a Ester e Daniele.
+Conserva la numerazione della Vulgata, che può differire dalle edizioni moderne.
+
+Fonte: repository ufficiale LaParola, commit fissato
+`207f6a574ffa5913790e27962f5e9e180ce1b47c`:
+https://github.com/LPN6/LaParola/tree/207f6a574ffa5913790e27962f5e9e180ce1b47c/Sito/Pagine/app/content/texts/martini
+
+La dichiarazione della fonte «Rights: Dominio pubblico» è in
+[about.html](https://github.com/LPN6/LaParola/blob/207f6a574ffa5913790e27962f5e9e180ce1b47c/Sito/Pagine/app/content/texts/martini/about.html).
+Scaricato il 24 ottobre 2026. Ogni capitolo HTML è stato verificato rispetto al
+proprio hash Git. La conversione estrae i testi dei soli versetti numerati,
+decodifica le entità HTML e normalizza gli spazi, escludendo i titoli esterni.
+SHA-256 del JSON incluso:
+`3865f59c82b3104cb57d6a51974c8c8ed2169eccf662214a617ce8ed283c3d62`.
+I metadati sono conservati in `core/data/martini-source.json` e nell'installer.
+
 ## Giovanni Diodati (1649)
 
 Testo storico italiano di pubblico dominio. Sono inclusi 66 libri, 1.189 capitoli
@@ -46,3 +66,8 @@ YouVersion. Una futura integrazione richiede accesso ufficiale e i relativi diri
 
 Per distribuire il pacchetto self-contained conservare anche gli avvisi forniti
 dai runtime e dalle dipendenze. `Cargo.lock` fissa le dipendenze Rust.
+
+## Icona
+
+L'icona della Bibbia in `app/Assets/` è stata creata per questo progetto;
+è distribuita con la stessa licenza MIT del codice. Non usa il logo YouVersion.

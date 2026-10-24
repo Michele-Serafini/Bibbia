@@ -41,8 +41,7 @@ fn complete_corpus_navigation_and_search() {
 #[test]
 fn personal_data_and_position_survive_restart_and_removal() {
     let dir = tempfile::tempdir().unwrap();
-    let mark =
-        json!({"highlight":"yellow","underline":true,"bookmark":true,"note":"Luce e speranza 🌅"});
+    let mark = json!({"highlight":"yellow","underline":true,"bookmark":true,"note":"Luce e speranza 🌅","ranges":[]});
     {
         let mut e = Engine::open(dir.path()).unwrap();
         e.request(json!({"op":"annotate","book":0,"chapter":0,"verse":2,"annotation":mark}))
@@ -127,7 +126,7 @@ fn c_abi_owns_utf8_responses_and_reports_errors() {
                 .unwrap()
                 .contains(&json!("KJV"))
         );
-        assert_eq!(parsed["data"]["defaultEdition"], "Diodati 1649");
+        assert_eq!(parsed["data"]["defaultEdition"], DEFAULT_EDITION);
         bible_free(result);
         let invalid = CString::new("{").unwrap();
         let result = bible_request(invalid.as_ptr());
@@ -165,7 +164,11 @@ fn italian_corpus_is_complete_and_searchable() {
     assert!(bible[0].chapters[0][0].contains("Iddio creò il cielo"));
     let dir = tempfile::tempdir().unwrap();
     let mut e = Engine::open(dir.path()).unwrap();
-    let result = e.request(json!({"op":"search","edition":DEFAULT_EDITION,"query":"Iddio ha tanto amato il mondo"})).unwrap();
+    let result = e
+        .request(
+            json!({"op":"search","edition":"Diodati 1649","query":"Iddio ha tanto amato il mondo"}),
+        )
+        .unwrap();
     assert!(
         result["hits"]
             .as_array()
@@ -192,5 +195,116 @@ fn verse_position_is_validated_and_legacy_positions_still_work() {
     assert_eq!(
         e.request(json!({"op":"bootstrap"})).unwrap()["settings"]["position"]["verse"],
         30
+    );
+}
+
+#[test]
+fn catholic_edition_has_all_books_and_greek_additions() {
+    let books: Vec<Book> = serde_json::from_str(MARTINI).unwrap();
+    assert_eq!(books.len(), 73);
+    for (id, chapters) in [
+        ("TB", 14),
+        ("JT", 16),
+        ("WS", 19),
+        ("SR", 51),
+        ("BR", 6),
+        ("M1", 16),
+        ("M2", 15),
+        ("ET", 16),
+        ("DN", 14),
+    ] {
+        let book = books.iter().find(|b| b.abbrev == id).unwrap();
+        assert_eq!(book.chapters.len(), chapters);
+        assert!(
+            book.chapters
+                .iter()
+                .all(|c| !c.is_empty() && c.iter().all(|v| !v.is_empty()))
+        );
+    }
+    assert_eq!(books.iter().map(|b| b.chapters.len()).sum::<usize>(), 1334);
+}
+
+#[test]
+fn phrase_marks_preserve_legacy_notes_and_survive_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    // Raw old payload deliberately has no ranges, as in version 0.1.
+    e.db.execute(
+        "INSERT INTO annotations VALUES ('KJV',0,0,0,?)",
+        [r#"{"highlight":"yellow","underline":false,"bookmark":true,"note":"Vecchia nota"}"#],
+    )
+    .unwrap();
+    e.request(json!({"op":"mark","book":0,"chapter":0,"verse":0,"start":3,"length":9,"action":"underline"})).unwrap();
+    e.request(
+        json!({"op":"mark","book":0,"chapter":0,"verse":0,"start":3,"length":2,"action":"clear"}),
+    )
+    .unwrap();
+    drop(e);
+    let e = Engine::open(dir.path()).unwrap();
+    let a = e.annotation("KJV", 0, 0, 0).unwrap();
+    assert_eq!(a.note, "Vecchia nota");
+    assert!(a.bookmark);
+    assert!(a.highlight.is_none());
+    assert!(
+        a.ranges
+            .iter()
+            .any(|m| m.start == 0 && m.length == 3 && m.highlight.as_deref() == Some("yellow"))
+    );
+    assert!(
+        a.ranges
+            .iter()
+            .any(|m| m.start == 5 && m.length == 7 && m.underline)
+    );
+    assert!(
+        a.ranges
+            .iter()
+            .all(|m| m.start >= 5 || m.start + m.length <= 3)
+    );
+}
+
+#[test]
+fn utf16_selection_rejects_split_emoji_and_merges_adjacent_ranges() {
+    let text = "A🌱 parola è luce";
+    let mut a = Annotation::default();
+    assert!(selection::apply_mark(text, &mut a, 1, 1, "underline").is_err());
+    assert!(selection::apply_mark(text, &mut a, 2, 1, "underline").is_err());
+    selection::apply_mark(text, &mut a, 1, 2, "underline").unwrap();
+    selection::apply_mark(text, &mut a, 3, 7, "underline").unwrap();
+    assert_eq!(a.ranges.len(), 1);
+    assert_eq!(a.ranges[0].length, 9);
+    selection::apply_mark(text, &mut a, 4, 6, "blue").unwrap();
+    assert!(
+        a.ranges
+            .iter()
+            .any(|m| m.start == 4 && m.highlight.as_deref() == Some("blue") && m.underline)
+    );
+    let before = a.clone();
+    assert!(selection::apply_mark(text, &mut a, 99, 1, "clear").is_err());
+    assert_eq!(a, before);
+}
+
+#[test]
+fn interface_and_bible_language_preferences_are_independent() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    e.request(json!({"op":"settings","key":"language","value":"en"}))
+        .unwrap();
+    e.request(json!({"op":"settings","key":"bibleLanguage","value":"it"}))
+        .unwrap();
+    assert!(
+        e.request(json!({"op":"settings","key":"language","value":"bogus"}))
+            .is_err()
+    );
+    drop(e);
+    let mut e = Engine::open(dir.path()).unwrap();
+    let b = e.request(json!({"op":"bootstrap"})).unwrap();
+    assert_eq!(b["settings"]["language"], "en");
+    assert_eq!(b["settings"]["bibleLanguage"], "it");
+    assert!(
+        b["editionMetadata"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["catholic"] == true && e["language"] == "it" && e["books"] == 73)
     );
 }

@@ -22,7 +22,7 @@ try {
     $noteFixture = Join-Path $dataDirectory 'note-da-conservare.txt'
     [IO.File]::WriteAllText($noteFixture, 'Appunti di prova: perché c''è speranza.')
     Invoke-Setup $installerPath "/S /D=$installDirectory"
-    foreach ($file in @('Bibbia.Windows.exe', 'bible_core.dll', 'Bibbia.Windows.pri', 'Uninstall.exe')) {
+    foreach ($file in @('Bibbia.Windows.exe', 'bible_core.dll', 'Bibbia.Windows.pri', 'Assets/Bibbia.ico', 'martini-source.json', 'Uninstall.exe')) {
         if (-not (Test-Path (Join-Path $installDirectory $file))) { throw "File installato mancante: $file" }
     }
     if (-not (Test-Path $shortcut)) { throw 'Collegamento Start mancante.' }
@@ -34,6 +34,8 @@ try {
     if (-not (Test-Path $extraFile) -or -not (Test-Path $noteFixture)) { throw 'L''aggiornamento ha eliminato dati personali.' }
     & "$env:WINDIR/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -File "$root/scripts/smoke-ui.ps1" -Executable "$installDirectory/Bibbia.Windows.exe"
     if ($LASTEXITCODE -ne 0) { throw 'Verifica grafica WinUI fallita.' }
+    dotnet run --project "$root/tests/Bibbia.UiState" -- "$installDirectory/bible_core.dll" $dataDirectory
+    if ($LASTEXITCODE -ne 0) { throw 'Le modifiche effettuate nella UI non sono state conservate.' }
     dotnet run --project "$root/tests/Bibbia.InteropSmoke" -- "$installDirectory/bible_core.dll"
     if ($LASTEXITCODE -ne 0) { throw 'Motore installato non funzionante.' }
     # Both install and uninstall must fail safely if the app is running.

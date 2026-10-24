@@ -1,25 +1,31 @@
 # Bibbia per Windows
 
-Prima versione di un lettore biblico offline con interfaccia **WinUI 3 nativa**
-e motore **Rust**. Interfaccia italiana, Mica, tema di Windows o chiaro/scuro,
+Lettore biblico offline con interfaccia **WinUI 3 nativa**
+e motore **Rust**. Interfaccia italiana o inglese, Mica, tema di Windows o chiaro/scuro,
 caratteri ridimensionabili e navigazione adattiva. Nessun browser incorporato,
 server o account. È un progetto indipendente, ispirato al flusso di lettura delle
 app bibliche; non è un client ufficiale Bible.com/YouVersion.
 
 ## Funzioni implementate
 
-- Bibbia Diodati 1649 completa in italiano, selezionata al primo avvio; KJV inglese inclusa.
+- Bibbia cattolica **Martini 1781** completa in italiano: 73 libri, inclusi i deuterocanonici,
+  selezionata al primo avvio. Sono incluse anche Diodati 1649 e KJV inglese.
+- Scelta indipendente della lingua dell’app (italiano/inglese) e della Bibbia.
+- Icona dedicata e barra del titolo che segue il tema dell’app.
 - Navigazione per libro e capitolo; ripresa dell'ultimo versetto selezionato.
 - Ricerca senza distinzione maiuscole/minuscole nella traduzione selezionata;
   massimo 200 risultati con indicazione del limite.
-- Selezione di un versetto: quattro colori, sottolineatura, segnalibro, nota e copia.
+- Selezione di parole o frasi con il mouse: barra contestuale compatta, quattro colori,
+  sottolineatura, copia, segnalibro e nota in un piccolo popup. Il pulsante ⋯ offre
+  anche le azioni sul versetto intero.
 - Raccolta degli appunti con ritorno al versetto originale.
 - Importazione di altre traduzioni JSON, anche italiane, senza sovrascrivere
   traduzioni esistenti o mescolare le relative annotazioni.
 - Dati personali locali in SQLite, con transazioni e modalità WAL.
 
-Le evidenziazioni e sottolineature si applicano al versetto intero, non a singole
-parole. Audio, piani di lettura, sincronizzazione cloud e catalogo online
+La Martini è una traduzione cattolica storica dalla Vulgata, di pubblico dominio;
+conserva il linguaggio e la numerazione della sua edizione. Audio, piani di lettura,
+sincronizzazione cloud e catalogo online
 YouVersion non sono implementati. Non sono stati misurati tempi di avvio o RAM su
 Windows; il runtime .NET e WinUI self-contained aumentano la dimensione del download.
 
@@ -33,7 +39,7 @@ WinUI ufficiali con un motore Rust indipendente e testabile.
 
 ## Installare su Windows
 
-[Scarica **Bibbia-Setup-0.1.0-x64.exe**](https://github.com/Michele-Serafini/Notion/releases/download/v0.1.0/Bibbia-Setup-0.1.0-x64.exe): un solo installer offline,
+[Scarica **Bibbia-Setup-0.2.0-x64.exe**](https://github.com/Michele-Serafini/Notion/releases/download/v0.2.0/Bibbia-Setup-0.2.0-x64.exe): un solo installer offline,
 con interfaccia italiana. Non richiede Rust, .NET, Visual Studio, account o
 download aggiuntivi sul PC destinatario. Supporta Windows 10 versione 2004 o
 successiva e Windows 11 a 64 bit.
@@ -44,17 +50,18 @@ successiva e Windows 11 a 64 bit.
 4. Per rimuovere l'app usare **Impostazioni Windows → App → Bibbia → Disinstalla**.
    Note, segnalibri e traduzioni importate vengono conservati.
 
-La [release v0.1.0](https://github.com/Michele-Serafini/Notion/releases/tag/v0.1.0)
+La [release v0.2.0](https://github.com/Michele-Serafini/Notion/releases/tag/v0.2.0)
 contiene l'installer e il checksum SHA-256. Per le nuove build il workflow
 GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-x64**.
 Il workflow manuale **Publish verified installer** pubblica gli stessi file di una
 build completata con successo, dopo averne ricontrollato il checksum, senza ricompilarli.
 
-**Verifica v0.1.0:** [pipeline completata con successo](https://github.com/Michele-Serafini/Notion/actions/runs/40106811927).
-Passati i 7 test Rust su Linux e Windows, i test C# → Rust e le prove automatiche
-di installazione, aggiornamento, avvio WinUI, lettura e ricerca mediante controlli
-reali, blocco con app aperta, disinstallazione e conservazione dei file personali
-su un runner Windows Server 2022. Il codice applicativo verificato è `28e529f`.
+La pipeline verifica 11 test Rust su Linux e Windows, il collegamento C# → Rust
+e l’installer su Windows Server 2022. Le prove WinUI usano una selezione reale
+con mouse e verificano popup, note, segnalibri, ricerca, scelta delle lingue,
+tema della barra del titolo e persistenza delle modifiche alla riapertura.
+Sono verificate anche installazione, aggiornamento, blocco con app aperta,
+disinstallazione e conservazione dei file personali.
 La build non è firmata digitalmente; Windows può mostrare un avviso SmartScreen.
 
 ## Compilare e avviare su Windows
@@ -86,7 +93,7 @@ tutti i prerequisiti, dalla radice del repository:
 pwsh -File ./scripts/package.ps1
 ```
 
-Il risultato è `artifacts/installer/Bibbia-Setup-0.1.0-x64.exe`, con un file
+Il risultato è `artifacts/installer/Bibbia-Setup-0.2.0-x64.exe`, con un file
 `.sha256` accanto. Il flag `-SkipBuild` riutilizza una pubblicazione già completata.
 La cartella `artifacts/Bibbia/` viene sempre rigenerata da una pubblicazione pulita,
 per evitare di includere file rimasti da vecchie build.
@@ -99,7 +106,7 @@ Su un runner Windows pulito, per provare installazione, aggiornamento, interfacc
 reale, blocco con app aperta, disinstallazione e conservazione dei dati:
 
 ```powershell
-pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.1.0-x64.exe
+pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.2.0-x64.exe
 ```
 
 Il test rifiuta di avviarsi se trova dati o un'installazione Bibbia preesistenti.
@@ -132,7 +139,10 @@ errori gestiti. Chiude il database prima di rimuovere i dati temporanei, anche s
 
 ## Importare altre traduzioni
 
-La Diodati 1649 italiana è già inclusa e funziona offline senza importazioni.
+La Martini cattolica italiana è già inclusa e funziona offline senza importazioni.
+Nelle impostazioni puoi scegliere la lingua dell’interfaccia e filtrare le
+traduzioni per lingua. Seleziona **Italiano → Martini 1781 (cattolica)** per la
+Bibbia cattolica completa.
 Le installazioni esistenti mantengono la traduzione scelta nell'ultima lettura;
 per cambiarla usare **Aspetto e traduzioni → Traduzione**.
 
@@ -167,14 +177,19 @@ protezioni dell'account Windows per dati sensibili.
 
 ## Controlli manuali aggiuntivi su Windows
 
-1. Avviare l'app; controllare che la Diodati italiana sia selezionata al primo avvio.
+1. Avviare l'app; controllare che la Martini cattolica sia selezionata al primo avvio.
+   Verificare la presenza di Tobia, Giuditta, Sapienza, Siracide, Baruc e Maccabei.
    Aprire Genesi 1, poi Giovanni 3 con libro e capitolo.
-2. Cercare `Iddio ha tanto amato il mondo`; aprire Giovanni 3:16 dai risultati.
+2. Cercare `talmente amato il mondo`; aprire Giovanni 3:16 dai risultati.
    Cercare poi una sola lettera: deve apparire un errore senza risultati precedenti.
-3. Selezionare il versetto, scegliere un colore, sottolineare, salvare una nota
+3. Selezionare parole con il mouse: deve apparire un menu compatto.
+   Scegliere un colore, sottolineare solo la frase selezionata, salvare una nota
    con accenti e un segnalibro. Controllare la raccolta e il pulsante Copia.
 4. Chiudere e riaprire: controllare note, ultimo versetto selezionato, tema e dimensione testo.
-5. Rimuovere colore, spunte e nota: il versetto deve sparire dalla raccolta.
+5. Rimuovere la formattazione dalla selezione, il segnalibro e la nota:
+   quando non restano annotazioni, il versetto deve sparire dalla raccolta.
+   Cambiare lingua dell’app senza cambiare la traduzione e provare i filtri italiano/inglese.
+   Controllare che anche la barra superiore segua i temi chiaro/scuro e Windows.
 6. Importare un JSON italiano autorizzato con spazi all'inizio e alla fine del nome;
    controllare selezione automatica della traduzione, lettura, ricerca e
    isolamento delle annotazioni tra traduzioni. Un file malformato deve mostrare
@@ -182,7 +197,7 @@ protezioni dell'account Windows per dati sensibili.
 7. Controllare tema Windows, contrasto elevato, tastiera, ridimensionamento e DPI
    al 100/150/200%. Verificare su un PC Windows senza SDK con la cartella pubblicata.
 
-La pipeline verifica già avvio, lettura e ricerca nell'interfaccia reale.
-Questi controlli aggiuntivi estendono la verifica a dialoghi, accessibilità, DPI
+La pipeline verifica già anche selezione con mouse, note, lingue e tema nell’interfaccia reale.
+Questi controlli aggiuntivi estendono la verifica ad accessibilità, DPI
 e PC Windows 10/11 diversi dal runner Windows Server 2022.
 Vedere [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) per fonti e licenze.

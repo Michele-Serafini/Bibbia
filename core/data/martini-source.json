@@ -1,0 +1,14 @@
+{
+  "name": "Martini 1781 (cattolica)",
+  "language": "it",
+  "canon": "Catholic, 73 books, Vulgate numbering",
+  "rights": "Dominio pubblico",
+  "author": "Antonio Martini (1720-1809)",
+  "source": "https://raw.githubusercontent.com/LPN6/LaParola/207f6a574ffa5913790e27962f5e9e180ce1b47c/Sito/Pagine/app/content/texts/martini/",
+  "commit": "207f6a574ffa5913790e27962f5e9e180ce1b47c",
+  "license_evidence": "https://raw.githubusercontent.com/LPN6/LaParola/207f6a574ffa5913790e27962f5e9e180ce1b47c/Sito/Pagine/app/content/texts/martini/about.html",
+  "chapters": 1334,
+  "verses": 35763,
+  "sha256": "3865f59c82b3104cb57d6a51974c8c8ed2169eccf662214a617ce8ed283c3d62",
+  "conversion": "Text of numbered verse spans; HTML unescaped, whitespace normalized; headings outside verse spans excluded. Each source file verified against its Git blob SHA-1."
+}

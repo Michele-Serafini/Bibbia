@@ -1,13 +1,9 @@
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using System.Text.Json;
-using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage.Pickers;
 using Windows.System;
-using Windows.UI.Text;
 
 namespace Bibbia.Windows;
 
@@ -21,12 +17,10 @@ public sealed class VerseRow
 {
     public int Index { get; init; }
     public string Number => (Index + 1).ToString();
+    public string MenuId => $"VerseMenu_{Index}";
     public required string Text { get; init; }
     public double TextSize { get; init; }
-    public required Brush Fill { get; init; }
-    public TextDecorations Decorations { get; init; }
-    public required string Marker { get; init; }
-    public required JsonElement Annotation { get; init; }
+    public required JsonElement Annotation { get; set; }
 }
 
 public sealed class SearchRow
@@ -46,7 +40,7 @@ public sealed partial class MainWindow : Window
     private string edition = "KJV";
     private int book, chapter, currentVerse, searchGeneration;
     private double fontSize = 20;
-    private bool ready, changing, dialogOpen, closed;
+    private bool ready, changing, closed;
     private string section = "read";
 
     public MainWindow()
@@ -54,6 +48,8 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         Navigation.IsEnabled = false;
         AppWindow.Resize(new global::Windows.Graphics.SizeInt32(1180, 820));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Bibbia.ico"));
+        Root.ActualThemeChanged += (_, _) => UpdateWindowTheme();
         Root.Loaded += OnLoaded;
         Closed += (_, _) =>
         {
@@ -68,7 +64,7 @@ public sealed partial class MainWindow : Window
     private void ShowError(Exception e)
     {
         if (closed) return;
-        ErrorBar.Message = e.Message;
+        ErrorBar.Message = T(e.Message);
         ErrorBar.IsOpen = true;
     }
     private void Guard(Action action)
@@ -106,10 +102,11 @@ public sealed partial class MainWindow : Window
                     ThemePicker.SelectedIndex = Root.RequestedTheme == ElementTheme.Light ? 1 : Root.RequestedTheme == ElementTheme.Dark ? 2 : 0;
                 }
                 FontSlider.Value = fontSize;
-                EditionPicker.ItemsSource = editions;
-                EditionPicker.SelectedItem = edition;
+                InitializeLanguages(boot);
             }
             finally { changing = false; }
+            ApplyLanguage();
+            UpdateWindowTheme();
             LoadBooks();
             ready = true;
             LoadChapter(currentVerse);
@@ -136,27 +133,14 @@ public sealed partial class MainWindow : Window
 
     private void LoadChapter(int focusVerse = -1)
     {
+        liveEditors.Clear();
         var rows = BibleEngine.Call(new { op = "chapter", edition, book, chapter }).EnumerateArray().Select(x =>
-        {
-            var a = x.GetProperty("annotation");
-            var color = a.GetProperty("highlight").GetString();
-            var fill = color switch
-            {
-                "yellow" => global::Windows.UI.Color.FromArgb(65, 235, 183, 30),
-                "green" => global::Windows.UI.Color.FromArgb(65, 75, 180, 100),
-                "blue" => global::Windows.UI.Color.FromArgb(65, 65, 155, 235),
-                "pink" => global::Windows.UI.Color.FromArgb(65, 220, 100, 160),
-                _ => Colors.Transparent
-            };
-            return new VerseRow { Index = x.GetProperty("verse").GetInt32(), Text = x.GetProperty("text").GetString()!,
-                TextSize = fontSize, Fill = new SolidColorBrush(fill), Annotation = a.Clone(),
-                Decorations = a.GetProperty("underline").GetBoolean() ? TextDecorations.Underline : TextDecorations.None,
-                Marker = a.GetProperty("bookmark").GetBoolean() ? "\uE8A4" : a.GetProperty("note").GetString()!.Length > 0 ? "\uE70B" : "" };
-        }).ToList();
+            new VerseRow { Index = x.GetProperty("verse").GetInt32(), Text = x.GetProperty("text").GetString()!,
+                TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
         VerseList.ItemsSource = rows;
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
         ReadingLabel.Text = $"{books[book].Name} {chapter + 1}";
-        StatusLabel.Text = $"Offline · {edition} · {rows.Count} versetti · Seleziona un versetto per annotarlo";
+        StatusLabel.Text = T("Offline · {0} · {1} versetti · Seleziona parole o frasi per annotarle", edition, rows.Count);
         PreviousButton.IsEnabled = book > 0 || chapter > 0;
         NextButton.IsEnabled = book < books.Count - 1 || chapter < books[book].Chapters - 1;
         SavePosition();
@@ -213,11 +197,11 @@ public sealed partial class MainWindow : Window
         ResultsPanel.Visibility = tag is "search" or "saved" ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
         SearchBar.Visibility = tag == "search" ? Visibility.Visible : Visibility.Collapsed;
-        PageTitle.Text = tag switch { "search" => "Trova le parole.", "saved" => "Portale con te.", "settings" => "Come piace a te.", _ => "Leggi con calma." };
+        PageTitle.Text = T(tag switch { "search" => "Trova le parole.", "saved" => "Portale con te.", "settings" => "Come piace a te.", _ => "Leggi con calma." });
         if (tag == "search")
         {
             ResultList.ItemsSource = null;
-            ResultStatus.Text = $"Cerca in {edition}. Fino a 200 risultati per ricerca.";
+            ResultStatus.Text = T("Cerca in {0}. Fino a 200 risultati per ricerca.", edition);
             SearchBox.Focus(FocusState.Programmatic);
         }
         if (tag == "saved" && ready) LoadSaved();
@@ -225,7 +209,7 @@ public sealed partial class MainWindow : Window
     }
     private void AppearanceClick(object sender, RoutedEventArgs e) => Navigation.SelectedItem = Navigation.FooterMenuItems[0];
 
-    private static SearchRow ToSearchRow(JsonElement x, bool annotated)
+    private SearchRow ToSearchRow(JsonElement x, bool annotated)
     {
         var b = x.GetProperty("book").GetInt32(); var c = x.GetProperty("chapter").GetInt32(); var v = x.GetProperty("verse").GetInt32();
         var detail = "";
@@ -233,9 +217,9 @@ public sealed partial class MainWindow : Window
         {
             var a = x.GetProperty("annotation");
             List<string> labels = [];
-            if (a.GetProperty("bookmark").GetBoolean()) labels.Add("Segnalibro");
-            if (a.GetProperty("highlight").ValueKind == JsonValueKind.String) labels.Add("Evidenziato");
-            if (a.GetProperty("underline").GetBoolean()) labels.Add("Sottolineato");
+            if (a.GetProperty("bookmark").GetBoolean()) labels.Add(T("Segnalibro"));
+            if (a.GetProperty("highlight").ValueKind == JsonValueKind.String || a.GetProperty("ranges").EnumerateArray().Any(m => m.GetProperty("highlight").ValueKind == JsonValueKind.String)) labels.Add(T("Evidenziato"));
+            if (a.GetProperty("underline").GetBoolean() || a.GetProperty("ranges").EnumerateArray().Any(m => m.GetProperty("underline").GetBoolean())) labels.Add(T("Sottolineato"));
             if (a.GetProperty("note").GetString() is { Length: > 0 } note) labels.Add(note);
             detail = string.Join(" · ", labels);
         }
@@ -245,7 +229,7 @@ public sealed partial class MainWindow : Window
     {
         var rows = BibleEngine.Call(new { op = "saved", edition }).EnumerateArray().Select(x => ToSearchRow(x, true)).ToList();
         ResultList.ItemsSource = rows;
-        ResultStatus.Text = rows.Count == 0 ? $"Nessun appunto in {edition}. Seleziona un versetto durante la lettura per iniziare." : $"{rows.Count} versetti nella tua raccolta · {edition}";
+        ResultStatus.Text = rows.Count == 0 ? T("Nessun appunto in {0}. Seleziona parole o frasi durante la lettura per iniziare.", edition) : T("{0} versetti nella tua raccolta · {1}", rows.Count, edition);
     }
     private async void SearchClick(object sender, RoutedEventArgs e) => await GuardAsync(Search);
     private async void SearchKeyDown(object sender, KeyRoutedEventArgs e)
@@ -259,19 +243,19 @@ public sealed partial class MainWindow : Window
         var query = SearchBox.Text;
         var selectedEdition = edition;
         ResultList.ItemsSource = null;
-        ResultStatus.Text = "Ricerca in corso…";
+        ResultStatus.Text = T("Ricerca in corso…");
         try
         {
             var result = await Task.Run(() => BibleEngine.Call(new { op = "search", edition = selectedEdition, query }));
             if (closed || generation != searchGeneration || section != "search") return;
             var rows = result.GetProperty("hits").EnumerateArray().Select(x => ToSearchRow(x, false)).ToList();
             ResultList.ItemsSource = rows;
-            ResultStatus.Text = result.GetProperty("truncated").GetBoolean() ? "Primi 200 risultati. Affina la ricerca per trovarne altri." : $"{rows.Count} risultati · {selectedEdition}";
+            ResultStatus.Text = result.GetProperty("truncated").GetBoolean() ? T("Primi 200 risultati. Affina la ricerca per trovarne altri.") : T("{0} risultati · {1}", rows.Count, selectedEdition);
         }
         catch (Exception e)
         {
             if (!closed && generation == searchGeneration && section == "search")
-                ResultStatus.Text = e.Message;
+                ResultStatus.Text = T(e.Message);
         }
     }
     private void ResultClicked(object sender, ItemClickEventArgs e)
@@ -285,45 +269,6 @@ public sealed partial class MainWindow : Window
         });
     }
 
-    private async void VerseSelected(object sender, SelectionChangedEventArgs e)
-    {
-        if (!ready || dialogOpen || VerseList.SelectedItem is not VerseRow row) return;
-        dialogOpen = true;
-        await GuardAsync(async () =>
-        {
-            currentVerse = row.Index;
-            SavePosition();
-            var a = row.Annotation;
-            var colors = new[] { "Nessuna", "Giallo", "Verde", "Blu", "Rosa" };
-            var keys = new string?[] { null, "yellow", "green", "blue", "pink" };
-            var color = new ComboBox { Header = "Evidenziazione", ItemsSource = colors, SelectedIndex = Array.IndexOf(keys, a.GetProperty("highlight").GetString()), MinWidth = 260 };
-            var underline = new CheckBox { Content = "Sottolinea", IsChecked = a.GetProperty("underline").GetBoolean() };
-            var bookmark = new CheckBox { Content = "Aggiungi ai segnalibri", IsChecked = a.GetProperty("bookmark").GetBoolean() };
-            var note = new TextBox { Header = "La tua nota", Text = a.GetProperty("note").GetString(), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 100, MaxLength = 8000 };
-            var copy = new Button { Content = "Copia versetto" };
-            copy.Click += (_, _) => Guard(() =>
-            {
-                var data = new DataPackage();
-                data.SetText($"{books[book].Name} {chapter + 1}:{row.Index + 1} ({edition})\n{row.Text}");
-                Clipboard.SetContent(data);
-                copy.Content = "Copiato";
-            });
-            var content = new StackPanel { Spacing = 12, MinWidth = 300 };
-            content.Children.Add(new TextBlock { Text = row.Text, TextWrapping = TextWrapping.Wrap, MaxHeight = 150 });
-            content.Children.Add(color); content.Children.Add(underline); content.Children.Add(bookmark); content.Children.Add(note); content.Children.Add(copy);
-            var dialog = new ContentDialog { XamlRoot = Root.XamlRoot, RequestedTheme = Root.RequestedTheme, Title = $"{books[book].Name} {chapter + 1}:{row.Index + 1}",
-                Content = new ScrollViewer { Content = content }, PrimaryButtonText = "Salva", CloseButtonText = "Annulla", DefaultButton = ContentDialogButton.Primary };
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            {
-                BibleEngine.Call(new { op = "annotate", edition, book, chapter, verse = row.Index,
-                    annotation = new { highlight = keys[Math.Max(0, color.SelectedIndex)], underline = underline.IsChecked == true, bookmark = bookmark.IsChecked == true, note = note.Text } });
-                LoadChapter(row.Index);
-            }
-        });
-        VerseList.SelectedItem = null;
-        dialogOpen = false;
-    }
-
     private void ThemeChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!ready || changing) return;
@@ -332,6 +277,7 @@ public sealed partial class MainWindow : Window
             var theme = ((ComboBoxItem)ThemePicker.SelectedItem).Tag.ToString()!;
             BibleEngine.Call(new { op = "settings", key = "theme", value = theme });
             Root.RequestedTheme = Enum.Parse<ElementTheme>(theme);
+            UpdateWindowTheme();
         });
     }
     private void FontChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -341,8 +287,8 @@ public sealed partial class MainWindow : Window
     }
     private void EditionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!ready || changing || EditionPicker.SelectedItem is not string selected) return;
-        Guard(() => { searchGeneration++; edition = selected; book = chapter = 0; LoadBooks(); LoadChapter(); });
+        if (!ready || changing || EditionPicker.SelectedItem is not EditionOption selected) return;
+        Guard(() => { searchGeneration++; edition = selected.Id; book = chapter = 0; LoadBooks(); LoadChapter(); });
     }
     private async void OpenDataClick(object sender, RoutedEventArgs e) => await GuardAsync(async () =>
     {
@@ -356,12 +302,12 @@ public sealed partial class MainWindow : Window
         picker.FileTypeFilter.Add(".json");
         var file = await picker.PickSingleFileAsync();
         if (file == null) return;
-        var name = new TextBox { Header = "Nome della traduzione", Text = Path.GetFileNameWithoutExtension(file.Name), MaxLength = 80 };
-        var rights = new CheckBox { Content = "Ho il diritto di utilizzare questo testo." };
+        var name = new TextBox { Header = T("Nome della traduzione"), Text = Path.GetFileNameWithoutExtension(file.Name), MaxLength = 80 };
+        var rights = new CheckBox { Content = T("Ho il diritto di utilizzare questo testo.") };
         var content = new StackPanel { Spacing = 12 };
-        content.Children.Add(new TextBlock { Text = "Formato: elenco di libri con name, abbrev e chapters (elenchi di versetti). Massimo 32 MB. La traduzione sarà copiata nel database locale.", TextWrapping = TextWrapping.Wrap });
+        content.Children.Add(new TextBlock { Text = T("Formato: elenco di libri con name, abbrev e chapters (elenchi di versetti). Massimo 32 MB. La traduzione sarà copiata nel database locale."), TextWrapping = TextWrapping.Wrap });
         content.Children.Add(name); content.Children.Add(rights);
-        var dialog = new ContentDialog { XamlRoot = Root.XamlRoot, RequestedTheme = Root.RequestedTheme, Title = "Importa traduzione", Content = content, PrimaryButtonText = "Importa", CloseButtonText = "Annulla", IsPrimaryButtonEnabled = false };
+        var dialog = new ContentDialog { XamlRoot = Root.XamlRoot, RequestedTheme = Root.RequestedTheme, Title = T("Importa traduzione"), Content = content, PrimaryButtonText = T("Importa"), CloseButtonText = T("Annulla"), IsPrimaryButtonEnabled = false };
         rights.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
         rights.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = false;
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
@@ -377,12 +323,15 @@ public sealed partial class MainWindow : Window
         changing = true;
         try
         {
-            EditionPicker.ItemsSource = boot.GetProperty("editions").EnumerateArray().Select(x => x.GetString()!).ToList();
-            EditionPicker.SelectedItem = id;
+            edition = id;
+            bibleLanguage = "all";
+            BibleEngine.Call(new {op="settings",key="bibleLanguage",value=bibleLanguage});
+            InitializeEditionOptions(boot);
+            RefreshEditionPicker();
         }
         finally { changing = false; }
         edition = id; book = chapter = 0;
         LoadBooks(); LoadChapter();
-        StatusLabel.Text = $"{id} importata. Apri Leggi per iniziare.";
+        StatusLabel.Text = T("{0} importata. Apri Leggi per iniziare.", id);
     });
 }

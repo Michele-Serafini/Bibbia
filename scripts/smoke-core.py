@@ -34,7 +34,7 @@ def main():
         annotation = dict(highlight="green", underline=True, bookmark=True, note="Perché c’è speranza 🌱")
         call(op="annotate", book=42, chapter=2, verse=15, annotation=annotation)
         call(op="init", directory=directory)
-        assert call(op="saved")[0]["annotation"] == annotation
+        assert call(op="saved")[0]["annotation"] == {**annotation, "ranges": []}
         call(op="close")
         print("Release ABI: lettura, ricerca, UTF-8 e persistenza verificati.")
 

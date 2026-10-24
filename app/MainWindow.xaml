@@ -8,12 +8,12 @@
             IsSettingsVisible="False" SelectionChanged="NavigationChanged" OpenPaneLength="220"
             PaneTitle="Bibbia" AlwaysShowHeader="False">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Leggi" Tag="read" Icon="Read" IsSelected="True" />
+                <NavigationViewItem Content="Leggi" Tag="read" AutomationProperties.AutomationId="ReadNavigation" Icon="Read" IsSelected="True" />
                 <NavigationViewItem Content="Cerca" Tag="search" Icon="Find" AutomationProperties.AutomationId="SearchNavigation" />
                 <NavigationViewItem Content="La mia raccolta" Tag="saved" Icon="Bookmarks" />
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="Aspetto e traduzioni" Tag="settings" Icon="Setting" />
+                <NavigationViewItem Content="Aspetto e traduzioni" Tag="settings" AutomationProperties.AutomationId="SettingsNavigation" Icon="Setting" />
             </NavigationView.FooterMenuItems>
             <Grid Padding="28,20,28,16" RowSpacing="16">
                 <Grid.RowDefinitions>
@@ -21,7 +21,7 @@
                     <RowDefinition Height="*" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <StackPanel Spacing="4">
-                    <TextBlock Text="UNO SPAZIO PER LA PAROLA" FontSize="11" CharacterSpacing="180"
+                    <TextBlock x:Name="EyebrowLabel" Text="UNO SPAZIO PER LA PAROLA" FontSize="11" CharacterSpacing="180"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock x:Name="PageTitle" Text="Leggi con calma." Style="{ThemeResource TitleTextBlockStyle}" />
                 </StackPanel>
@@ -35,18 +35,21 @@
                             <ComboBox x:Name="ChapterPicker" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="ChapterChanged" AutomationProperties.Name="Capitolo" />
                             <Button Grid.Column="2" Content="Aa" Click="AppearanceClick" AutomationProperties.Name="Aspetto della lettura" ToolTipService.ToolTip="Dimensione del testo e tema" />
                         </Grid>
-                        <ListView x:Name="VerseList" Grid.Row="1" SelectionMode="Single" SelectionChanged="VerseSelected"
+                        <ListView x:Name="VerseList" Grid.Row="1" SelectionMode="None"
                             HorizontalContentAlignment="Stretch" MaxWidth="850" HorizontalAlignment="Stretch"
                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Versetti del capitolo" AutomationProperties.AutomationId="VerseList">
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:VerseRow">
-                                    <Border Padding="12,10" Margin="0,2" CornerRadius="6" Background="{x:Bind Fill}">
-                                        <Grid ColumnSpacing="14">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="32" /><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions>
+                                    <Border Padding="12,10" Margin="0,2" CornerRadius="6">
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,6,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Grid.Column="1" Text="{x:Bind Text}" FontFamily="Georgia" FontSize="{x:Bind TextSize}"
-                                                TextWrapping="Wrap" TextDecorations="{x:Bind Decorations}" IsTextSelectionEnabled="False" />
-                                            <TextBlock Grid.Column="2" Text="{x:Bind Marker}" FontFamily="Segoe Fluent Icons" Margin="0,6,0,0" />
+                                            <RichEditBox Grid.Column="1" Loaded="VerseEditorLoaded" DataContextChanged="VerseEditorDataContextChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
+                                                FontFamily="Georgia" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" BorderThickness="0"
+                                                ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                ScrollViewer.VerticalScrollMode="Disabled" />
+                                            <Button Grid.Column="2" Content="⋯" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
+                                                Padding="6" MinWidth="28" Style="{ThemeResource SubtleButtonStyle}" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -81,21 +84,23 @@
                     </Grid>
                     <ScrollViewer x:Name="SettingsPanel" Visibility="Collapsed">
                         <StackPanel MaxWidth="600" HorizontalAlignment="Left" Spacing="18">
-                            <TextBlock Text="Il tuo modo di leggere" Style="{ThemeResource SubtitleTextBlockStyle}" />
-                            <ComboBox x:Name="ThemePicker" Header="Tema" Width="240" SelectedIndex="0" SelectionChanged="ThemeChanged">
+                            <TextBlock x:Name="AppearanceLabel" Text="Il tuo modo di leggere" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                            <ComboBox x:Name="AppLanguagePicker" Header="Lingua dell’app" Width="280" SelectionChanged="AppLanguageChanged" AutomationProperties.AutomationId="AppLanguagePicker"><ComboBoxItem Content="Italiano" Tag="it" /><ComboBoxItem Content="English" Tag="en" /></ComboBox>
+                            <ComboBox x:Name="ThemePicker" AutomationProperties.AutomationId="ThemePicker" Header="Tema" Width="240" SelectedIndex="0" SelectionChanged="ThemeChanged">
                                 <ComboBoxItem Content="Come Windows" Tag="Default" /><ComboBoxItem Content="Chiaro" Tag="Light" /><ComboBoxItem Content="Scuro" Tag="Dark" />
                             </ComboBox>
                             <Slider x:Name="FontSlider" Header="Dimensione del testo" Minimum="14" Maximum="32" Value="20"
                                 StepFrequency="1" SnapsTo="StepValues" Width="300" ValueChanged="FontChanged" />
-                            <ComboBox x:Name="EditionPicker" Header="Traduzione" MinWidth="280" SelectionChanged="EditionChanged" />
-                            <TextBlock Text="Diodati 1649: Bibbia completa in italiano, di pubblico dominio. È inclusa anche la KJV inglese. Puoi importare altre traduzioni JSON che hai il diritto di utilizzare. L’app funziona senza connessione."
+                            <ComboBox x:Name="BibleLanguagePicker" AutomationProperties.AutomationId="BibleLanguagePicker" Header="Lingua della Bibbia" Width="280" SelectionChanged="BibleLanguageChanged"><ComboBoxItem Content="Italiano" Tag="it" /><ComboBoxItem Content="English" Tag="en" /><ComboBoxItem Content="Tutte" Tag="all" /></ComboBox>
+                            <ComboBox x:Name="EditionPicker" DisplayMemberPath="Name" AutomationProperties.AutomationId="EditionPicker" Header="Traduzione" MinWidth="280" SelectionChanged="EditionChanged" />
+                            <TextBlock x:Name="CatalogDescription" Text="Martini 1781: Bibbia cattolica italiana completa, 73 libri e numerazione della Vulgata. Sono incluse anche Diodati e KJV. La lingua dell’app è indipendente dalla lingua della Bibbia."
                                 TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <Button Content="Importa traduzione JSON…" Click="ImportClick" />
-                            <TextBlock Text="I tuoi appunti restano sul dispositivo" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,12,0,0" />
-                            <TextBlock Text="Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento."
+                            <Button x:Name="ImportButton" Content="Importa traduzione JSON…" Click="ImportClick" />
+                            <TextBlock x:Name="PrivacyTitle" Text="I tuoi appunti restano sul dispositivo" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,12,0,0" />
+                            <TextBlock x:Name="PrivacyDescription" Text="Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento."
                                 TextWrapping="Wrap" />
-                            <Button Content="Apri cartella dati" Click="OpenDataClick" />
-                            <TextBlock Text="Bibbia · 0.1&#x0a;Interfaccia Windows nativa · Motore Rust&#x0a;Progetto indipendente, non affiliato a YouVersion."
+                            <Button x:Name="OpenDataButton" Content="Apri cartella dati" Click="OpenDataClick" />
+                            <TextBlock x:Name="AboutLabel" Text="Bibbia · 0.2&#x0a;Interfaccia Windows nativa · Motore Rust&#x0a;Progetto indipendente, non affiliato a YouVersion."
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </ScrollViewer>

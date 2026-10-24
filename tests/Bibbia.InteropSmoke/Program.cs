@@ -10,7 +10,11 @@ void Check(bool condition, string message) { if (!condition) throw new InvalidOp
 try
 {
     var boot = BibleEngine.Call(new { op = "init", directory });
-    Check(boot.GetProperty("defaultEdition").GetString() == "Diodati 1649", "Traduzione italiana iniziale mancante.");
+    Check(boot.GetProperty("defaultEdition").GetString() == "Martini 1781 (cattolica)", "Traduzione italiana iniziale mancante.");
+    const string catholic = "Martini 1781 (cattolica)";
+    Check(BibleEngine.Call(new {op="books",edition=catholic}).GetArrayLength() == 73, "Canone cattolico incompleto.");
+    var mark = BibleEngine.Call(new {op="mark",edition=catholic,book=0,chapter=0,verse=0,start=3,length=9,action="underline"});
+    Check(mark.GetProperty("ranges")[0].GetProperty("length").GetInt32() == 9, "Selezione parziale non conservata dal ponte nativo.");
     var verses = BibleEngine.Call(new { op = "chapter", edition = "Diodati 1649", book = 0, chapter = 0 });
     Check(verses.GetArrayLength() == 31, "Genesi 1 incompleta.");
     Check(verses[0].GetProperty("text").GetString()!.Contains("Iddio creò"), "Testo UTF-8 non corretto.");
@@ -18,6 +22,7 @@ try
     BibleEngine.Call(new { op = "annotate", edition = "Diodati 1649", book = 0, chapter = 0, verse = 0, annotation });
     BibleEngine.Call(new { op = "close" });
     BibleEngine.Call(new { op = "init", directory });
+    Check(BibleEngine.Call(new {op="chapter",edition=catholic,book=0,chapter=0})[0].GetProperty("annotation").GetProperty("ranges")[0].GetProperty("underline").GetBoolean(), "Sottolineatura parziale persa alla riapertura.");
     var saved = BibleEngine.Call(new { op = "saved", edition = "Diodati 1649" });
     Check(saved[0].GetProperty("annotation").GetProperty("note").GetString() == annotation.note, "Nota persa dopo riapertura.");
     var source = Path.Combine(directory, "traduzione.json");

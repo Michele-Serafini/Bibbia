@@ -10,9 +10,12 @@ use std::{
 };
 
 type Result<T> = std::result::Result<T, String>;
+mod selection;
+use selection::TextMark;
 const KJV: &str = include_str!("../data/kjv.json");
 const DIODATI: &str = include_str!("../data/diodati.json");
-const DEFAULT_EDITION: &str = "Diodati 1649";
+const MARTINI: &str = include_str!("../data/martini.json");
+const DEFAULT_EDITION: &str = "Martini 1781 (cattolica)";
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Book {
@@ -27,6 +30,8 @@ pub struct Annotation {
     pub underline: bool,
     pub bookmark: bool,
     pub note: String,
+    #[serde(default)]
+    pub ranges: Vec<TextMark>,
 }
 
 pub struct Engine {
@@ -66,8 +71,12 @@ impl Engine {
         let mut editions = BTreeMap::new();
         editions.insert("KJV".into(), serde_json::from_str(KJV).map_err(error)?);
         editions.insert(
-            DEFAULT_EDITION.into(),
+            "Diodati 1649".into(),
             serde_json::from_str(DIODATI).map_err(error)?,
+        );
+        editions.insert(
+            DEFAULT_EDITION.into(),
+            serde_json::from_str(MARTINI).map_err(error)?,
         );
         {
             let mut stmt = db
@@ -82,6 +91,38 @@ impl Engine {
             }
         }
         Ok(Self { db, editions })
+    }
+
+    fn save_annotation(
+        &self,
+        edition: &str,
+        book: usize,
+        chapter: usize,
+        verse: usize,
+        a: &Annotation,
+    ) -> Result<()> {
+        if *a == Annotation::default() {
+            self.db
+                .execute(
+                    "DELETE FROM annotations WHERE edition=? AND book=? AND chapter=? AND verse=?",
+                    params![edition, book as i64, chapter as i64, verse as i64],
+                )
+                .map_err(error)?;
+        } else {
+            self.db
+                .execute(
+                    "INSERT OR REPLACE INTO annotations VALUES (?,?,?,?,?)",
+                    params![
+                        edition,
+                        book as i64,
+                        chapter as i64,
+                        verse as i64,
+                        serde_json::to_string(a).map_err(error)?
+                    ],
+                )
+                .map_err(error)?;
+        }
+        Ok(())
     }
 
     fn books(&self, edition: &str) -> Result<&Vec<Book>> {
@@ -135,7 +176,8 @@ impl Engine {
                     settings.insert(k, serde_json::from_str(&v).map_err(error)?);
                 }
                 Ok(
-                    json!({"editions":self.editions.keys().collect::<Vec<_>>(), "defaultEdition":DEFAULT_EDITION, "settings":settings}),
+                    json!({"editions":self.editions.keys().collect::<Vec<_>>(), "defaultEdition":DEFAULT_EDITION, "settings":settings,
+                        "editionMetadata":self.editions.iter().map(|(id,b)|json!({"id":id,"language":if id=="KJV" {"en"} else if id=="Diodati 1649" || id==DEFAULT_EDITION {"it"} else {"und"},"books":b.len(),"catholic":id==DEFAULT_EDITION})).collect::<Vec<_>>()}),
                 )
             }
             "books" => Ok(json!(
@@ -169,31 +211,47 @@ impl Engine {
                         .ok_or("Annotazione mancante")?,
                 )
                 .map_err(error)?;
-                if let Some(color) = &annotation.highlight
-                    && !["yellow", "green", "blue", "pink"].contains(&color.as_str())
-                {
+                if !selection::valid_color(&annotation.highlight) {
                     return Err("Colore non valido".into());
                 }
                 if annotation.note.len() > 32_768 {
                     return Err("Nota troppo lunga".into());
                 }
-                if annotation == Annotation::default() {
-                    self.db.execute("DELETE FROM annotations WHERE edition=? AND book=? AND chapter=? AND verse=?",
-                        params![edition,book as i64,chapter as i64,verse as i64]).map_err(error)?;
-                } else {
-                    self.db
-                        .execute(
-                            "INSERT OR REPLACE INTO annotations VALUES (?,?,?,?,?)",
-                            params![
-                                edition,
-                                book as i64,
-                                chapter as i64,
-                                verse as i64,
-                                serde_json::to_string(&annotation).map_err(error)?
-                            ],
-                        )
-                        .map_err(error)?;
+                if annotation.ranges.len() > 512 {
+                    return Err("Troppe annotazioni nel versetto".into());
                 }
+                for mark in &annotation.ranges {
+                    selection::validate_range(
+                        &self.chapter(edition, book, chapter)?[verse],
+                        mark.start,
+                        mark.length,
+                    )?;
+                    if !selection::valid_color(&mark.highlight) {
+                        return Err("Colore non valido".into());
+                    }
+                }
+                self.save_annotation(edition, book, chapter, verse, &annotation)?;
+                Ok(json!(annotation))
+            }
+            "mark" => {
+                let (book, chapter, verse) = (
+                    index(&request, "book")?,
+                    index(&request, "chapter")?,
+                    index(&request, "verse")?,
+                );
+                let text = self
+                    .chapter(edition, book, chapter)?
+                    .get(verse)
+                    .ok_or("Versetto non disponibile")?;
+                let mut annotation = self.annotation(edition, book, chapter, verse)?;
+                selection::apply_mark(
+                    text,
+                    &mut annotation,
+                    index(&request, "start")?,
+                    index(&request, "length")?,
+                    field(&request, "action")?,
+                )?;
+                self.save_annotation(edition, book, chapter, verse, &annotation)?;
                 Ok(json!(annotation))
             }
             "saved" => {
@@ -255,10 +313,20 @@ impl Engine {
             }
             "settings" => {
                 let key = field(&request, "key")?;
-                if !["position", "fontSize", "theme"].contains(&key) {
+                if !["position", "fontSize", "theme", "language", "bibleLanguage"].contains(&key) {
                     return Err("Impostazione sconosciuta".into());
                 }
                 let value = request.get("value").ok_or("Valore mancante")?;
+                if key == "language" && !value.as_str().is_some_and(|s| ["it", "en"].contains(&s)) {
+                    return Err("Lingua non disponibile".into());
+                }
+                if key == "bibleLanguage"
+                    && !value
+                        .as_str()
+                        .is_some_and(|s| ["it", "en", "all"].contains(&s))
+                {
+                    return Err("Lingua non disponibile".into());
+                }
                 if key == "fontSize" && !value.as_u64().is_some_and(|n| (14..=32).contains(&n)) {
                     return Err("Dimensione non valida".into());
                 }
@@ -289,7 +357,10 @@ impl Engine {
             }
             "import" => {
                 let id = field(&request, "id")?.trim();
-                if id.is_empty() || id.len() > 80 || ["KJV", DEFAULT_EDITION].contains(&id) {
+                if id.is_empty()
+                    || id.len() > 80
+                    || ["KJV", "Diodati 1649", DEFAULT_EDITION].contains(&id)
+                {
                     return Err("Nome traduzione non valido o riservato".into());
                 }
                 if self.editions.contains_key(id) {

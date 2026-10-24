@@ -28,7 +28,9 @@ VIAddVersionKey /LANG=1040 "FileVersion" "${APP_VERSION}.0"
 VIAddVersionKey /LANG=1040 "LegalCopyright" "Progetto Bibbia · Licenza MIT"
 
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TEXT "Leggi la Bibbia offline, evidenzia i versetti e conserva i tuoi appunti.$\r$\n$\r$\nLa Diodati italiana e la KJV inglese sono incluse. Non sono richiesti account o download aggiuntivi.$\r$\n$\r$\nL'app sarà installata solo per il tuo utente."
+!define MUI_ICON "${PROJECT_DIR}\app\Assets\Bibbia.ico"
+!define MUI_UNICON "${PROJECT_DIR}\app\Assets\Bibbia.ico"
+!define MUI_WELCOMEPAGE_TEXT "Leggi la Bibbia offline, evidenzia parole e frasi e conserva i tuoi appunti.$\r$\n$\r$\nSono incluse la Bibbia cattolica Martini in italiano, la Diodati e la KJV inglese. Non sono richiesti account o download aggiuntivi.$\r$\n$\r$\nL'app sarà installata solo per il tuo utente."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${PROJECT_DIR}\LICENSE"
 !insertmacro MUI_PAGE_DIRECTORY
