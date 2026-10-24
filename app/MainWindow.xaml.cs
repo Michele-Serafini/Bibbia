@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Windowing;
 using System.Text.Json;
 using Windows.Storage.Pickers;
 using Windows.System;
@@ -47,7 +48,11 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         Navigation.IsEnabled = false;
-        AppWindow.Resize(new global::Windows.Graphics.SizeInt32(1180, 820));
+        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        var width = Math.Min(1180, area.Width - 32);
+        var height = Math.Min(820, area.Height - 32);
+        AppWindow.MoveAndResize(new global::Windows.Graphics.RectInt32(
+            area.X + (area.Width-width)/2, area.Y + (area.Height-height)/2, width, height));
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Bibbia.ico"));
         Root.ActualThemeChanged += (_, _) => UpdateWindowTheme();
         Root.Loaded += OnLoaded;

@@ -47,7 +47,13 @@
                                             <RichEditBox Grid.Column="1" Loaded="VerseEditorLoaded" DataContextChanged="VerseEditorDataContextChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
                                                 FontFamily="Georgia" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" BorderThickness="0"
                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                ScrollViewer.VerticalScrollMode="Disabled" />
+                                                ScrollViewer.VerticalScrollMode="Disabled" UseSystemFocusVisuals="True">
+                                                <RichEditBox.Resources>
+                                                    <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+                                                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+                                                </RichEditBox.Resources>
+                                            </RichEditBox>
                                             <Button Grid.Column="2" Content="⋯" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
                                                 Padding="6" MinWidth="28" Background="Transparent" BorderThickness="0" />
                                         </Grid>
