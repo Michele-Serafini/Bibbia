@@ -33,7 +33,7 @@ WinUI ufficiali con un motore Rust indipendente e testabile.
 
 ## Installare su Windows
 
-Il pacchetto previsto è **`Bibbia-Setup-0.1.0-x64.exe`**: un solo installer offline,
+[Scarica **Bibbia-Setup-0.1.0-x64.exe**](https://github.com/Michele-Serafini/Notion/releases/download/v0.1.0/Bibbia-Setup-0.1.0-x64.exe): un solo installer offline,
 con interfaccia italiana. Non richiede Rust, .NET, Visual Studio, account o
 download aggiuntivi sul PC destinatario. Supporta Windows 10 versione 2004 o
 successiva e Windows 11 a 64 bit.
@@ -44,15 +44,17 @@ successiva e Windows 11 a 64 bit.
 4. Per rimuovere l'app usare **Impostazioni Windows → App → Bibbia → Disinstalla**.
    Note, segnalibri e traduzioni importate vengono conservati.
 
-Il workflow GitHub Actions **Check and build** genera l'installer nell'artefatto
-**Bibbia-Installer-x64**, insieme al checksum SHA-256. Dopo il caricamento di
-questi file nel repository, eseguire il workflow dalla scheda **Actions**,
-scaricare l'artefatto ed estrarre il `.exe` dallo ZIP di GitHub.
-Non viene pubblicata automaticamente una release.
+La [release v0.1.0](https://github.com/Michele-Serafini/Notion/releases/tag/v0.1.0)
+contiene l'installer e il checksum SHA-256. Per le nuove build il workflow
+GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-x64**.
+Il workflow manuale **Publish verified installer** pubblica gli stessi file di una
+build completata con successo, dopo averne ricontrollato il checksum, senza ricompilarli.
 
-**Stato:** nell'ambiente Linux è stato compilato lo script NSIS con un payload
-di prova, eliminato al termine. L'installer della vera applicazione non è ancora
-stato generato: richiede l'esecuzione della build e dei test su Windows.
+**Verifica v0.1.0:** [pipeline completata con successo](https://github.com/Michele-Serafini/Notion/actions/runs/40106811927).
+Passati i 7 test Rust su Linux e Windows, i test C# → Rust e le prove automatiche
+di installazione, aggiornamento, avvio WinUI, lettura e ricerca mediante controlli
+reali, blocco con app aperta, disinstallazione e conservazione dei file personali
+su un runner Windows Server 2022. Il codice applicativo verificato è `28e529f`.
 La build non è firmata digitalmente; Windows può mostrare un avviso SmartScreen.
 
 ## Compilare e avviare su Windows
@@ -105,9 +107,9 @@ La prova WinUI usa Windows UI Automation e richiede una sessione desktop interat
 Non eseguirla su un profilo con appunti reali.
 
 Il workflow `.github/workflows/check.yml` compila il motore su Linux e l'intera
-app su Windows e carica un artefatto scaricabile. Il workflow deve essere eseguito
-su GitHub: la sua presenza non costituisce una build Windows riuscita.
-L'installer viene caricato solo dopo il completamento dei test Windows.
+app su Windows. L'installer viene caricato solo dopo il completamento dei test
+Windows. Per pubblicarlo, avviare `publish-release.yml` dalla scheda Actions e
+indicare il numero di una build **Check and build** riuscita sul ramo `main`.
 
 ## Sviluppare il motore su Linux
 
@@ -163,7 +165,7 @@ L'app non trasmette dati. Per il backup chiudere l'app, poi copiare la cartella
 chiudere l'app e ripristinare la cartella. I file non sono cifrati; usare le
 protezioni dell'account Windows per dati sensibili.
 
-## Verifica manuale su Windows
+## Controlli manuali aggiuntivi su Windows
 
 1. Avviare l'app; controllare che la Diodati italiana sia selezionata al primo avvio.
    Aprire Genesi 1, poi Giovanni 3 con libro e capitolo.
@@ -180,5 +182,7 @@ protezioni dell'account Windows per dati sensibili.
 7. Controllare tema Windows, contrasto elevato, tastiera, ridimensionamento e DPI
    al 100/150/200%. Verificare su un PC Windows senza SDK con la cartella pubblicata.
 
-Questa verifica grafica è necessaria prima di considerare pronta una release.
+La pipeline verifica già avvio, lettura e ricerca nell'interfaccia reale.
+Questi controlli aggiuntivi estendono la verifica a dialoghi, accessibilità, DPI
+e PC Windows 10/11 diversi dal runner Windows Server 2022.
 Vedere [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) per fonti e licenze.
