@@ -46,22 +46,28 @@ public sealed partial class MainWindow
         }
         BindVerseEditor(sender);
     }
+    private void VerseEditorUnloaded(object sender,RoutedEventArgs e)
+    {
+        if (sender is not RichEditBox editor) return;
+        if (editor.Tag is VerseRow row && liveEditors.TryGetValue(row.Index,out var mapped) && ReferenceEquals(mapped,editor)) liveEditors.Remove(row.Index);
+        if (ReferenceEquals(selectionEditor,editor)) { selectionTimer?.Stop(); selectionEditor=null; }
+        editor.ContextFlyout=null; editor.Tag=null;
+    }
     private void VerseEditorDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs e) => BindVerseEditor(sender);
     private void BindVerseEditor(object sender)
     {
         if (sender is not RichEditBox editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
-        foreach (var key in liveEditors.Where(x => ReferenceEquals(x.Value,editor)).Select(x => x.Key).ToList()) liveEditors.Remove(key);
+        if (editor.Tag is VerseRow previous && liveEditors.TryGetValue(previous.Index,out var mapped) && ReferenceEquals(mapped,editor)) liveEditors.Remove(previous.Index);
         liveEditors[row.Index] = editor;
         if (ReferenceEquals(editor.Tag,row)) return;
         editor.Tag = row;
-        UpdateDocument(editor,() => editor.Document.SetText(TextSetOptions.None,row.Text));
+        UpdateDocument(editor,() => { editor.Document.SetText(TextSetOptions.None,row.Text); ApplyTextStylesCore(editor,row); });
         AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
         AutomationProperties.SetName(editor,row.Text);
-        ApplyTextStyles(editor,row);
         // The text control dismisses its own SelectionFlyout on focus loss.
         // Own the annotation popup separately so its buttons can receive focus.
         editor.SelectionFlyout = null;
-        editor.ContextFlyout = AnnotationToolbar(editor,row,true);
+        editor.ContextFlyout = AnnotationToolbar(editor,row,true,true);
         TraceSelection("bound",editor);
     }
     private void VersePointerPressed(object sender, PointerRoutedEventArgs e)
@@ -115,11 +121,14 @@ public sealed partial class MainWindow
         // programmatic text/format changes. Keep user editing disabled outside
         // this synchronous update on the UI thread.
         var readOnly = editor.IsReadOnly;
+        var document = editor.Document;
+        var batched = false;
         editor.IsReadOnly = false;
-        try { update(); }
-        finally { editor.IsReadOnly = readOnly; }
+        try { document.BatchDisplayUpdates(); batched=true; document.UndoLimit=0; update(); }
+        finally { try { if (batched) document.ApplyDisplayUpdates(); } finally { editor.IsReadOnly=readOnly; } }
     }
-    private void ApplyTextStyles(RichEditBox editor, VerseRow row) => UpdateDocument(editor,() =>
+    private void ApplyTextStyles(RichEditBox editor, VerseRow row) => UpdateDocument(editor,() => ApplyTextStylesCore(editor,row));
+    private void ApplyTextStylesCore(RichEditBox editor, VerseRow row)
     {
         var whole = editor.Document.GetRange(0,row.Text.Length);
         var a = row.Annotation;
@@ -132,22 +141,21 @@ public sealed partial class MainWindow
             whole.CharacterFormat.BackgroundColor = MarkColor(color);
             whole.CharacterFormat.ForegroundColor = Colors.Black;
         }
-        foreach (var mark in a.GetProperty("ranges").EnumerateArray())
-        {
-            int start = mark.GetProperty("start").GetInt32(), length = mark.GetProperty("length").GetInt32();
-            var range = editor.Document.GetRange(start,start+length);
-            if (mark.GetProperty("underline").GetBoolean()) range.CharacterFormat.Underline = UnderlineType.Single;
+        foreach (var mark in a.GetProperty("ranges").EnumerateArray()) {
+            int start=mark.GetProperty("start").GetInt32(), length=mark.GetProperty("length").GetInt32();
+            var range=editor.Document.GetRange(start,start+length);
+            if (mark.GetProperty("underline").GetBoolean()) range.CharacterFormat.Underline=UnderlineType.Single;
             if (mark.GetProperty("highlight").GetString() is string highlight) {
-                range.CharacterFormat.BackgroundColor = MarkColor(highlight);
-                range.CharacterFormat.ForegroundColor = Colors.Black;
+                range.CharacterFormat.BackgroundColor=MarkColor(highlight); range.CharacterFormat.ForegroundColor=Colors.Black;
             }
         }
-    });
-    private CommandBarFlyout AnnotationToolbar(RichEditBox editor, VerseRow row, bool selection)
+    }
+    private CommandBarFlyout AnnotationToolbar(RichEditBox editor, VerseRow row, bool selection, bool lazy=false)
     {
         var flyout = new CommandBarFlyout();
-        var start = 0; var length = row.Text.Length;
+        var start = 0; var length = row.Text.Length; string? builtLanguage=null;
         flyout.Opening += (_,_) => {
+            if (builtLanguage != language) { flyout.PrimaryCommands.Clear(); flyout.SecondaryCommands.Clear(); BuildCommands(); builtLanguage=language; }
             if (selection) {
                 start = Math.Clamp(editor.Document.Selection.StartPosition,0,row.Text.Length);
                 var end = Math.Clamp(editor.Document.Selection.EndPosition,start,row.Text.Length);
@@ -157,6 +165,7 @@ public sealed partial class MainWindow
             currentVerse = row.Index;
             Guard(SavePosition);
         };
+        void BuildCommands() {
         AppBarButton Button(string label, Symbol symbol, string id)
         {
             var b = new AppBarButton { Label=T(label), Icon=new SymbolIcon(symbol) };
@@ -193,6 +202,8 @@ public sealed partial class MainWindow
         flyout.PrimaryCommands.Add(note);
         var clear = Button("Rimuovi formattazione",Symbol.Clear,"ClearSelection");
         clear.Click += (_,_) => Mark("clear"); flyout.SecondaryCommands.Add(clear);
+        }
+        if (!lazy) { BuildCommands(); builtLanguage=language; }
         return flyout;
     }
     private void VerseMenuClick(object sender, RoutedEventArgs e)
@@ -204,7 +215,7 @@ public sealed partial class MainWindow
     {
         var flyout = new Flyout();
         var content = new StackPanel { Width=300,Spacing=12 };
-        content.Children.Add(new TextBlock {Text=$"{books[book].Name} {chapter+1}:{row.Index+1}",FontWeight=Microsoft.UI.Text.FontWeights.SemiBold});
+        content.Children.Add(new TextBlock {Text=$"{books[book].Name} {chapter+1}:{row.Number}",FontWeight=Microsoft.UI.Text.FontWeights.SemiBold});
         var input = new TextBox {Header=T("La tua nota"),Text=row.Annotation.GetProperty("note").GetString(),AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Height=130,MaxLength=8000};
         AutomationProperties.SetAutomationId(input,"NoteText"); content.Children.Add(input);
         var save = new Button {Content=T("Salva"),HorizontalAlignment=HorizontalAlignment.Right};

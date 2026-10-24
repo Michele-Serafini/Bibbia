@@ -1,5 +1,54 @@
 # Testi e dipendenze
 
+## CEI 2008, cattolica italiana
+
+Testo dei **73 libri** dalla fonte ufficiale [BibbiaEDU](https://www.bibbiaedu.it/CEI2008/),
+1.328 capitoli. © 2008–2024 Fondazione di Religione Santi Francesco d’Assisi e
+Caterina da Siena. Traduzione della Conferenza Episcopale Italiana, 2008.
+**Non è pubblico dominio e non è MIT**. L’inclusione nel lettore gratuito per
+finalità formative e didattiche non commerciali segue le condizioni pubblicate
+nelle [note legali ufficiali](https://www.bibbiaedu.it/site/twig/templates/v3/html/notelegali/).
+Il testo delle condizioni è conservato in `core/data/LICENSE.cei2008.txt`, incluso
+nell’installer e mostrato nell’installazione. Per altri usi occorre l’autorizzazione
+degli aventi diritto; la licenza del codice non concede diritti sul testo.
+
+Sono estratti esclusivamente i versetti, senza commenti, loghi, grafica o software
+del sito. Entità HTML decodificate e spazi di impaginazione normalizzati; il testo
+non è riscritto. Le etichette conservano le lettere e i gruppi originali. Ester
+comprende sia il testo greco sia quello ebraico presentati dalla fonte: i prefissi
+**G/E** distinguono i riferimenti e sono spiegati nel lettore. Il manifest
+`cei2008-source.json` fissa URL e SHA-256 di ciascuna delle 1.328 pagine e del JSON.
+`scripts/import-cei.py` riproduce la conversione da una cache verificata.
+
+## Raccolta estesa in inglese, 83 libri/sezioni
+
+Questa è una **raccolta di testi di più canoni**, non un canone universale né
+l’intera Bibbia etiopica. I testi sono in inglese. Comprende:
+
+- Tutti gli **81 libri/sezioni della World English Bible Classic ecumenica**:
+  Antico e Nuovo Testamento, deuterocanonici, 1–2 Esdra, 3–4 Maccabei,
+  Preghiera di Manasse, Salmo 151 e versioni greche di Ester e Daniele.
+  [Testo e diritti ufficiali](https://ebible.org/eng-web/copyright.htm): pubblico
+  dominio. World English Bible è un marchio di eBible.org. Il testo WEB rimane
+  identico alla fonte XML ufficiale, senza note o titoli intercalati. I record vuoti
+  della fonte sono omessi: non vengono inventati versetti per riempire le lacune.
+  I versetti combinati mantengono la propria etichetta originale.
+- **1 Enoc**, 108 capitoli, traduzione R. H. Charles del 1917, pubblico dominio.
+  [Fonte Project Gutenberg, ebook 77935](https://www.gutenberg.org/ebooks/77935),
+  digitalizzazione di David King e Distributed Proofreaders. Sono esclusi
+  introduzione, apparato critico e numeri di pagina. I capitoli sono riordinati
+  numericamente; le etichette originali, comprese quelle con lettere, sono conservate.
+  La licenza Project Gutenberg è inclusa in `LICENSE.gutenberg.txt`.
+- **Giubilei**, 50 capitoli, traduzione R. H. Charles, Londra 1917, pubblico dominio
+  come dichiarato nei metadati della specifica edizione [Sefaria](https://www.sefaria.org/Book_of_Jubilees.1?ven=The_Book_of_Jubilees,_trans._R._H._Charles._London_[1917]).
+  Si usa la suddivisione della fonte in 1.758 segmenti, che può differire da altre
+  edizioni. Non si usa la traduzione predefinita o un testo moderno diverso.
+
+`extended-source.json` conserva URL e checksum delle fonti e del corpus incluso;
+`scripts/import-extended.py` riproduce la conversione. I testi non sono tradotti
+artificialmente in italiano. Numeri di record e numero dei versetti di altre
+edizioni non sono necessariamente equivalenti.
+
 ## Antonio Martini (1781), cattolica
 
 Traduzione italiana storica dalla Vulgata, di Antonio Martini (1720–1809),

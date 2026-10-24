@@ -308,3 +308,251 @@ fn interface_and_bible_language_preferences_are_independent() {
             .any(|e| e["catholic"] == true && e["language"] == "it" && e["books"] == 73)
     );
 }
+
+#[test]
+fn packed_text_and_casefold_indexes_preserve_every_original_verse() {
+    for (id, source) in [
+        ("KJV", KJV),
+        ("Diodati 1649", DIODATI),
+        (DEFAULT_EDITION, MARTINI),
+        ("CEI 2008", include_str!("../data/cei2008.json")),
+        (
+            "Raccolta estesa (83 sezioni)",
+            include_str!("../data/extended.json"),
+        ),
+    ] {
+        let original: Vec<Book> = serde_json::from_str(source).unwrap();
+        let packed = corpus::BUILTINS.iter().find(|b| b.id == id).unwrap();
+        let mut count = 0;
+        for (bi, book) in original.iter().enumerate() {
+            let header = &packed.catalog()[bi];
+            assert_eq!(header.name, book.name);
+            assert_eq!(header.abbrev, book.abbrev);
+            for (ci, chapter) in book.chapters.iter().enumerate() {
+                let span = &header.chapters[ci];
+                assert_eq!(span.count, chapter.len());
+                if let Some(labels) = &book.labels {
+                    assert_eq!(span.labels, labels[ci]);
+                }
+                for (vi, text) in chapter.iter().enumerate() {
+                    assert_eq!(packed.text(span.first + vi), text);
+                    assert_eq!(packed.lower(span.first + vi), text.to_lowercase());
+                    count += 1;
+                }
+            }
+        }
+        assert!(count > 30_000);
+    }
+}
+
+#[test]
+fn imported_texts_are_lazy_and_only_one_edition_is_retained() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("text.json");
+    std::fs::write(
+        &path,
+        r#"[{"name":"Local","abbrev":"loc","chapters":[["A small text."]]}]"#,
+    )
+    .unwrap();
+    let mut engine = Engine::open(dir.path()).unwrap();
+    for id in ["First", "Second"] {
+        engine
+            .request(json!({"op":"import","id":id,"path":path}))
+            .unwrap();
+    }
+    drop(engine);
+    let mut engine = Engine::open(dir.path()).unwrap();
+    assert!(engine.editions.values().all(|e| e.loaded.get().is_none()));
+    for id in ["First", "Second", "KJV"] {
+        engine
+            .request(json!({"op":"chapter","edition":id,"book":0,"chapter":0}))
+            .unwrap();
+        assert!(
+            engine
+                .editions
+                .iter()
+                .all(|(name, e)| e.loaded.get().is_none() || name == id)
+        );
+    }
+}
+
+#[test]
+fn unchanged_settings_do_not_write_again_and_chapter_reads_keep_marks() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(dir.path()).unwrap();
+    let setting = json!({"op":"settings","key":"theme","value":"Dark"});
+    engine.request(setting.clone()).unwrap();
+    let before: i64 = engine
+        .db
+        .query_row("SELECT total_changes()", [], |r| r.get(0))
+        .unwrap();
+    engine.request(setting).unwrap();
+    let after: i64 = engine
+        .db
+        .query_row("SELECT total_changes()", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(before, after);
+    for verse in [0, 15, 30] {
+        engine.request(json!({"op":"annotate","book":0,"chapter":0,"verse":verse,"annotation":{"highlight":null,"underline":false,"bookmark":true,"note":"Kept"}})).unwrap();
+    }
+    let chapter = engine
+        .request(json!({"op":"chapter","book":0,"chapter":0}))
+        .unwrap();
+    assert_eq!(
+        chapter
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|r| r["annotation"]["bookmark"] == true)
+            .count(),
+        3
+    );
+    assert_eq!(chapter[15]["label"], "16");
+}
+
+#[test]
+fn extended_numbering_keeps_source_labels_and_does_not_invent_verses() {
+    {
+        let source = corpus::BUILTINS
+            .iter()
+            .find(|b| b.id == "Raccolta estesa (83 sezioni)")
+            .unwrap();
+        assert_eq!(source.catalog().len(), 83);
+        for id in [
+            "1ES", "2ES", "3MA", "4MA", "MAN", "PS2", "ESG", "DAG", "ENO", "JUB",
+        ] {
+            assert!(source.catalog().iter().any(|b| b.abbrev == id));
+        }
+        let sir = source.catalog().iter().find(|b| b.abbrev == "SIR").unwrap();
+        assert!(!sir.chapters[0].labels.contains(&"5".into()));
+        assert!(sir.chapters[0].labels.contains(&"6".into()));
+    }
+}
+
+#[test]
+fn modern_cei_has_complete_catholic_text_and_distinct_esther_variants() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    let books = e
+        .request(json!({"op":"books","edition":"CEI 2008"}))
+        .unwrap();
+    assert_eq!(books.as_array().unwrap().len(), 73);
+    assert_eq!(
+        books
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| b["chapters"].as_u64().unwrap())
+            .sum::<u64>(),
+        1328
+    );
+    for id in ["Tb", "Gdt", "Sap", "Sir", "Bar", "1Mac", "2Mac"] {
+        assert!(
+            books.as_array().unwrap().iter().any(|b| b["abbrev"] == id),
+            "{id}"
+        );
+    }
+    let first = e
+        .request(json!({"op":"chapter","edition":"CEI 2008","book":0,"chapter":0}))
+        .unwrap();
+    assert_eq!(
+        first[0]["text"],
+        "In principio Dio creò il cielo e la terra."
+    );
+    assert_eq!(first[0]["label"], "1");
+    let est = books
+        .as_array()
+        .unwrap()
+        .iter()
+        .position(|b| b["abbrev"] == "Est")
+        .unwrap();
+    let rows = e
+        .request(json!({"op":"chapter","edition":"CEI 2008","book":est,"chapter":0}))
+        .unwrap();
+    for label in ["G1a", "G1", "E1"] {
+        assert!(rows.as_array().unwrap().iter().any(|r| r["label"] == label));
+    }
+    let hits=e.request(json!({"op":"search","edition":"CEI 2008","query":"Dio infatti ha tanto amato il mondo"})).unwrap();
+    assert!(
+        hits["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["label"] == "16")
+    );
+}
+
+#[test]
+fn malformed_import_labels_are_rejected_and_combined_labels_persist() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("labeled.json");
+    let mut e = Engine::open(dir.path()).unwrap();
+    for labels in [
+        json!([]),
+        json!([["1"]]),
+        json!([["1", "1"]]),
+        json!([["1", ""]]),
+    ] {
+        std::fs::write(
+            &path,
+            json!([{"name":"Test","abbrev":"T","chapters":[["One","Two"]],"labels":labels}])
+                .to_string(),
+        )
+        .unwrap();
+        assert!(
+            e.request(json!({"op":"import","id":"Labeled","path":path}))
+                .is_err()
+        );
+    }
+    std::fs::write(
+        &path,
+        json!([{"name":"Test","abbrev":"T","chapters":[["One","Two"]],"labels":[["1a","2-3"]]}])
+            .to_string(),
+    )
+    .unwrap();
+    e.request(json!({"op":"import","id":"Labeled","path":path}))
+        .unwrap();
+    drop(e);
+    let mut e = Engine::open(dir.path()).unwrap();
+    let rows = e
+        .request(json!({"op":"chapter","edition":"Labeled","book":0,"chapter":0}))
+        .unwrap();
+    assert_eq!(rows[1]["label"], "2-3");
+}
+
+#[test]
+fn legacy_import_catalog_migrates_without_losing_notes_or_rewriting_text() {
+    let dir = tempfile::tempdir().unwrap();
+    let payload = r#"[{"name":"Old","abbrev":"O","chapters":[["Preserved text"]]}]"#;
+    let db = Connection::open(dir.path().join("bible.sqlite3")).unwrap();
+    db.execute_batch("CREATE TABLE editions (id TEXT PRIMARY KEY,payload TEXT NOT NULL);")
+        .unwrap();
+    db.execute(
+        "INSERT INTO editions VALUES (?,?)",
+        params!["Old import", payload],
+    )
+    .unwrap();
+    drop(db);
+    let mut e = Engine::open(dir.path()).unwrap();
+    assert!(e.editions["Old import"].loaded.get().is_none());
+    assert_eq!(e.editions["Old import"].book_count, 1);
+    let stored: String =
+        e.db.query_row(
+            "SELECT payload FROM editions WHERE id='Old import'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(stored, payload);
+    let rows = e
+        .request(json!({"op":"chapter","edition":"Old import","book":0,"chapter":0}))
+        .unwrap();
+    assert_eq!(rows[0]["text"], "Preserved text");
+    drop(e);
+    let e = Engine::open(dir.path()).unwrap();
+    assert!(e.editions["Old import"].loaded.get().is_none());
+    let changes: i64 =
+        e.db.query_row("SELECT total_changes()", [], |r| r.get(0))
+            .unwrap();
+    assert_eq!(changes, 0);
+}

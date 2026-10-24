@@ -25,14 +25,15 @@ VIAddVersionKey /LANG=1040 "ProductName" "Bibbia"
 VIAddVersionKey /LANG=1040 "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=1040 "FileDescription" "Installazione di Bibbia per Windows"
 VIAddVersionKey /LANG=1040 "FileVersion" "${APP_VERSION}.0"
-VIAddVersionKey /LANG=1040 "LegalCopyright" "Progetto Bibbia · Licenza MIT"
+VIAddVersionKey /LANG=1040 "LegalCopyright" "Codice MIT · testi con licenze separate"
 
 !define MUI_ABORTWARNING
 !define MUI_ICON "${PROJECT_DIR}\app\Assets\Bibbia.ico"
 !define MUI_UNICON "${PROJECT_DIR}\app\Assets\Bibbia.ico"
-!define MUI_WELCOMEPAGE_TEXT "Leggi la Bibbia offline, evidenzia parole e frasi e conserva i tuoi appunti.$\r$\n$\r$\nSono incluse la Bibbia cattolica Martini in italiano, la Diodati e la KJV inglese. Non sono richiesti account o download aggiuntivi.$\r$\n$\r$\nL'app sarà installata solo per il tuo utente."
+!define MUI_WELCOMEPAGE_TEXT "Leggi la Bibbia offline, evidenzia parole e frasi e conserva i tuoi appunti.$\r$\n$\r$\nSono incluse CEI 2008 e Martini cattoliche in italiano, Diodati, KJV e una raccolta estesa di 83 libri/sezioni in inglese. Il testo CEI è destinato a finalità formative e didattiche non commerciali. Non sono richiesti account o download aggiuntivi.$\r$\n$\r$\nL'app sarà installata solo per il tuo utente."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${PROJECT_DIR}\LICENSE"
+!insertmacro MUI_PAGE_LICENSE "${PROJECT_DIR}\core\data\LICENSE.cei2008.txt"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES

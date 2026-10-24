@@ -75,12 +75,15 @@ public sealed partial class MainWindow
         var position = GetCursorPos(out var cursor) ? new IntPtr(unchecked((cursor.Y<<16)|(cursor.X&0xffff))) : IntPtr.Zero;
         SendWindowMessage(WinRT.Interop.WindowNative.GetWindowHandle(this),0xA1,new IntPtr(2),position);
     }
+    private global::Windows.UI.Color? appliedSurface;
     private void UpdateWindowTheme()
     {
+        var background = EditorBackground();
+        if (appliedSurface == background) return;
+        appliedSurface = background;
         var dark = Root.ActualTheme == ElementTheme.Dark;
         var flag = dark ? 1 : 0;
         DwmSetWindowAttribute(WinRT.Interop.WindowNative.GetWindowHandle(this),20,ref flag,sizeof(int));
-        var background = EditorBackground();
         LegacyTitleBar.Background = new SolidColorBrush(background);
         if (!legacyCaption && AppWindowTitleBar.IsCustomizationSupported())
         {
@@ -95,6 +98,6 @@ public sealed partial class MainWindow
         }
         foreach (var editor in liveEditors.Values) if (editor.DataContext is VerseRow row) ApplyTextStyles(editor,row);
     }
-    private global::Windows.UI.Color EditorBackground() => Root.ActualTheme == ElementTheme.Dark
-        ? global::Windows.UI.Color.FromArgb(255,32,32,32) : global::Windows.UI.Color.FromArgb(255,250,250,250);
+    private global::Windows.UI.Color EditorBackground() => (Root.Background as SolidColorBrush)?.Color ??
+        (Root.ActualTheme == ElementTheme.Dark ? global::Windows.UI.Color.FromArgb(255,32,32,32) : global::Windows.UI.Color.FromArgb(255,248,248,248));
 }

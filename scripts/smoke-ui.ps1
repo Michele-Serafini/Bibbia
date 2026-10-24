@@ -78,6 +78,18 @@ function Select-Option([string]$id, [string]$name) {
     $combo = Wait-Control $window $id
     $combo.SetFocus()
     $combo.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+    if ($id -eq 'BookPicker' -and $name -in @('1 Enoch (Charles 1917)', 'Jubilees (Charles 1917)')) {
+        # The book list is virtualized. Reach its last two books with the real
+        # keyboard instead of requiring unrealized items in the UIA tree.
+        Add-Type -AssemblyName System.Windows.Forms
+        [Windows.Forms.SendKeys]::SendWait('{END}')
+        if ($name -eq '1 Enoch (Charles 1917)') { [Windows.Forms.SendKeys]::SendWait('{UP}') }
+        [Windows.Forms.SendKeys]::SendWait('{ENTER}')
+        Start-Sleep -Milliseconds 300
+        $selected = $combo.GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
+        if ($selected.Count -ne 1 -or $selected[0].Current.Name -ne $name) { throw "Book selection failed: $name" }
+        return
+    }
     $condition = [Windows.Automation.AndCondition]::new(
         [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty, $name),
         [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::ListItem))
@@ -104,15 +116,21 @@ function Check-TitleTheme([int]$expected) {
         $graphics = [Drawing.Graphics]::FromImage($bitmap)
         try {
             $graphics.CopyFromScreen([int](($bounds.left + $bounds.right) / 2), [int]($bounds.top + 18), 0, 0, [Drawing.Size]::new(1, 1))
-            $brightness = $bitmap.GetPixel(0, 0).GetBrightness()
+            $caption = $bitmap.GetPixel(0, 0)
+            $brightness = $caption.GetBrightness()
+            $graphics.CopyFromScreen([int]($bounds.right - 40), [int]($bounds.top + 80), 0, 0, [Drawing.Size]::new(1, 1))
+            $surface = $bitmap.GetPixel(0, 0)
+            $expectedChannel = if ($expected -eq 1) { 32 } else { 248 }
+            $matches = $caption.R -eq $expectedChannel -and $caption.G -eq $expectedChannel -and $caption.B -eq $expectedChannel -and $caption.ToArgb() -eq $surface.ToArgb()
         }
         finally { $graphics.Dispose(); $bitmap.Dispose() }
-        if (($expected -eq 1 -and $brightness -lt 0.5) -or ($expected -eq 0 -and $brightness -ge 0.5)) { return }
+        if ($matches -and (($expected -eq 1 -and $brightness -lt 0.5) -or ($expected -eq 0 -and $brightness -ge 0.5))) { return }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
-    throw "Caption appearance does not follow the theme: dark=$expected, brightness=$brightness"
+    throw "Caption appearance does not follow the theme: dark=$expected, brightness=$brightness caption=$caption surface=$surface"
 }
 $env:BIBBIA_UI_DIAGNOSTICS = '1'
+$env:BIBBIA_UI_TEST_MOTION = '1'
 $process = Start-Process (Resolve-Path $Executable).Path -PassThru
 try {
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
@@ -132,6 +150,7 @@ try {
 
     # Drag the mouse over part of the text, rather than invoking a whole-verse menu.
     $editor = Wait-Control $window 'VerseText_0'
+    $originalTextHeight = $editor.Current.BoundingRectangle.Height
     $editor.SetFocus()
     Start-Sleep -Milliseconds 500
     # RichEdit's UIA text-range rectangles can be empty before its first render.
@@ -179,6 +198,13 @@ try {
     Check-TitleTheme 0
     Select-Option 'ThemePicker' 'Scuro'
     Check-TitleTheme 1
+    $font = Wait-Control $window 'FontSlider'
+    $font.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern).SetValue(26)
+    Start-Sleep -Milliseconds 300
+    Select-Page 'ReadNavigation'
+    $resized = Wait-Control $window 'VerseText_0'
+    if ($resized.Current.BoundingRectangle.Height -le $originalTextHeight + 2) { throw 'Text size did not update the rendered document.' }
+    Select-Page 'SettingsNavigation'
     Select-Option 'AppLanguagePicker' 'English'
     Wait-Text $window 'Your reading experience' | Out-Null
     # Changing the app language must not silently change the Bible language.
@@ -188,6 +214,20 @@ try {
     $selected = (Wait-Control $window 'EditionPicker').GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
     if ($selected[0].Current.Name -ne 'KJV') { throw 'English Bible filter did not select KJV.' }
     Select-Option 'BibleLanguagePicker' 'Italiano'
+    Select-Option 'EditionPicker' 'CEI 2008'
+    Select-Page 'ReadNavigation'
+    Wait-Text (Wait-Control $window 'VerseList') ('In principio Dio cre' + [char]0xF2 + ' il cielo e la terra.') | Out-Null
+    Invoke-Control (Wait-Control $window 'QuickEditionButton')
+    Invoke-Control (Wait-Control $window 'QuickEdition_Raccoltaestesa(83sezioni)' -Popup)
+    Select-Option 'BookPicker' '1 Enoch (Charles 1917)'
+    $enoch = 'The words of the blessing of Enoch'
+    $condition = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::AutomationIdProperty, 'VerseText_0')
+    $first = (Wait-Control $window 'VerseList').FindFirst([Windows.Automation.TreeScope]::Descendants, $condition)
+    if ($null -eq $first -or -not $first.Current.Name.StartsWith($enoch)) { throw '1 Enoch did not render from the extended collection.' }
+    Select-Option 'BookPicker' 'Jubilees (Charles 1917)'
+    Wait-Control $window 'VerseText_0' | Out-Null
+    Invoke-Control (Wait-Control $window 'QuickEditionButton')
+    Invoke-Control (Wait-Control $window 'QuickEdition_Martini1781(cattolica)' -Popup)
     Select-Page 'ReadNavigation'
     Wait-Text (Wait-Control $window 'VerseList') $firstVerse | Out-Null
     Check-TitleTheme 1
@@ -204,7 +244,9 @@ try {
         if ([Math]::Abs(($after.right-$after.left)-($before.right-$before.left)) -gt 2) { throw 'Title bar restore button did not restore the window.' }
         Check-TitleTheme 1
     }
-    Write-Host 'WinUI: Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'
+    $error = Find-Control $window 'ErrorBar'
+    if ($null -ne $error -and -not $error.Current.IsOffscreen) { throw "An application error was shown: $($error.Current.Name)" }
+    Write-Host 'WinUI: CEI, extended collection, animated navigation, text resizing, matching caption/surface colors, Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'
 }
 catch {
     $diagnostics = Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts/diagnostics'

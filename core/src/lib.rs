@@ -10,10 +10,15 @@ use std::{
 };
 
 type Result<T> = std::result::Result<T, String>;
+mod corpus;
 mod selection;
+use corpus::{BookRef, Chapter, Edition};
 use selection::TextMark;
+#[cfg(test)]
 const KJV: &str = include_str!("../data/kjv.json");
+#[cfg(test)]
 const DIODATI: &str = include_str!("../data/diodati.json");
+#[cfg(test)]
 const MARTINI: &str = include_str!("../data/martini.json");
 const DEFAULT_EDITION: &str = "Martini 1781 (cattolica)";
 
@@ -22,6 +27,8 @@ pub struct Book {
     pub name: String,
     pub abbrev: String,
     pub chapters: Vec<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub labels: Option<Vec<Vec<String>>>,
 }
 
 #[derive(Clone, Default, Deserialize, Serialize, PartialEq, Debug)]
@@ -36,7 +43,7 @@ pub struct Annotation {
 
 pub struct Engine {
     db: Connection,
-    editions: BTreeMap<String, Vec<Book>>,
+    editions: BTreeMap<String, Edition>,
 }
 
 fn error(e: impl std::fmt::Display) -> String {
@@ -65,29 +72,49 @@ impl Engine {
                 verse INTEGER NOT NULL, payload TEXT NOT NULL,
                 PRIMARY KEY (edition, book, chapter, verse));
             CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, payload TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS editions (id TEXT PRIMARY KEY, payload TEXT NOT NULL);",
+            CREATE TABLE IF NOT EXISTS editions (id TEXT PRIMARY KEY, payload TEXT NOT NULL, book_count INTEGER);",
+        )
+        .map_err(error)?;
+        // Upgrade old installations once, without parsing imported corpora on
+        // subsequent launches. Personal annotations and source text are untouched.
+        let has_count = db
+            .prepare("PRAGMA table_info(editions)")
+            .map_err(error)?
+            .query_map([], |r| r.get::<_, String>(1))
+            .map_err(error)?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(error)?
+            .iter()
+            .any(|n| n == "book_count");
+        if !has_count {
+            db.execute_batch("ALTER TABLE editions ADD COLUMN book_count INTEGER;")
+                .map_err(error)?;
+        }
+        db.execute(
+            "UPDATE editions SET book_count=json_array_length(payload) WHERE book_count IS NULL",
+            [],
         )
         .map_err(error)?;
         let mut editions = BTreeMap::new();
-        editions.insert("KJV".into(), serde_json::from_str(KJV).map_err(error)?);
-        editions.insert(
-            "Diodati 1649".into(),
-            serde_json::from_str(DIODATI).map_err(error)?,
-        );
-        editions.insert(
-            DEFAULT_EDITION.into(),
-            serde_json::from_str(MARTINI).map_err(error)?,
-        );
+        for source in &corpus::BUILTINS {
+            editions.insert(source.id.into(), Edition::builtin(source));
+        }
         {
+            // Only the catalog is needed at startup. Imported texts stay on
+            // disk until opened; at most one imported edition is cached.
             let mut stmt = db
-                .prepare("SELECT id, payload FROM editions")
+                .prepare("SELECT id, book_count FROM editions")
                 .map_err(error)?;
             let rows = stmt
-                .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+                .query_map([], |r| {
+                    Ok((r.get::<_, String>(0)?, r.get::<_, u32>(1)? as usize))
+                })
                 .map_err(error)?;
             for row in rows {
-                let (id, payload) = row.map_err(error)?;
-                editions.insert(id, serde_json::from_str(&payload).map_err(error)?);
+                let (id, count) = row.map_err(error)?;
+                editions
+                    .entry(id)
+                    .or_insert_with(|| Edition::imported(count));
             }
         }
         Ok(Self { db, editions })
@@ -125,16 +152,130 @@ impl Engine {
         Ok(())
     }
 
-    fn books(&self, edition: &str) -> Result<&Vec<Book>> {
+    fn edition(&self, id: &str) -> Result<&Edition> {
         self.editions
-            .get(edition)
+            .get(id)
             .ok_or_else(|| "Traduzione non disponibile".into())
     }
-    fn chapter(&self, edition: &str, book: usize, chapter: usize) -> Result<&Vec<String>> {
-        self.books(edition)?
-            .get(book)
-            .and_then(|b| b.chapters.get(chapter))
-            .ok_or_else(|| "Capitolo non disponibile".into())
+    fn books(&self, id: &str) -> Result<Vec<BookRef<'_>>> {
+        let edition = self.edition(id)?;
+        Ok(if let Some(source) = edition.builtin {
+            source
+                .catalog()
+                .iter()
+                .map(|b| BookRef {
+                    name: &b.name,
+                    abbrev: &b.abbrev,
+                    chapters: b.chapters.len(),
+                })
+                .collect()
+        } else {
+            edition
+                .books(&self.db, id)?
+                .iter()
+                .map(|b| BookRef {
+                    name: &b.name,
+                    abbrev: &b.abbrev,
+                    chapters: b.chapters.len(),
+                })
+                .collect()
+        })
+    }
+    fn chapter(&self, id: &str, book: usize, chapter: usize) -> Result<Chapter<'_>> {
+        let edition = self.edition(id)?;
+        if let Some(source) = edition.builtin {
+            let span = source
+                .catalog()
+                .get(book)
+                .and_then(|b| b.chapters.get(chapter))
+                .ok_or("Capitolo non disponibile")?;
+            Ok(Chapter::Packed(source, span))
+        } else {
+            let book = edition
+                .books(&self.db, id)?
+                .get(book)
+                .ok_or("Capitolo non disponibile")?;
+            let verses = book
+                .chapters
+                .get(chapter)
+                .ok_or("Capitolo non disponibile")?;
+            Ok(Chapter::Owned(
+                verses,
+                book.labels
+                    .as_ref()
+                    .and_then(|l| l.get(chapter))
+                    .map(Vec::as_slice),
+            ))
+        }
+    }
+    fn search(&self, id: &str, query: &str) -> Result<Value> {
+        let edition = self.edition(id)?;
+        let mut hits = Vec::new();
+        let mut truncated = false;
+        let mut add = |bi, ci, vi, name: &str, text: &str, label: Option<&str>| {
+            if hits.len() == 200 {
+                truncated = true;
+                return false;
+            }
+            hits.push(json!({"book":bi,"chapter":ci,"verse":vi,"name":name,"text":text,"label":label.map(str::to_owned).unwrap_or_else(||format!("{}",vi+1))}));
+            true
+        };
+        if let Some(source) = edition.builtin {
+            'outer: for (bi, b) in source.catalog().iter().enumerate() {
+                for (ci, c) in b.chapters.iter().enumerate() {
+                    for vi in 0..c.count {
+                        if source.lower(c.first + vi).contains(query)
+                            && !add(
+                                bi,
+                                ci,
+                                vi,
+                                &b.name,
+                                source.text(c.first + vi),
+                                c.labels.get(vi).map(String::as_str),
+                            )
+                        {
+                            break 'outer;
+                        }
+                    }
+                }
+            }
+        } else {
+            let books = edition.books(&self.db, id)?;
+            let lower = edition.lowercase.get_or_init(|| {
+                books
+                    .iter()
+                    .map(|b| {
+                        b.chapters
+                            .iter()
+                            .map(|c| c.iter().map(|v| v.to_lowercase()).collect())
+                            .collect()
+                    })
+                    .collect()
+            });
+            'outer: for (bi, b) in books.iter().enumerate() {
+                for (ci, c) in b.chapters.iter().enumerate() {
+                    for (vi, text) in c.iter().enumerate() {
+                        if lower[bi][ci][vi].contains(query)
+                            && !add(
+                                bi,
+                                ci,
+                                vi,
+                                &b.name,
+                                text,
+                                b.labels
+                                    .as_ref()
+                                    .and_then(|l| l.get(ci))
+                                    .and_then(|l| l.get(vi))
+                                    .map(String::as_str),
+                            )
+                        {
+                            break 'outer;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(json!({"hits":hits,"truncated":truncated}))
     }
     fn annotation(
         &self,
@@ -143,7 +284,7 @@ impl Engine {
         chapter: usize,
         verse: usize,
     ) -> Result<Annotation> {
-        let mut stmt = self.db.prepare("SELECT payload FROM annotations WHERE edition=? AND book=? AND chapter=? AND verse=?").map_err(error)?;
+        let mut stmt = self.db.prepare_cached("SELECT payload FROM annotations WHERE edition=? AND book=? AND chapter=? AND verse=?").map_err(error)?;
         let mut rows = stmt
             .query(params![edition, book as i64, chapter as i64, verse as i64])
             .map_err(error)?;
@@ -161,6 +302,13 @@ impl Engine {
             .get("edition")
             .and_then(Value::as_str)
             .unwrap_or("KJV");
+        if ["books", "chapter", "search", "saved"].contains(&op) {
+            for (id, data) in &mut self.editions {
+                if id != edition && data.builtin.is_none() {
+                    data.release();
+                }
+            }
+        }
         match op {
             "bootstrap" => {
                 let mut settings = serde_json::Map::new();
@@ -177,23 +325,28 @@ impl Engine {
                 }
                 Ok(
                     json!({"editions":self.editions.keys().collect::<Vec<_>>(), "defaultEdition":DEFAULT_EDITION, "settings":settings,
-                        "editionMetadata":self.editions.iter().map(|(id,b)|json!({"id":id,"language":if id=="KJV" {"en"} else if id=="Diodati 1649" || id==DEFAULT_EDITION {"it"} else {"und"},"books":b.len(),"catholic":id==DEFAULT_EDITION})).collect::<Vec<_>>()}),
+                        "editionMetadata":self.editions.iter().map(|(id,b)|json!({"id":id,"language":b.language,"books":b.book_count,"catholic":b.canon=="catholic","canon":b.canon})).collect::<Vec<_>>()}),
                 )
             }
             "books" => Ok(json!(
                 self.books(edition)?
                     .iter()
                     .enumerate()
-                    .map(|(i, b)| json!({"index":i,"name":b.name,"chapters":b.chapters.len()}))
+                    .map(|(i, b)| json!({"index":i,"name":b.name,"abbrev":b.abbrev,"chapters":b.chapters}))
                     .collect::<Vec<_>>()
             )),
             "chapter" => {
                 let book = index(&request, "book")?;
                 let chapter = index(&request, "chapter")?;
                 let verses = self.chapter(edition, book, chapter)?;
+                let mut annotations = BTreeMap::new();
+                let mut stmt = self.db.prepare_cached("SELECT verse,payload FROM annotations WHERE edition=? AND book=? AND chapter=?").map_err(error)?;
+                let rows = stmt.query_map(params![edition,book as i64,chapter as i64],|r| Ok((r.get::<_,u32>(0)? as usize,r.get::<_,String>(1)?))).map_err(error)?;
+                for row in rows { let (verse,payload) = row.map_err(error)?; annotations.insert(verse,serde_json::from_str::<Annotation>(&payload).map_err(error)?); }
                 let mut result = Vec::with_capacity(verses.len());
-                for (i, text) in verses.iter().enumerate() {
-                    result.push(json!({"verse":i,"text":text,"annotation":self.annotation(edition,book,chapter,i)?}));
+                for i in 0..verses.len() {
+                    let annotation = annotations.remove(&i).unwrap_or_default();
+                    result.push(json!({"verse":i,"label":verses.label(i),"text":verses.get(i).unwrap(),"annotation":annotation}));
                 }
                 Ok(json!(result))
             }
@@ -222,7 +375,7 @@ impl Engine {
                 }
                 for mark in &annotation.ranges {
                     selection::validate_range(
-                        &self.chapter(edition, book, chapter)?[verse],
+                        self.chapter(edition, book, chapter)?.get(verse).ok_or("Versetto non disponibile")?,
                         mark.start,
                         mark.length,
                     )?;
@@ -272,7 +425,7 @@ impl Engine {
                     let (b, c, v, a) = row.map_err(error)?;
                     let (b, c, v) = (b as usize, c as usize, v as usize);
                     let annotation: Annotation = serde_json::from_str(&a).map_err(error)?;
-                    let name = &self
+                    let name = self
                         .books(edition)?
                         .get(b)
                         .ok_or("Libro salvato non valido")?
@@ -282,7 +435,7 @@ impl Engine {
                         .get(v)
                         .ok_or("Versetto salvato non valido")?;
                     result.push(json!({"book":b,"chapter":c,"verse":v,"name":name,
-                        "text":text,"annotation":annotation}));
+                        "text":text,"label":self.chapter(edition,b,c)?.label(v),"annotation":annotation}));
                 }
                 Ok(json!(result))
             }
@@ -294,22 +447,7 @@ impl Engine {
                 if query.len() > 256 {
                     return Err("Ricerca troppo lunga".into());
                 }
-                let mut hits = Vec::new();
-                let mut truncated = false;
-                'outer: for (bi, b) in self.books(edition)?.iter().enumerate() {
-                    for (ci, c) in b.chapters.iter().enumerate() {
-                        for (vi, text) in c.iter().enumerate() {
-                            if text.to_lowercase().contains(&query) {
-                                if hits.len() == 200 {
-                                    truncated = true;
-                                    break 'outer;
-                                }
-                                hits.push(json!({"book":bi,"chapter":ci,"verse":vi,"name":b.name,"text":text}));
-                            }
-                        }
-                    }
-                }
-                Ok(json!({"hits":hits,"truncated":truncated}))
+                self.search(edition,&query)
             }
             "settings" => {
                 let key = field(&request, "key")?;
@@ -347,11 +485,8 @@ impl Engine {
                         return Err("Versetto non disponibile".into());
                     }
                 }
-                self.db
-                    .execute(
-                        "INSERT OR REPLACE INTO settings VALUES (?,?)",
-                        params![key, value.to_string()],
-                    )
+                self.db.prepare_cached("INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET payload=excluded.payload WHERE payload<>excluded.payload").map_err(error)?
+                    .execute(params![key, value.to_string()])
                     .map_err(error)?;
                 Ok(json!(true))
             }
@@ -359,7 +494,7 @@ impl Engine {
                 let id = field(&request, "id")?.trim();
                 if id.is_empty()
                     || id.len() > 80
-                    || ["KJV", "Diodati 1649", DEFAULT_EDITION].contains(&id)
+                    || corpus::BUILTINS.iter().any(|b|b.id==id)
                 {
                     return Err("Nome traduzione non valido o riservato".into());
                 }
@@ -380,6 +515,11 @@ impl Engine {
                             || b.abbrev.is_empty()
                             || b.chapters.is_empty()
                             || b.chapters.len() > 200
+                            || b.labels.as_ref().is_some_and(|labels| {
+                                labels.len() != b.chapters.len() || labels.iter().zip(&b.chapters).any(|(ls, vs)|
+                                    ls.len() != vs.len() || ls.iter().any(|l| l.trim().is_empty() || l.len() > 24)
+                                    || ls.iter().collect::<std::collections::BTreeSet<_>>().len() != ls.len())
+                            })
                             || b.chapters.iter().any(|c| {
                                 c.is_empty()
                                     || c.len() > 200
@@ -391,9 +531,12 @@ impl Engine {
                 }
                 let payload = serde_json::to_string(&books).map_err(error)?;
                 self.db
-                    .execute("INSERT INTO editions VALUES (?,?)", params![id, payload])
+                    .execute("INSERT INTO editions (id,payload,book_count) VALUES (?,?,?)", params![id, payload, books.len() as i64])
                     .map_err(error)?;
-                self.editions.insert(id.to_string(), books);
+                for cached in self.editions.values_mut() { cached.release(); }
+                let data = Edition::imported(books.len());
+                let _ = data.loaded.set(books);
+                self.editions.insert(id.to_string(),data);
                 Ok(json!({"id":id}))
             }
             _ => Err("Operazione sconosciuta".into()),

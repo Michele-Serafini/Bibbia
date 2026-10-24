@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Windowing;
 using System.Text.Json;
+using System.ComponentModel;
 using Windows.Storage.Pickers;
 using Windows.System;
 
@@ -12,15 +13,18 @@ public sealed class BookRow
 {
     public required string Name { get; init; }
     public int Chapters { get; init; }
+    public required int[] ChapterNumbers { get; init; }
 }
 
-public sealed class VerseRow
+public sealed class VerseRow : INotifyPropertyChanged
 {
     public int Index { get; init; }
-    public string Number => (Index + 1).ToString();
+    public required string Number { get; init; }
     public string MenuId => $"VerseMenu_{Index}";
     public required string Text { get; init; }
-    public double TextSize { get; init; }
+    private double textSize;
+    public double TextSize { get => textSize; set { if (textSize == value) return; textSize=value; PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(nameof(TextSize))); } }
+    public event PropertyChangedEventHandler? PropertyChanged;
     public required JsonElement Annotation { get; set; }
 }
 
@@ -38,6 +42,8 @@ public sealed partial class MainWindow : Window
 {
     private readonly string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BibbiaRust");
     private List<BookRow> books = [];
+    private readonly Dictionary<string,List<BookRow>> bookCatalogs = [];
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? fontTimer;
     private string edition = "KJV";
     private int book, chapter, currentVerse, searchGeneration;
     private double fontSize = 20;
@@ -63,7 +69,11 @@ public sealed partial class MainWindow : Window
             ready = false;
             searchGeneration++;
             selectionTimer?.Stop();
-            try { BibleEngine.Call(new { op = "close" }); }
+            fontTimer?.Stop();
+            try {
+                BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});
+                BibleEngine.Call(new { op = "close" });
+            }
             catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); }
         };
     }
@@ -123,8 +133,12 @@ public sealed partial class MainWindow : Window
 
     private void LoadBooks()
     {
-        var data = BibleEngine.Call(new { op = "books", edition });
-        books = data.EnumerateArray().Select(x => new BookRow { Name = x.GetProperty("name").GetString()!, Chapters = x.GetProperty("chapters").GetInt32() }).ToList();
+        if (!bookCatalogs.TryGetValue(edition,out var catalog)) {
+            var data = BibleEngine.Call(new { op = "books", edition });
+            catalog = data.EnumerateArray().Select(x => new BookRow { Name=x.GetProperty("name").GetString()!,Chapters=x.GetProperty("chapters").GetInt32(),ChapterNumbers=Enumerable.Range(1,x.GetProperty("chapters").GetInt32()).ToArray() }).ToList();
+            bookCatalogs[edition] = catalog;
+        }
+        books = catalog;
         book = Math.Clamp(book, 0, books.Count - 1);
         chapter = Math.Clamp(chapter, 0, books[book].Chapters - 1);
         changing = true;
@@ -132,7 +146,7 @@ public sealed partial class MainWindow : Window
         {
             BookPicker.ItemsSource = books;
             BookPicker.SelectedIndex = book;
-            ChapterPicker.ItemsSource = Enumerable.Range(1, books[book].Chapters).ToList();
+            ChapterPicker.ItemsSource = books[book].ChapterNumbers;
             ChapterPicker.SelectedIndex = chapter;
         }
         finally { changing = false; }
@@ -145,17 +159,29 @@ public sealed partial class MainWindow : Window
         activeSelectionFlyout?.Hide();
         activeSelectionFlyout = null;
         liveEditors.Clear();
+        var animate = VerseList.ItemsSource != null;
         var rows = BibleEngine.Call(new { op = "chapter", edition, book, chapter }).EnumerateArray().Select(x =>
-            new VerseRow { Index = x.GetProperty("verse").GetInt32(), Text = x.GetProperty("text").GetString()!,
+            new VerseRow { Index = x.GetProperty("verse").GetInt32(), Number=x.GetProperty("label").GetString()!, Text = x.GetProperty("text").GetString()!,
                 TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
         VerseList.ItemsSource = rows;
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
         ReadingLabel.Text = $"{books[book].Name} {chapter + 1}";
-        StatusLabel.Text = T("Offline · {0} · {1} versetti · Seleziona parole o frasi per annotarle", edition, rows.Count);
+        UpdateReadingStatus(rows.Count);
         PreviousButton.IsEnabled = book > 0 || chapter > 0;
         NextButton.IsEnabled = book < books.Count - 1 || chapter < books[book].Chapters - 1;
         SavePosition();
         ScrollToCurrentVerse();
+        if (animate && section == "read") AnimateReveal(VerseList,140);
+    }
+
+    private void UpdateReadingStatus(int count)
+    {
+        QuickEditionButton.Content = edition + " ▾";
+        var option = editionOptions.First(x => x.Id == edition);
+        var detail = edition == "Raccolta estesa (83 sezioni)" ? T("83 sezioni in inglese: WEB ecumenica, 1 Enoc e Giubilei. Comprende 1–2 Esdra, 3–4 Maccabei, Salmo 151 e Preghiera di Manasse. È una raccolta di più canoni; non esiste un canone universale di tutti i libri.") : T("{0} libri · {1}",option.Books,option.Language == "it" ? "Italiano" : option.Language == "en" ? "English" : T("Tutte"));
+        var attribution = edition == "CEI 2008" ? T("CEI 2008 · © 2008–2024 Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena. Uso formativo e didattico non commerciale. Fonte: BibbiaEDU. Ester: G = greco, E = ebraico.") : "";
+        EditionDetails.Text = detail + (attribution.Length > 0 ? "\n" + attribution : "");
+        StatusLabel.Text = T("Offline · {0} · {1} versetti · Seleziona parole o frasi per annotarle", edition, count) + (attribution.Length > 0 ? "\n" + attribution : "");
     }
 
     private void SavePosition() => BibleEngine.Call(new { op = "settings", key = "position", value = new { edition, book, chapter, verse = currentVerse } });
@@ -202,6 +228,7 @@ public sealed partial class MainWindow : Window
     }
     private void ShowSection(string tag)
     {
+        var changed = section != tag;
         section = tag;
         searchGeneration++;
         ReadPanel.Visibility = tag == "read" ? Visibility.Visible : Visibility.Collapsed;
@@ -217,6 +244,7 @@ public sealed partial class MainWindow : Window
         }
         if (tag == "saved" && ready) LoadSaved();
         if (tag == "read" && ready) ScrollToCurrentVerse();
+        if (changed) AnimateReveal(tag == "read" ? ReadPanel : tag == "settings" ? SettingsPanel : ResultsPanel);
     }
     private void AppearanceClick(object sender, RoutedEventArgs e) => Navigation.SelectedItem = Navigation.FooterMenuItems[0];
 
@@ -234,7 +262,7 @@ public sealed partial class MainWindow : Window
             if (a.GetProperty("note").GetString() is { Length: > 0 } note) labels.Add(note);
             detail = string.Join(" · ", labels);
         }
-        return new SearchRow { Book = b, Chapter = c, Verse = v, Reference = $"{x.GetProperty("name").GetString()} {c + 1}:{v + 1}", Text = x.GetProperty("text").GetString()!, Detail = detail };
+        return new SearchRow { Book = b, Chapter = c, Verse = v, Reference = $"{x.GetProperty("name").GetString()} {c + 1}:{x.GetProperty("label").GetString()}", Text = x.GetProperty("text").GetString()!, Detail = detail };
     }
     private void LoadSaved()
     {
@@ -261,6 +289,7 @@ public sealed partial class MainWindow : Window
             if (closed || generation != searchGeneration || section != "search") return;
             var rows = result.GetProperty("hits").EnumerateArray().Select(x => ToSearchRow(x, false)).ToList();
             ResultList.ItemsSource = rows;
+            AnimateReveal(ResultList,140);
             ResultStatus.Text = result.GetProperty("truncated").GetBoolean() ? T("Primi 200 risultati. Affina la ricerca per trovarne altri.") : T("{0} risultati · {1}", rows.Count, selectedEdition);
         }
         catch (Exception e)
@@ -294,7 +323,16 @@ public sealed partial class MainWindow : Window
     private void FontChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         if (!ready || changing) return;
-        Guard(() => { fontSize = e.NewValue; BibleEngine.Call(new { op = "settings", key = "fontSize", value = (int)fontSize }); LoadChapter(currentVerse); });
+        fontSize = e.NewValue;
+        if (fontTimer == null) {
+            fontTimer = DispatcherQueue.CreateTimer(); fontTimer.Interval = TimeSpan.FromMilliseconds(100); fontTimer.IsRepeating = false;
+            fontTimer.Tick += (_,_) => Guard(() => {
+                if (closed) return;
+                if (VerseList.ItemsSource is List<VerseRow> rows) foreach (var row in rows) row.TextSize=fontSize;
+                BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});
+            });
+        }
+        if (!fontTimer.IsRunning) fontTimer.Start();
     }
     private void EditionChanged(object sender, SelectionChangedEventArgs e)
     {

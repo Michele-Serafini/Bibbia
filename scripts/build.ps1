@@ -27,6 +27,9 @@ try {
     Copy-Item core/data/LICENSE.bible-data "$staging/LICENSE.bible-data" -Force
     Copy-Item core/data/diodati-source.json "$staging/diodati-source.json" -Force
     Copy-Item core/data/martini-source.json "$staging/martini-source.json" -Force
+    foreach ($file in @('cei2008-source.json','extended-source.json','LICENSE.cei2008.txt','LICENSE.gutenberg.txt')) {
+        Copy-Item "core/data/$file" "$staging/$file" -Force
+    }
     Copy-Item THIRD_PARTY_NOTICES.md "$staging/THIRD_PARTY_NOTICES.md" -Force
     Copy-Item LICENSE "$staging/LICENSE" -Force
     $destination = Join-Path $root 'artifacts/Bibbia'
