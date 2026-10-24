@@ -246,8 +246,8 @@ try {
         if ([Math]::Abs(($after.right-$after.left)-($before.right-$before.left)) -gt 2) { throw 'Title bar restore button did not restore the window.' }
         Check-TitleTheme 1
     }
-    $error = Find-Control $window 'ErrorBar'
-    if ($null -ne $error -and -not $error.Current.IsOffscreen) { throw "An application error was shown: $($error.Current.Name)" }
+    $errorBarControl = Find-Control $window 'ErrorBar'
+    if ($null -ne $errorBarControl -and -not $errorBarControl.Current.IsOffscreen) { throw "An application error was shown: $($errorBarControl.Current.Name)" }
     Write-Host 'WinUI: CEI, extended collection, animated navigation, text resizing, matching caption/surface colors, Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'
 }
 catch {
