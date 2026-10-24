@@ -47,7 +47,7 @@ WinUI ufficiali con un motore Rust indipendente e testabile.
 
 ## Installare su Windows
 
-[Scarica **Bibbia-Setup-0.3.0-x64.exe**](https://github.com/Michele-Serafini/Notion/releases/download/v0.3.0/Bibbia-Setup-0.3.0-x64.exe): un solo installer offline,
+[Scarica **Bibbia-Setup-0.3.0-x64.exe**](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.3.0/Bibbia-Setup-0.3.0-x64.exe): un solo installer offline,
 con interfaccia italiana. Non richiede Rust, .NET, Visual Studio, account o
 download aggiuntivi sul PC destinatario. Supporta Windows 10 versione 2004 o
 successiva e Windows 11 a 64 bit.
@@ -58,13 +58,13 @@ successiva e Windows 11 a 64 bit.
 4. Per rimuovere l'app usare **Impostazioni Windows → App → Bibbia → Disinstalla**.
    Note, segnalibri e traduzioni importate vengono conservati.
 
-La [release v0.3.0](https://github.com/Michele-Serafini/Notion/releases/tag/v0.3.0)
+La [release v0.3.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.3.0)
 contiene l'installer e il checksum SHA-256. Per le nuove build il workflow
 GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-x64**.
 Il workflow manuale **Publish verified installer** pubblica gli stessi file di una
 build completata con successo, dopo averne ricontrollato il checksum, senza ricompilarli.
 
-La pipeline verifica 18 test Rust, il collegamento C# → Rust, installazione,
+La pipeline verifica 19 test Rust, il collegamento C# → Rust, installazione,
 aggiornamento e rimozione su Windows Server 2022. Le prove UI esercitano
 selezione con mouse, popup, note, segnalibri, ricerca, lingue, CEI e testi estesi,
 ridimensionamento del testo, animazioni, colore della barra e della superficie,
@@ -222,6 +222,8 @@ il catalogo della traduzione utilizzata. Un capitolo carica tutte le annotazioni
 con una query SQLite, le impostazioni identiche non vengono riscritte e viene
 mantenuta al massimo una traduzione importata in memoria. Il catalogo delle
 importazioni precedenti viene migrato una volta, senza modificare testi o appunti.
+Se un vecchio import usa il nome di una nuova traduzione inclusa, riceve il suffisso
+«importata»: annotazioni e posizione seguono il testo originale in una transazione.
 Il ridimensionamento del testo aggiorna le righe esistenti con un limite di
 frequenza, senza ricaricare il capitolo.
 

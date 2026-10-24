@@ -562,3 +562,59 @@ fn legacy_import_catalog_migrates_without_losing_notes_or_rewriting_text() {
             .unwrap();
     assert_eq!(changes, 0);
 }
+
+#[test]
+fn newly_bundled_names_do_not_shadow_existing_imports_or_mix_their_notes() {
+    let dir = tempfile::tempdir().unwrap();
+    let e = Engine::open(dir.path()).unwrap();
+    let payload = r#"[{"name":"My text","abbrev":"M","chapters":[["My original verse"]]}]"#;
+    for id in ["CEI 2008", "CEI 2008 (importata)"] {
+        e.db.execute(
+            "INSERT INTO editions (id,payload,book_count) VALUES (?,?,1)",
+            params![id, payload],
+        )
+        .unwrap();
+    }
+    let annotation = Annotation {
+        bookmark: true,
+        note: "My own note".into(),
+        ..Default::default()
+    };
+    e.save_annotation("CEI 2008", 0, 0, 0, &annotation).unwrap();
+    e.db.execute(
+        "INSERT INTO settings VALUES ('position',?)",
+        [json!({"edition":"CEI 2008","book":0,"chapter":0,"verse":0}).to_string()],
+    )
+    .unwrap();
+    drop(e);
+    let mut e = Engine::open(dir.path()).unwrap();
+    let imported = "CEI 2008 (importata 2)";
+    let boot = e.request(json!({"op":"bootstrap"})).unwrap();
+    assert_eq!(boot["settings"]["position"]["edition"], imported);
+    let own = e
+        .request(json!({"op":"chapter","edition":imported,"book":0,"chapter":0}))
+        .unwrap();
+    assert_eq!(own[0]["text"], "My original verse");
+    assert_eq!(own[0]["annotation"]["note"], "My own note");
+    assert!(
+        e.request(json!({"op":"saved","edition":"CEI 2008"}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        e.request(json!({"op":"books","edition":"CEI 2008"}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        73
+    );
+    drop(e);
+    let mut e = Engine::open(dir.path()).unwrap();
+    assert_eq!(
+        e.request(json!({"op":"bootstrap"})).unwrap()["settings"]["position"]["edition"],
+        imported
+    );
+}

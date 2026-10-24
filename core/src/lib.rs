@@ -110,11 +110,44 @@ impl Engine {
                     Ok((r.get::<_, String>(0)?, r.get::<_, u32>(1)? as usize))
                 })
                 .map_err(error)?;
-            for row in rows {
-                let (id, count) = row.map_err(error)?;
-                editions
-                    .entry(id)
-                    .or_insert_with(|| Edition::imported(count));
+            let imported = rows
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(error)?;
+            for (mut id, count) in imported {
+                // A previously imported CEI (or another new builtin name) must
+                // keep its own text, notes and reading position after upgrade.
+                if editions.contains_key(&id) {
+                    let original = id.clone();
+                    let mut suffix = 1;
+                    loop {
+                        id = if suffix == 1 {
+                            format!("{original} (importata)")
+                        } else {
+                            format!("{original} (importata {suffix})")
+                        };
+                        let occupied: bool = db.query_row(
+                            "SELECT EXISTS(SELECT 1 FROM editions WHERE id=?1 UNION ALL SELECT 1 FROM annotations WHERE edition=?1)",
+                            [&id], |r| r.get(0)).map_err(error)?;
+                        if !occupied && !editions.contains_key(&id) {
+                            break;
+                        }
+                        suffix += 1;
+                    }
+                    let tx = db.unchecked_transaction().map_err(error)?;
+                    tx.execute(
+                        "UPDATE editions SET id=?1 WHERE id=?2",
+                        params![id, original],
+                    )
+                    .map_err(error)?;
+                    tx.execute(
+                        "UPDATE annotations SET edition=?1 WHERE edition=?2",
+                        params![id, original],
+                    )
+                    .map_err(error)?;
+                    tx.execute("UPDATE settings SET payload=json_set(payload,'$.edition',?1) WHERE key='position' AND json_extract(payload,'$.edition')=?2",params![id,original]).map_err(error)?;
+                    tx.commit().map_err(error)?;
+                }
+                editions.insert(id, Edition::imported(count));
             }
         }
         Ok(Self { db, editions })
