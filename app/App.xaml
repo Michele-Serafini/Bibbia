@@ -6,6 +6,28 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="WindowSurfaceBrush" Color="#F8F8F8" />
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#F8F8F8" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#F8F8F8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WindowSurfaceBrush" Color="#F8F8F8" />
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#F8F8F8" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#F8F8F8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="WindowSurfaceBrush" Color="#202020" />
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#202020" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#202020" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="WindowSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="{ThemeResource SystemColorWindowColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
