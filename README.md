@@ -64,13 +64,12 @@ GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-
 Il workflow manuale **Publish verified installer** pubblica gli stessi file di una
 build completata con successo, dopo averne ricontrollato il checksum, senza ricompilarli.
 
-La pipeline verifica 19 test Rust, il collegamento C# → Rust, installazione,
+**Verifica v0.3.0:** [pipeline completata con successo](https://github.com/Michele-Serafini/Bibbia/actions/runs/40142876728), codice applicativo `cb15d45`.
+Sono passati 19 test Rust, il collegamento C# → Rust, installazione,
 aggiornamento e rimozione su Windows Server 2022. Le prove UI esercitano
 selezione con mouse, popup, note, segnalibri, ricerca, lingue, CEI e testi estesi,
 ridimensionamento del testo, animazioni, colore della barra e della superficie,
-ingrandimento/ripristino e persistenza dopo la chiusura. L’esito della build
-corrente è disponibile nella scheda Actions; le release vengono pubblicate solo
-dopo il completamento di queste prove.
+ingrandimento/ripristino e persistenza dopo la chiusura. La release contiene l’installer prodotto da questa build e pubblicato dopo la verifica del checksum.
 La build non è firmata digitalmente; Windows può mostrare un avviso SmartScreen.
 
 ## Compilare e avviare su Windows
