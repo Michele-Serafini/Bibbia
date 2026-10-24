@@ -74,8 +74,8 @@
       "50": "421fd4edc4272804bdd85fb153f88dd8b4ed758f2cc9232ce7b41f24295e1219"
     }
   },
-  "sha256": "c7fed2a181cd7d332b665c5e4bb2d07781874708268b58ac4b0a609bbb0b5d29",
+  "sha256": "a973c60ab67f9e364fb5e6084ca8a4a43467a1600c450886f7ab51cd3bc83414",
   "sections": 83,
   "retrieved": "2026-10-24",
-  "conversion": "WEB official XML text and source labels, empty records omitted, combined verse labels and gaps preserved. Charles texts: scripture body only, HTML/page/footnote markup removed, original chapter/verse order and combined labels retained; Jubilees uses source segment numbering. This is a collection, NOT a universal canon or the complete Ethiopian canon."
+  "conversion": "WEB official XML text and source labels, empty records omitted, combined verse labels and gaps preserved. Charles texts: scripture body only, HTML/page/footnote markup and printer colophon removed, layout whitespace normalized, original chapter/verse order and combined labels retained; Jubilees uses source segment numbering. This is a collection, NOT a universal canon or the complete Ethiopian canon."
 }

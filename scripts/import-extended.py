@@ -70,6 +70,8 @@ for node in soup.find_all(['h2', 'h3', 'h4', 'p', 'div']):
     if node.find_parent(class_='footnote') or node.find_parent(id='pg-footer'):
         continue
     text = node.get_text(' ', strip=True)
+    if started and text.startswith('Printed in Great Britain'):
+        break
     if not started:
         if 'The words of the blessing of Enoch' not in text:
             continue
@@ -111,7 +113,7 @@ assert set(rows) == set(range(1, 109))
 enoch = dict(name='1 Enoch (Charles 1917)', abbrev='ENO', chapters=[], labels=[])
 for chapter in range(1, 109):
     labels = sorted(rows[chapter], key=lambda k: (int(re.match(r'\d+', k)[0]), k))
-    verses = [' '.join(rows[chapter][v]) for v in labels]
+    verses = [' '.join(' '.join(rows[chapter][v]).split()) for v in labels]
     assert all(verses), chapter
     # Grouped verses must cover every source reference, with no invented gaps.
     covered = set()
@@ -160,7 +162,7 @@ metadata = dict(name='Extended collection: WEB Classic + 1 Enoch + Jubilees', la
                               translation=version, license='Public Domain (Sefaria availableVersions metadata)',
                               chapters=50, chapter_sha256=jubilees_hashes),
                 sha256=hashlib.sha256(data).hexdigest(), sections=83, retrieved='2026-10-24',
-                conversion='WEB official XML text and source labels, empty records omitted, combined verse labels and gaps preserved. Charles texts: scripture body only, HTML/page/footnote markup removed, original chapter/verse order and combined labels retained; Jubilees uses source segment numbering. This is a collection, NOT a universal canon or the complete Ethiopian canon.')
+                conversion='WEB official XML text and source labels, empty records omitted, combined verse labels and gaps preserved. Charles texts: scripture body only, HTML/page/footnote markup and printer colophon removed, layout whitespace normalized, original chapter/verse order and combined labels retained; Jubilees uses source segment numbering. This is a collection, NOT a universal canon or the complete Ethiopian canon.')
 metadata_path = root / 'core/data/extended-source.json'
 if metadata_path.exists():
     expected = json.loads(metadata_path.read_text(encoding='utf-8'))

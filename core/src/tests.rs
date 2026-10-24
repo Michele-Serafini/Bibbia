@@ -426,6 +426,12 @@ fn extended_numbering_keeps_source_labels_and_does_not_invent_verses() {
         let sir = source.catalog().iter().find(|b| b.abbrev == "SIR").unwrap();
         assert!(!sir.chapters[0].labels.contains(&"5".into()));
         assert!(sir.chapters[0].labels.contains(&"6".into()));
+        let enoch = source.catalog().iter().find(|b| b.abbrev == "ENO").unwrap();
+        assert_eq!(enoch.chapters.len(), 108);
+        let last = &enoch.chapters[107];
+        assert_eq!(last.labels.last().unwrap(), "15");
+        assert!(!source.text(last.first + last.count - 1).contains("Printed"));
+        assert!(!source.text(enoch.chapters[0].first).contains(['\r', '\n']));
     }
 }
 
