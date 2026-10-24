@@ -89,8 +89,8 @@ try {
     $editor = Wait-Control $window 'VerseText_0'
     $editor.SetFocus()
     $range = $editor.GetCurrentPattern([Windows.Automation.TextPattern]::Pattern).DocumentRange.Clone()
-    $range.MoveEndpointByRange([Windows.Automation.TextPatternRangeEndpoint]::End, $range, [Windows.Automation.TextPatternRangeEndpoint]::Start)
-    [void]$range.MoveEndpointByUnit([Windows.Automation.TextPatternRangeEndpoint]::End, [Windows.Automation.TextUnit]::Character, 12)
+    $range.MoveEndpointByRange([Windows.Automation.Text.TextPatternRangeEndpoint]::End, $range, [Windows.Automation.Text.TextPatternRangeEndpoint]::Start)
+    [void]$range.MoveEndpointByUnit([Windows.Automation.Text.TextPatternRangeEndpoint]::End, [Windows.Automation.Text.TextUnit]::Character, 12)
     $bounds = $range.GetBoundingRectangles()
     if ($bounds.Length -lt 4 -or $bounds[2] -le 10) { throw 'Selected text has no visible bounding rectangle.' }
     $x = [int]($bounds[0] + 1); $y = [int]($bounds[1] + $bounds[3] / 2)
