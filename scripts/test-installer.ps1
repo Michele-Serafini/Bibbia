@@ -56,6 +56,13 @@ try {
 finally {
     # Only these fixture directories were created by this test, after checking
     # that no user data or existing installation was present.
+    # A native UI Automation crash can bypass the child script's finally.
+    foreach ($fixtureProcess in @(Get-Process -Name 'Bibbia.Windows' -ErrorAction SilentlyContinue)) {
+        if ($fixtureProcess.Path -eq (Join-Path $installDirectory 'Bibbia.Windows.exe')) {
+            $fixtureProcess.Kill()
+            $fixtureProcess.WaitForExit()
+        }
+    }
     if (Test-Path "$installDirectory/Uninstall.exe") {
         Start-Process "$installDirectory/Uninstall.exe" -ArgumentList "/S _?=$installDirectory" -Wait
     }

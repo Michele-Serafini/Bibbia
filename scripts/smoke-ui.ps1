@@ -116,8 +116,9 @@ try {
         Start-Sleep -Milliseconds 25
     }
     [DesktopProbe]::Mouse([int]($x + $dragWidth), $y, 4)
-    $selectedText = $editor.GetCurrentPattern([Windows.Automation.TextPattern]::Pattern).GetSelection()
-    foreach ($selectedRange in $selectedText) { Write-Host "Selected text: $($selectedRange.GetText(-1))" }
+    # Avoid RichEdit's legacy UIA text-range provider on Server 2022: it can
+    # return invalid native range handles. Check the result through the Rust
+    # bridge after closing the UI instead (Bibbia.UiState).
     $underline = Wait-Control $window 'UnderlineSelection' -Popup
     if ($underline.Current.BoundingRectangle.Height -gt 100) { throw 'Selection toolbar is unexpectedly large.' }
     Invoke-Control $underline
