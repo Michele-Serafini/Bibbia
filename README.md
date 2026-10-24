@@ -56,10 +56,12 @@ GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-
 Il workflow manuale **Publish verified installer** pubblica gli stessi file di una
 build completata con successo, dopo averne ricontrollato il checksum, senza ricompilarli.
 
-La pipeline verifica 11 test Rust su Linux e Windows, il collegamento C# → Rust
-e l’installer su Windows Server 2022. Le prove WinUI usano una selezione reale
+**Verifica v0.2.0:** [pipeline completata con successo](https://github.com/Michele-Serafini/Notion/actions/runs/40122846045).
+Passati 11 test Rust su Linux e Windows, il collegamento C# → Rust
+e le prove dell’installer su Windows Server 2022. Il codice applicativo verificato è `7eea9a9`. Le prove WinUI usano una selezione reale
 con mouse e verificano popup, note, segnalibri, ricerca, scelta delle lingue,
-tema della barra del titolo e persistenza delle modifiche alla riapertura.
+colore effettivo della barra del titolo, ingrandimento/ripristino della finestra
+e persistenza delle modifiche alla riapertura.
 Sono verificate anche installazione, aggiornamento, blocco con app aperta,
 disinstallazione e conservazione dei file personali.
 La build non è firmata digitalmente; Windows può mostrare un avviso SmartScreen.
