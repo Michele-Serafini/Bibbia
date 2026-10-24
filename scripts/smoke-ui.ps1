@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+Add-Type -AssemblyName System.Drawing
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -93,6 +94,20 @@ function Check-TitleTheme([int]$expected) {
     $actual = 0
     $result = [DesktopProbe]::DwmGetWindowAttribute($process.MainWindowHandle, 20, [ref]$actual, 4)
     if ($result -ne 0 -or $actual -ne $expected) { throw "Native title bar theme: expected $expected, got $actual (HRESULT $result)." }
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    do {
+        $bounds = $window.Current.BoundingRectangle
+        $bitmap = [Drawing.Bitmap]::new(1, 1)
+        $graphics = [Drawing.Graphics]::FromImage($bitmap)
+        try {
+            $graphics.CopyFromScreen([int]($bounds.Left + $bounds.Width / 2), [int]($bounds.Top + 14), 0, 0, [Drawing.Size]::new(1, 1))
+            $brightness = $bitmap.GetPixel(0, 0).GetBrightness()
+        }
+        finally { $graphics.Dispose(); $bitmap.Dispose() }
+        if (($expected -eq 1 -and $brightness -lt 0.5) -or ($expected -eq 0 -and $brightness -ge 0.5)) { return }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Caption appearance does not follow the theme: dark=$expected, brightness=$brightness"
 }
 $env:BIBBIA_UI_DIAGNOSTICS = '1'
 $process = Start-Process (Resolve-Path $Executable).Path -PassThru
@@ -164,10 +179,10 @@ try {
     Select-Option 'AppLanguagePicker' 'English'
     Wait-Text $window 'Your reading experience' | Out-Null
     # Changing the app language must not silently change the Bible language.
-    $selected = (Wait-Control $window 'EditionPicker').GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).GetSelection()
+    $selected = (Wait-Control $window 'EditionPicker').GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
     if ($selected[0].Current.Name -ne 'Martini 1781 (cattolica)') { throw 'App language changed the Bible edition.' }
     Select-Option 'BibleLanguagePicker' 'English'
-    $selected = (Wait-Control $window 'EditionPicker').GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).GetSelection()
+    $selected = (Wait-Control $window 'EditionPicker').GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
     if ($selected[0].Current.Name -ne 'KJV') { throw 'English Bible filter did not select KJV.' }
     Select-Option 'BibleLanguagePicker' 'Italiano'
     Select-Page 'ReadNavigation'
