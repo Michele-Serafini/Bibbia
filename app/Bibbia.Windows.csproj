@@ -25,4 +25,13 @@
   <Target Name="CheckRustCore" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('..\target\x86_64-pc-windows-msvc\release\bible_core.dll')" Text="Esegui scripts/build.ps1 dalla radice, con Rust x64 MSVC." />
   </Target>
+  <Target Name="PublishCompiledWinUIResources" AfterTargets="Publish">
+    <!-- The .NET Publish target omits generated WinUI PRI/XBF output in this
+         SDK version. Preserve the same resource layout as the working build. -->
+    <Error Condition="!Exists('$(ProjectPriFullPath)')" Text="Indice WinUI non generato: $(ProjectPriFullPath)" />
+    <ItemGroup>
+      <_CompiledWinUIResource Include="$(TargetDir)**\*.pri;$(TargetDir)**\*.xbf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_CompiledWinUIResource)" DestinationFiles="@(_CompiledWinUIResource->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
