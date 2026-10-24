@@ -88,16 +88,17 @@ try {
     # Drag the mouse over part of the text, rather than invoking a whole-verse menu.
     $editor = Wait-Control $window 'VerseText_0'
     $editor.SetFocus()
-    $range = $editor.GetCurrentPattern([Windows.Automation.TextPattern]::Pattern).DocumentRange.Clone()
-    $range.MoveEndpointByRange([Windows.Automation.Text.TextPatternRangeEndpoint]::End, $range, [Windows.Automation.Text.TextPatternRangeEndpoint]::Start)
-    [void]$range.MoveEndpointByUnit([Windows.Automation.Text.TextPatternRangeEndpoint]::End, [Windows.Automation.Text.TextUnit]::Character, 12)
-    $bounds = $range.GetBoundingRectangles()
-    if ($bounds.Length -lt 4 -or $bounds[2] -le 10) { throw 'Selected text has no visible bounding rectangle.' }
-    $x = [int]($bounds[0] + 1); $y = [int]($bounds[1] + $bounds[3] / 2)
+    # RichEdit's UIA text-range rectangles can be empty before its first render.
+    # Drag within the real edit control instead; the database assertion below
+    # the UI test verifies that a nonempty partial range was actually marked.
+    $bounds = $editor.Current.BoundingRectangle
+    if ($bounds.Width -lt 100 -or $bounds.Height -le 0) { throw 'Verse editor is not visible.' }
+    $dragWidth = [Math]::Min($bounds.Width / 3, $bounds.Height * 3.5)
+    $x = [int]($bounds.Left + 2); $y = [int]($bounds.Top + $bounds.Height / 2)
     [void][DesktopProbe]::SetCursorPos($x, $y)
     [DesktopProbe]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
     for ($step = 1; $step -le 12; $step++) {
-        [void][DesktopProbe]::SetCursorPos([int]($x + ($bounds[2] - 2) * $step / 12), $y)
+        [void][DesktopProbe]::SetCursorPos([int]($x + $dragWidth * $step / 12), $y)
         Start-Sleep -Milliseconds 25
     }
     [DesktopProbe]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
