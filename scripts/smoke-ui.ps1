@@ -9,8 +9,21 @@ using System;
 using System.Runtime.InteropServices;
 public static class DesktopProbe {
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
-    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
-    [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
+    [StructLayout(LayoutKind.Sequential)] private struct MouseInput {
+        public int x, y;
+        public uint data, flags, time;
+        public IntPtr extra;
+    }
+    [StructLayout(LayoutKind.Sequential)] private struct Input { public uint type; public MouseInput mouse; }
+    [DllImport("user32.dll", SetLastError=true)] private static extern uint SendInput(uint count, Input[] input, int size);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int metric);
+    public static void Mouse(int x, int y, uint flags) {
+        var input = new Input { type=0, mouse=new MouseInput {
+            x=(int)((long)x*65535/(GetSystemMetrics(0)-1)),
+            y=(int)((long)y*65535/(GetSystemMetrics(1)-1)), flags=0x8001 | flags }};
+        if (SendInput(1, new[]{input}, Marshal.SizeOf(typeof(Input))) != 1)
+            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+    }
     [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr window, int attribute, out int value, int size);
 }
 '@
@@ -88,6 +101,7 @@ try {
     # Drag the mouse over part of the text, rather than invoking a whole-verse menu.
     $editor = Wait-Control $window 'VerseText_0'
     $editor.SetFocus()
+    Start-Sleep -Milliseconds 500
     # RichEdit's UIA text-range rectangles can be empty before its first render.
     # Drag within the real edit control instead; the database assertion below
     # the UI test verifies that a nonempty partial range was actually marked.
@@ -95,13 +109,15 @@ try {
     if ($bounds.Width -lt 100 -or $bounds.Height -le 0) { throw 'Verse editor is not visible.' }
     $dragWidth = [Math]::Min($bounds.Width / 3, $bounds.Height * 3.5)
     $x = [int]($bounds.Left + 2); $y = [int]($bounds.Top + $bounds.Height / 2)
-    [void][DesktopProbe]::SetCursorPos($x, $y)
-    [DesktopProbe]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+    Write-Host "Mouse drag: $x,$y to $([int]($x+$dragWidth)),$y; edit bounds $bounds"
+    [DesktopProbe]::Mouse($x, $y, 2)
     for ($step = 1; $step -le 12; $step++) {
-        [void][DesktopProbe]::SetCursorPos([int]($x + $dragWidth * $step / 12), $y)
+        [DesktopProbe]::Mouse([int]($x + $dragWidth * $step / 12), $y, 0)
         Start-Sleep -Milliseconds 25
     }
-    [DesktopProbe]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+    [DesktopProbe]::Mouse([int]($x + $dragWidth), $y, 4)
+    $selectedText = $editor.GetCurrentPattern([Windows.Automation.TextPattern]::Pattern).GetSelection()
+    foreach ($selectedRange in $selectedText) { Write-Host "Selected text: $($selectedRange.GetText(-1))" }
     $underline = Wait-Control $window 'UnderlineSelection' -Popup
     if ($underline.Current.BoundingRectangle.Height -gt 100) { throw 'Selection toolbar is unexpectedly large.' }
     Invoke-Control $underline

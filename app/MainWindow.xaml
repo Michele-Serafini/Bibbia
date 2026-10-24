@@ -44,7 +44,7 @@
                                         <Grid ColumnSpacing="10">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,6,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <RichEditBox Grid.Column="1" Loaded="VerseEditorLoaded" DataContextChanged="VerseEditorDataContextChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
+                                            <RichEditBox Grid.Column="1" Loaded="VerseEditorLoaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
                                                 FontFamily="Georgia" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" BorderThickness="0"
                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                 ScrollViewer.VerticalScrollMode="Disabled" UseSystemFocusVisuals="True">

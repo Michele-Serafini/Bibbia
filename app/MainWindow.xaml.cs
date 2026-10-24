@@ -61,6 +61,7 @@ public sealed partial class MainWindow : Window
             closed = true;
             ready = false;
             searchGeneration++;
+            selectionTimer?.Stop();
             try { BibleEngine.Call(new { op = "close" }); }
             catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); }
         };
@@ -138,6 +139,8 @@ public sealed partial class MainWindow : Window
 
     private void LoadChapter(int focusVerse = -1)
     {
+        selectionTimer?.Stop();
+        selectionEditor = null;
         liveEditors.Clear();
         var rows = BibleEngine.Call(new { op = "chapter", edition, book, chapter }).EnumerateArray().Select(x =>
             new VerseRow { Index = x.GetProperty("verse").GetInt32(), Text = x.GetProperty("text").GetString()!,

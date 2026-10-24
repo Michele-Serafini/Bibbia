@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using System.Text.Json;
 using Microsoft.UI.Text;
+using System.Runtime.InteropServices;
 using Windows.ApplicationModel.DataTransfer;
 
 namespace Bibbia.Windows;
@@ -14,6 +15,10 @@ namespace Bibbia.Windows;
 public sealed partial class MainWindow
 {
     private readonly Dictionary<int,RichEditBox> liveEditors = [];
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? selectionTimer;
+    private RichEditBox? selectionEditor;
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
     private static global::Windows.UI.Color MarkColor(string? color) => color switch {
         "yellow"=>global::Windows.UI.Color.FromArgb(255,225,191,65),
         "green"=>global::Windows.UI.Color.FromArgb(255,151,207,145),
@@ -46,11 +51,34 @@ public sealed partial class MainWindow
         if (sender is not RichEditBox editor) return;
         var point = e.GetCurrentPoint(editor).Position;
         // RichEdit updates its selection while handling the mouse release.
-        DispatcherQueue.TryEnqueue(() => {
-            if (!closed && editor.IsLoaded && editor.Document.Selection.Length > 0)
-                editor.SelectionFlyout.ShowAt(editor,new FlyoutShowOptions {Position=point,Placement=FlyoutPlacementMode.Top});
-        });
+        DispatcherQueue.TryEnqueue(() => ShowSelectionToolbar(editor,point));
     }
+    private void VerseSelectionChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RichEditBox editor || (GetAsyncKeyState(1) & 0x8000) == 0) return;
+        selectionEditor = editor;
+        // RichEdit can consume routed pointer releases. Observe the document
+        // selection too, and wait for the drag to finish before opening a menu.
+        if (selectionTimer == null) {
+            selectionTimer = DispatcherQueue.CreateTimer();
+            selectionTimer.Interval = TimeSpan.FromMilliseconds(40);
+            selectionTimer.Tick += (_,_) => {
+                if ((GetAsyncKeyState(1) & 0x8000) != 0) return;
+                selectionTimer.Stop();
+                if (selectionEditor is { } target) ShowSelectionToolbar(target);
+                selectionEditor = null;
+            };
+        }
+        selectionTimer.Start();
+    }
+    private void ShowSelectionToolbar(RichEditBox editor, global::Windows.Foundation.Point? point = null) => Guard(() =>
+    {
+        if (closed || !editor.IsLoaded || editor.Document.Selection.Length == 0 || editor.SelectionFlyout.IsOpen) return;
+        selectionTimer?.Stop();
+        var options = new FlyoutShowOptions {Placement=FlyoutPlacementMode.Top};
+        if (point is { } position) options.Position = position;
+        editor.SelectionFlyout.ShowAt(editor,options);
+    });
     private static void UpdateDocument(RichEditBox editor, Action update)
     {
         // WinUI rejects document writes while IsReadOnly is true, including
