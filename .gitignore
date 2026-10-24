@@ -1,0 +1,9 @@
+/target/
+/app/bin/
+/app/obj/
+/tests/**/bin/
+/tests/**/obj/
+/.vs/
+*.user
+*.log
+/artifacts/

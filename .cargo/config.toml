@@ -1,0 +1,4 @@
+[target.x86_64-pc-windows-msvc]
+# Keep the native engine usable on PCs without Visual Studio / VC++ Redistributable.
+# Allocations stay on their owning side of the C ABI (bible_request/bible_free).
+rustflags = ["-C", "target-feature=+crt-static"]

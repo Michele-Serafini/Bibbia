@@ -1,0 +1,29 @@
+{
+  "translation": "Giovanni Diodati Bible (1649)",
+  "abbreviation": "giovanni",
+  "description": "Italian Giovanni Diodati Bibbia 1649",
+  "lang": "it",
+  "language": "Italian",
+  "direction": "LTR",
+  "encoding": "UTF-8",
+  "distribution_lcsh": "Bible.Italian",
+  "distribution_version": "1.1",
+  "distribution_version_date": "2020-02-08",
+  "distribution_abbreviation": "Giovanni Diodati",
+  "distribution_about": "1649 Italian Giovanni Diodati Bibbia",
+  "distribution_license": "Public Domain",
+  "distribution_sourcetype": "OSIS",
+  "distribution_source": "http://unbound.biola.edu/",
+  "distribution_versification": "KJV",
+  "distribution_history": {
+    "history_1.0": "(2002-01-15) Initial release",
+    "history_1.1": "(2020-02-08) Fix issue https://tracker.crosswire.org/browse/MOD-299"
+  },
+  "url": "https://api.getbible.net/v2/giovanni.json",
+  "sha": "cee35588f101b688cec9d51b32a1b4ed99df2823",
+  "source_url": "https://github.com/getbible/Unbound-Biola/blob/38a275eef7e15a398f6ec08239abc75ed8713456/Italian__Giovanni_Diodati_Bible_(1649)__giovanni__LTR.txt",
+  "source_sha256": "b0d13b1d50c5b12665dfedac03432e2be82e17ad3f833d33f6983c6319109a97",
+  "converted_sha256": "76f397aa95e71c8a01bc94b223586fbd15302cb987477f12e681fc1df1082002",
+  "conversion": "Record book||chapter||verse||text, ordered by numeric indices; texts preserved, labels from getbible/v2/giovanni/books.json.",
+  "retrieved": "2026-10-24"
+}
