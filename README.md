@@ -7,6 +7,20 @@ font **Adwaita Sans e Source Serif 4**, colonna di lettura limitata e interlinea
 Nessun browser incorporato, server o account. Progetto indipendente,
 non affiliato a GNOME o Bible.com/YouVersion.
 
+## Aspetto
+
+GNOME, tema chiaro:
+
+![Bibbia GNOME con Adwaita Sans e Source Serif 4](docs/screenshots/gnome-light.png)
+
+Windows, tema chiaro:
+
+![Bibbia WinUI con la nuova impaginazione](docs/screenshots/windows-light.png)
+
+Sono schermate reali della versione 0.4.0 nelle prove Windows Server e Debian 12.
+Disponibili anche [GNOME scuro](docs/screenshots/gnome-dark.png) e
+[Windows scuro](docs/screenshots/windows-dark.png).
+
 ## Funzioni implementate
 
 - **CEI 2008**, Bibbia cattolica italiana completa di 73 libri, offline, per uso
@@ -104,7 +118,9 @@ GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-
 Il workflow manuale **Publish verified packages** pubblica gli stessi file di una
 build completata con successo, dopo averne ricontrollato il checksum, senza ricompilarli.
 
-La pipeline verifica 20 test del motore, la mappatura delle selezioni GTK,
+**Verifica 0.4.0:** [pipeline completata con successo](https://github.com/Michele-Serafini/Bibbia/actions/runs/40151864300), codice applicativo `54bcb66`.
+
+Superati 20 test del motore, la mappatura delle selezioni GTK,
 il collegamento C# → Rust e le interfacce reali con mouse: popup, note,
 segnalibri, ricerca, lingue, CEI, Enoc e Giubilei, font, colori e riapertura dei dati.
 Comprende installazione/aggiornamento/rimozione dei pacchetti Windows e Debian,
@@ -346,20 +362,20 @@ Misura della build release Linux x86-64, profili nuovi, Martini Genesi 1,
 finestra 980×800, GTK4 4.18/libadwaita 1.7, X11/Xvfb con renderer software Cairo.
 Mediana di tre processi nuovi nella stessa macchina di prova:
 
-| Misura | App GNOME 0.4.0 |
-| --- | ---: |
-| Finestra pronta dopo il primo rendering | 304 ms |
-| Memoria residente RSS, librerie e font inclusi | 93,1 MiB |
-| Memoria proporzionale PSS | 79,2 MiB |
-| Pagine private residenti, pulite e modificate | 68,2 MiB |
-| CPU a riposo, campioni da 3 secondi | nessun tick registrato |
+| Misura | Macchina di sviluppo | CI Debian 12 |
+| --- | ---: | ---: |
+| Finestra pronta dopo il primo rendering | 304 ms | 152 ms |
+| Memoria residente RSS, librerie e font inclusi | 93,1 MiB | 101,0 MiB |
+| Memoria proporzionale PSS | 79,2 MiB | 76,3 MiB |
+| Pagine private residenti, pulite e modificate | 68,2 MiB | 53,3 MiB |
+| CPU a riposo, campioni da 3 secondi | nessun tick registrato | nessun tick registrato |
 
 Sono misure del processo completo, escluse quelle del server grafico e del resto
 del desktop. Le pagine delle librerie possono essere condivise con altre app.
 Non sono misure di Windows né una garanzia per altri renderer, GPU, schermi o
 font installati. I risultati grezzi sono in
 [docs/performance/v0.4.0-gnome-linux.json](docs/performance/v0.4.0-gnome-linux.json).
-La pipeline salva anche una misura sul riferimento Debian 12.
+Il [secondo risultato](docs/performance/v0.4.0-gnome-debian12-ci.json) usa GTK4 4.8/libadwaita 1.2 sul riferimento Debian 12, con lo stesso renderer e procedura; le macchine sono diverse.
 
 ```sh
 xvfb-run -a -s '-screen 0 1280x960x24' dbus-run-session -- \
