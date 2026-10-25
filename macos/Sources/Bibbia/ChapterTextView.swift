@@ -65,7 +65,9 @@ final class ReadingTextView: NSTextView {
     }
 
     func render(revision: Int, size: Int, dark: Bool) {
-        guard let model, self.revision != revision || self.size != size || self.dark != dark else { return }
+        guard let model else { return }
+        setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
+        guard self.revision != revision || self.size != size || self.dark != dark else { return }
         let chapterChanged = renderedPosition?.edition != model.position.edition
             || renderedPosition?.book != model.position.book || renderedPosition?.chapter != model.position.chapter
         if chapterChanged { closePopover() }

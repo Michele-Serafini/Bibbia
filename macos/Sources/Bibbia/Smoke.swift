@@ -71,6 +71,13 @@ extension AppModel {
             navigate(john.position)
             try await waitUntil { self.position == john.position && !self.loading }
             try check(verses.contains { $0.label == "16" && $0.text.contains("amato") }, "Search navigates to native reader")
+            panel = .search; query = "ha tanto amato il mondo"; search()
+            try await waitUntil { !self.searching && !self.hits.isEmpty }
+            let previousHits = hits.map(\.position)
+            navigate(john.position)
+            try await waitUntil { !self.loading }
+            try check(!searching && hits.map(\.position) == previousHits, "Opening a result reuses the search results")
+            panel = .books
             preferences.theme = "Light"; preferencesChanged()
             try await Task.sleep(for: .milliseconds(500))
             try screenshot(window, name: "macos-light.png")

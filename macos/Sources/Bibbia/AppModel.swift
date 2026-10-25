@@ -75,20 +75,23 @@ final class AppModel: ObservableObject {
         guard let store else { return }
         generation += 1
         let token = generation
+        let editionChanged = target.edition != position.edition
         positionTask?.cancel()
-        searchTask?.cancel(); searching = false
+        if editionChanged { searchTask?.cancel(); searching = false; hits = []; saved = [] }
         loading = true
         Task {
             do {
-                let books = try await store.books(edition: target.edition)
+                let books: [BookIndex]
+                if editionChanged { books = try await store.books(edition: target.edition) }
+                else { books = self.books }
                 let verses = try await store.chapter(target)
                 guard token == generation else { return }
                 try await store.savePosition(target)
                 guard token == generation else { return }
                 self.position = target; self.books = books; self.verses = verses
                 scrollTarget = target.verse; revision += 1; loading = false
-                if panel == .saved { loadSaved(reset: true) }
-                if panel == .search { search() }
+                if editionChanged && panel == .saved { loadSaved(reset: true) }
+                if editionChanged && panel == .search { search() }
             } catch {
                 guard token == generation else { return }
                 self.error = error.localizedDescription; loading = false
