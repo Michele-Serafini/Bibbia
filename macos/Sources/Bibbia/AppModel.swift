@@ -61,6 +61,7 @@ final class AppModel: ObservableObject {
             scrollTarget = position.verse
             applyTheme(); revision += 1; loading = false
             if ProcessInfo.processInfo.arguments.contains("--ui-smoke") { await runSmoke() }
+            if ProcessInfo.processInfo.arguments.contains("--ui-reopen") { await runReopenSmoke() }
             if let marker = ProcessInfo.processInfo.environment["BIBBIA_BENCHMARK_READY"] {
                 // A one-shot test hook; absent during normal launches.
                 try await Task.sleep(for: .milliseconds(100))

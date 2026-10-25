@@ -54,6 +54,7 @@ final class ReadingTextView: NSTextView {
     private var revision = -1
     private var size = 0
     private var dark = false
+    private var renderedPosition: Position?
     private(set) var annotationPopover: NSPopover?
     private(set) var capturedSelection: [SelectedSpan] = []
     private var capturedPosition = Position()
@@ -65,12 +66,14 @@ final class ReadingTextView: NSTextView {
 
     func render(revision: Int, size: Int, dark: Bool) {
         guard let model, self.revision != revision || self.size != size || self.dark != dark else { return }
-        let chapterChanged = capturedPosition.edition != model.position.edition
-            || capturedPosition.book != model.position.book || capturedPosition.chapter != model.position.chapter
+        let chapterChanged = renderedPosition?.edition != model.position.edition
+            || renderedPosition?.book != model.position.book || renderedPosition?.chapter != model.position.chapter
         if chapterChanged { closePopover() }
         self.revision = revision; self.size = size; self.dark = dark
         let selected = selectedRange()
+        let scrollOrigin = enclosingScrollView?.contentView.bounds.origin
         let oldString = string
+        renderedPosition = model.position
         readingLayout = ReadingLayout(verses: model.verses)
         let paragraph = NSMutableParagraphStyle()
         let numberFont = NSFont.monospacedDigitSystemFont(ofSize: CGFloat(size) * 0.56, weight: .medium)
@@ -108,7 +111,13 @@ final class ReadingTextView: NSTextView {
             }
         } else { textStorage?.setAttributedString(content) }
         textStorage?.endEditing()
-        if oldString == readingLayout.text, NSMaxRange(selected) <= content.length { setSelectedRange(selected) }
+        if !chapterChanged, NSMaxRange(selected) <= content.length {
+            setSelectedRange(selected)
+            if let scrollOrigin, let scroll = enclosingScrollView {
+                scroll.contentView.scroll(to: scrollOrigin)
+                scroll.reflectScrolledClipView(scroll.contentView)
+            }
+        }
         setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
     }
 

@@ -83,7 +83,7 @@ def exercise(app):
         run('ditto', app, installed)
         run('codesign', '--verify', '--deep', '--strict', installed)
         binary = installed / 'Contents/MacOS/Bibbia'
-        run('lipo', '-verify_arch', 'arm64', 'x86_64', binary)
+        run('lipo', binary, '-verify_arch', 'arm64', 'x86_64')
         libraries = subprocess.check_output(['otool', '-L', str(binary)], text=True)
         print(libraries)
         assert all('/usr/lib/' in line or '/System/Library/' in line for line in libraries.splitlines()[1:]), libraries
@@ -96,6 +96,10 @@ def exercise(app):
             run(binary, '--data-dir', profile, '--ui-smoke', stdout=log, stderr=log, timeout=90)
         print((DIAGNOSTICS / 'ui.log').read_text())
         assert (profile / 'ui-passed.txt').exists()
+        with (DIAGNOSTICS / 'reopen.log').open('w') as log:
+            run(binary, '--data-dir', profile, '--ui-reopen', stdout=log, stderr=log, timeout=30)
+        print((DIAGNOSTICS / 'reopen.log').read_text())
+        assert (profile / 'reopen-passed.txt').exists()
         for screenshot in (profile / 'screenshots').glob('*.png'):
             shutil.copyfile(screenshot, DIAGNOSTICS / screenshot.name)
         db = profile / 'bible.sqlite3'

@@ -40,6 +40,14 @@ public struct Position: Codable, Sendable, Equatable, Hashable {
                 chapter: Int = 0, verse: Int = 0) {
         self.edition = edition; self.book = book; self.chapter = chapter; self.verse = verse
     }
+    enum CodingKeys: String, CodingKey { case edition, book, chapter, verse }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        edition = try c.decode(String.self, forKey: .edition)
+        book = try c.decode(Int.self, forKey: .book)
+        chapter = try c.decode(Int.self, forKey: .chapter)
+        verse = try c.decodeIfPresent(Int.self, forKey: .verse) ?? 0
+    }
 }
 
 public struct TextMark: Codable, Sendable, Equatable {

@@ -3,6 +3,24 @@ import Foundation
 import BibleKit
 
 extension AppModel {
+    func runReopenSmoke() async {
+        do {
+            guard directory.lastPathComponent.hasPrefix("bibbia-macos-smoke-"),
+                  FileManager.default.fileExists(atPath: directory.appendingPathComponent(".bibbia-test-fixture").path),
+                  let store else { throw BibleError.invalid("Reopen test requires an isolated marked profile") }
+            try await Task.sleep(for: .milliseconds(500))
+            try check(position.edition == "CEI 2008" && position.chapter == 2 && preferences.fontSize == 28
+                      && preferences.language == "en" && preferences.theme == "Dark", "Second process restores reading preferences")
+            let notes = try await store.saved(edition: Position().edition)
+            try check(notes.first?.annotation.note == "Nota macOS 😀" && notes.first?.annotation.bookmark == true,
+                      "Second process restores notes and bookmarks")
+            try Data("passed\n".utf8).write(to: directory.appendingPathComponent("reopen-passed.txt"))
+            NSApp.terminate(nil)
+        } catch {
+            FileHandle.standardError.write(Data("macOS reopen smoke failed: \(error)\n".utf8))
+            Darwin.exit(1)
+        }
+    }
     /// Integration mode requires an explicitly marked disposable directory.
     /// It is never run as part of an ordinary launch.
     func runSmoke() async {
@@ -17,7 +35,7 @@ extension AppModel {
             try check(window.frame.width >= 760, "Native window allocated")
             try check(text.string.contains(verses[0].text), "Chapter rendered in NSTextView")
             let font = text.textStorage?.attribute(.font, at: text.readingLayout.spans[0].location, effectiveRange: nil) as? NSFont
-            try check(font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")
+            try check(font != nil && font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")
             let selection = NSRange(location: text.readingLayout.spans[0].location, length: 8)
             text.setSelectedRange(selection)
             text.showSelection()

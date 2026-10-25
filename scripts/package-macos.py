@@ -48,7 +48,7 @@ def package():
         if arch == 'arm64':
             shutil.copytree(bundles[0], resources / bundles[0].name)
     run('lipo', '-create', *binaries, '-output', executable)
-    run('lipo', '-verify_arch', 'arm64', 'x86_64', executable)
+    run('lipo', executable, '-verify_arch', 'arm64', 'x86_64')
     run('strip', '-x', executable)
     shutil.copyfile(ROOT / 'macos/Info.plist', contents / 'Info.plist')
     iconset = ROOT / 'artifacts/Bibbia.iconset'
