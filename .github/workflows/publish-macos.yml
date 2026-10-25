@@ -1,0 +1,53 @@
+name: Publish verified macOS package
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Build macOS run tested on Apple Silicon and Intel
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish exactly the tested Universal binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          gh run view "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion,status,headSha,headBranch,workflowName > "$RUNNER_TEMP/macos-build.json"
+          build_sha=$(python3 - "$RUNNER_TEMP/macos-build.json" <<'PY'
+          import json, sys
+          run = json.load(open(sys.argv[1]))
+          assert run['status'] == 'completed' and run['conclusion'] == 'success', 'Build not successful'
+          assert run['headBranch'] == 'main' and run['workflowName'] == 'Build macOS', 'Unexpected build source'
+          print(run['headSha'])
+          PY
+          )
+          git fetch --no-tags --depth=1 origin "$build_sha"
+          git show "$build_sha:macos/Info.plist" > "$RUNNER_TEMP/tested.plist"
+          version=$(python3 - "$RUNNER_TEMP/tested.plist" <<'PY'
+          import plistlib, re, sys
+          version = plistlib.load(open(sys.argv[1], 'rb'))['CFBundleShortVersionString']
+          assert re.fullmatch(r'\d+\.\d+\.\d+', version), 'Invalid version'
+          print(version)
+          PY
+          )
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name Bibbia-macOS-Universal --dir "$RUNNER_TEMP/macos-package"
+          cd "$RUNNER_TEMP/macos-package"
+          dmg="Bibbia-$version-universal.dmg"
+          archive="Bibbia-$version-universal.zip"
+          test -f "$dmg" && test -f "$archive"
+          sha256sum -c "$dmg.sha256"
+          sha256sum -c "$archive.sha256"
+          notes="$GITHUB_WORKSPACE/docs/releases/macos-v$version.md"
+          test -f "$notes"
+          gh release create "macos-v$version" "$dmg" "$dmg.sha256" "$archive" "$archive.sha256" --repo "$GITHUB_REPOSITORY" --target "$build_sha" --title "Bibbia $version per macOS — Swift nativo" --notes-file "$notes"

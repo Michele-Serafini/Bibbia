@@ -22,9 +22,9 @@ struct ChapterTextView: NSViewRepresentable {
         view.isVerticallyResizable = true; view.isHorizontallyResizable = false
         view.autoresizingMask = [.width]
         view.minSize = NSSize(width: 0, height: 0)
-        view.maxSize = NSSize(width: .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         view.textContainer?.widthTracksTextView = true
-        view.textContainer?.containerSize = NSSize(width: 760, height: .greatestFiniteMagnitude)
+        view.textContainer?.containerSize = NSSize(width: 760, height: CGFloat.greatestFiniteMagnitude)
         view.setAccessibilityIdentifier("bibleText")
         view.setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
         scroll.documentView = view
