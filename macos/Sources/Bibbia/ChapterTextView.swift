@@ -36,9 +36,17 @@ struct ChapterTextView: NSViewRepresentable {
         view.model = model
         view.render(revision: model.revision, size: model.preferences.fontSize, dark: colorScheme == .dark)
         if let target = model.scrollTarget, view.readingLayout.spans.indices.contains(target) {
-            view.scrollRangeToVisible(view.readingLayout.spans[target])
-            // Deferring avoids mutating observed state inside updateNSView.
-            DispatchQueue.main.async { if model.scrollTarget == target { model.scrollTarget = nil } }
+            let position = model.position
+            // SwiftUI must finish sizing the scroll view before TextKit can
+            // place a search result accurately inside the visible chapter.
+            DispatchQueue.main.async { [weak view] in
+                guard let view, model.position == position, model.scrollTarget == target,
+                      view.readingLayout.spans.indices.contains(target) else { return }
+                view.layoutSubtreeIfNeeded()
+                if let container = view.textContainer { view.layoutManager?.ensureLayout(for: container) }
+                view.scrollRangeToVisible(view.readingLayout.spans[target])
+                model.scrollTarget = nil
+            }
         }
     }
 

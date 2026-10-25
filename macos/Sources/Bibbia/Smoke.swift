@@ -15,7 +15,7 @@ extension AppModel {
             try check(notes.first?.annotation.note == "Nota macOS 😀" && notes.first?.annotation.bookmark == true,
                       "Second process restores notes and bookmarks")
             try Data("passed\n".utf8).write(to: directory.appendingPathComponent("reopen-passed.txt"))
-            NSApp.terminate(nil)
+            DispatchQueue.main.async { NSApp.terminate(nil) }
         } catch {
             FileHandle.standardError.write(Data("macOS reopen smoke failed: \(error)\n".utf8))
             Darwin.exit(1)
@@ -102,7 +102,7 @@ extension AppModel {
             let marker = directory.appendingPathComponent("ui-passed.txt")
             try Data("Native macOS UI checks passed\n".utf8).write(to: marker)
             print("Native macOS UI checks passed")
-            NSApp.terminate(nil)
+            DispatchQueue.main.async { NSApp.terminate(nil) }
         } catch {
             FileHandle.standardError.write(Data("macOS UI smoke failed: \(error)\n".utf8))
             // This path is only reachable in the explicit integration-test mode.
@@ -112,7 +112,7 @@ extension AppModel {
 
     private func check(_ condition: Bool, _ message: String) throws {
         guard condition else { throw BibleError.invalid(message) }
-        print("PASS: \(message)")
+        FileHandle.standardOutput.write(Data("PASS: \(message)\n".utf8))
     }
 
     private func waitUntil(_ condition: () -> Bool) async throws {
@@ -148,9 +148,12 @@ extension AppModel {
         }
         // AppKit's real mouseDown tracking loop consumes these queued drag/up
         // events. This needs no Accessibility permission or external click tool.
-        NSApp.postEvent(try event(.leftMouseUp, end, 3), atStart: true)
-        NSApp.postEvent(try event(.leftMouseDragged, end, 2), atStart: true)
-        view.mouseDown(with: try event(.leftMouseDown, start, 1))
+        let down = try event(.leftMouseDown, start, 1)
+        let drag = try event(.leftMouseDragged, end, 2)
+        let up = try event(.leftMouseUp, end, 3)
+        NSApp.postEvent(up, atStart: true)
+        NSApp.postEvent(drag, atStart: true)
+        view.mouseDown(with: down)
     }
 
     private func screenshot(_ window: NSWindow, name: String) throws {

@@ -39,6 +39,20 @@ def stop(process):
             process.wait()
 
 
+def ui_process(binary, profile, mode, log_name, timeout):
+    with (DIAGNOSTICS / log_name).open('w') as log:
+        process = subprocess.Popen([str(binary), '--data-dir', str(profile), mode], stdout=log, stderr=log)
+        try:
+            status = process.wait(timeout=timeout)
+            if status:
+                raise RuntimeError(f'{mode} failed with exit status {status}')
+        except subprocess.TimeoutExpired:
+            subprocess.run(['sample', str(process.pid), '2', '10', '-file', str(DIAGNOSTICS / 'timeout-sample.txt')], timeout=15)
+            raise
+        finally:
+            stop(process)
+
+
 def benchmark(binary, root):
     samples = []
     for index in range(3):
@@ -94,15 +108,13 @@ def exercise(app):
         profile.mkdir()
         (profile / '.bibbia-test-fixture').write_text('disposable integration fixture\n')
         try:
-            with (DIAGNOSTICS / 'ui.log').open('w') as log:
-                run(binary, '--data-dir', profile, '--ui-smoke', stdout=log, stderr=log, timeout=90)
+            ui_process(binary, profile, '--ui-smoke', 'ui.log', 60)
         finally:
             print((DIAGNOSTICS / 'ui.log').read_text())
             for screenshot in (profile / 'screenshots').glob('*.png'):
                 shutil.copyfile(screenshot, DIAGNOSTICS / screenshot.name)
         assert (profile / 'ui-passed.txt').exists()
-        with (DIAGNOSTICS / 'reopen.log').open('w') as log:
-            run(binary, '--data-dir', profile, '--ui-reopen', stdout=log, stderr=log, timeout=30)
+        ui_process(binary, profile, '--ui-reopen', 'reopen.log', 30)
         print((DIAGNOSTICS / 'reopen.log').read_text())
         assert (profile / 'reopen-passed.txt').exists()
         db = profile / 'bible.sqlite3'
