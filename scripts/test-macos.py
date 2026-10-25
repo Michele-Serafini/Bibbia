@@ -76,11 +76,24 @@ def benchmark(binary, root):
                 time.sleep(3)
                 elapsed = time.monotonic() - idle_started
                 cpu = (cpu_seconds(process.pid) - before) / elapsed * 100
-                samples.append(dict(startup_ms=round(startup, 2), rss_mib=round(rss, 2), idle_cpu_percent=round(cpu, 2)))
+                # AppKit/SwiftUI can finish deferred startup work after the
+                # first frame. Keep the early sample and measure again later.
+                time.sleep(5)
+                steady_rss = int(subprocess.check_output(['ps', '-p', str(process.pid), '-o', 'rss='], text=True)) / 1024
+                before = cpu_seconds(process.pid)
+                idle_started = time.monotonic()
+                time.sleep(3)
+                elapsed = time.monotonic() - idle_started
+                steady_cpu = (cpu_seconds(process.pid) - before) / elapsed * 100
+                samples.append(dict(startup_ms=round(startup, 2), rss_mib=round(rss, 2),
+                                    idle_cpu_percent=round(cpu, 2), steady_rss_mib=round(steady_rss, 2),
+                                    steady_idle_cpu_percent=round(steady_cpu, 2)))
+                if index == 2:
+                    run('sample', process.pid, '2', '10', '-file', DIAGNOSTICS / 'idle-sample.txt', stdout=log, stderr=log)
             finally:
                 stop(process)
     result = dict(platform=platform.platform(), architecture=platform.machine(),
-                  method='Whole release app; 3 fresh profiles; ready after layout/display plus 100ms one-shot; 1.5s settle and 3s idle; ps RSS/CPU time. Excludes WindowServer. Not a cross-machine comparison.',
+                  method='Whole release app; 3 fresh profiles; ready after layout/display plus 100ms one-shot; early RSS/CPU after 1.5s settle over 3s; steady RSS/CPU after another 5s settle over 3s. ps RSS/CPU time, no input. Excludes WindowServer. Not a cross-machine comparison.',
                   samples=samples,
                   medians={key: round(statistics.median(sample[key] for sample in samples), 2) for key in samples[0]})
     (DIAGNOSTICS / 'performance.json').write_text(json.dumps(result, indent=2) + '\n')
