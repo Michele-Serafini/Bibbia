@@ -1,4 +1,4 @@
-name: Publish verified installer
+name: Publish verified packages
 on:
   workflow_dispatch:
     inputs:
@@ -43,10 +43,17 @@ jobs:
           )
           build_tag="v$build_version"
           gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name Bibbia-Installer-x64 --dir "$RUNNER_TEMP/bibbia-installer"
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name Bibbia-Linux-x64 --dir "$RUNNER_TEMP/bibbia-linux"
+          cd "$RUNNER_TEMP/bibbia-linux"
+          linux_deb="bibbia_$build_version-1_amd64.deb"
+          linux_rpm="bibbia-$build_version-1.x86_64.rpm"
+          test -f "$linux_deb" && test -f "$linux_rpm"
+          sha256sum -c "$linux_deb.sha256"
+          sha256sum -c "$linux_rpm.sha256"
           cd "$RUNNER_TEMP/bibbia-installer"
           installer_file="Bibbia-Setup-$build_version-x64.exe"
           test -f "$installer_file"
           sha256sum -c "$installer_file.sha256"
           notes_file="$GITHUB_WORKSPACE/docs/releases/$build_tag.md"
           test -f "$notes_file"
-          gh release create "$build_tag" "$installer_file" "$installer_file.sha256" --repo "$GITHUB_REPOSITORY" --target "$build_sha" --title "Bibbia $build_version per Windows" --notes-file "$notes_file"
+          gh release create "$build_tag" "$installer_file" "$installer_file.sha256" "$RUNNER_TEMP/bibbia-linux/$linux_deb" "$RUNNER_TEMP/bibbia-linux/$linux_deb.sha256" "$RUNNER_TEMP/bibbia-linux/$linux_rpm" "$RUNNER_TEMP/bibbia-linux/$linux_rpm.sha256" --repo "$GITHUB_REPOSITORY" --target "$build_sha" --title "Bibbia $build_version per Windows e Linux" --notes-file "$notes_file"

@@ -1,0 +1,14 @@
+{
+  "AdwaitaSans-Regular.ttf": {
+    "source": "https://download.gnome.org/sources/adwaita-fonts/49/adwaita-fonts-49.0.tar.xz",
+    "release": "49.0",
+    "license": "OFL-1.1",
+    "sha256": "8381c33b9a44f066f2b99dba3d416a2342891e28c956a35dfd8d16ee2987e6d4"
+  },
+  "SourceSerif4-Regular.ttf": {
+    "source": "https://github.com/adobe-fonts/source-serif/blob/80d3f8894c09c937bebfa9011247d2e1c79fd6f4/TTF/SourceSerif4-Regular.ttf",
+    "commit": "80d3f8894c09c937bebfa9011247d2e1c79fd6f4",
+    "license": "OFL-1.1",
+    "sha256": "e5a4ee6a3d87bb9024796be390c6771e2a0eb1883dae25effaf57ca01668e24b"
+  }
+}

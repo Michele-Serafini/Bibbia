@@ -441,10 +441,18 @@ impl Engine {
                 Ok(json!(annotation))
             }
             "saved" => {
-                self.books(edition)?;
-                let mut stmt = self.db.prepare("SELECT book, chapter, verse, payload FROM annotations WHERE edition=? ORDER BY book,chapter,verse").map_err(error)?;
+                let books = self.books(edition)?;
+                let limit = match request.get("limit") {
+                    None => -1,
+                    Some(v) => v.as_i64().filter(|v|(1..=200).contains(v)).ok_or("Limite non valido")?,
+                };
+                let offset = match request.get("offset") {
+                    None => 0,
+                    Some(v) => v.as_i64().filter(|v|*v>=0).ok_or("Indice non valido: offset")?,
+                };
+                let mut stmt = self.db.prepare_cached("SELECT book, chapter, verse, payload FROM annotations WHERE edition=? ORDER BY book,chapter,verse LIMIT ? OFFSET ?").map_err(error)?;
                 let rows = stmt
-                    .query_map([edition], |r| {
+                    .query_map(params![edition,limit,offset], |r| {
                         Ok((
                             r.get::<_, u32>(0)?,
                             r.get::<_, u32>(1)?,
@@ -458,8 +466,7 @@ impl Engine {
                     let (b, c, v, a) = row.map_err(error)?;
                     let (b, c, v) = (b as usize, c as usize, v as usize);
                     let annotation: Annotation = serde_json::from_str(&a).map_err(error)?;
-                    let name = self
-                        .books(edition)?
+                    let name = books
                         .get(b)
                         .ok_or("Libro salvato non valido")?
                         .name;

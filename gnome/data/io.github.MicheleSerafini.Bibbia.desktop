@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Bibbia
+GenericName=Offline Bible Reader
+GenericName[it]=Lettore della Bibbia offline
+Comment=Read, highlight and keep your notes on your device
+Comment[it]=Leggi, sottolinea e conserva i tuoi appunti sul dispositivo
+Exec=bibbia
+Icon=io.github.MicheleSerafini.Bibbia
+Terminal=false
+Categories=Education;Literature;GTK;
+Keywords=Bible;Bibbia;CEI;Scripture;Reading;
+StartupNotify=true
+StartupWMClass=io.github.MicheleSerafini.Bibbia

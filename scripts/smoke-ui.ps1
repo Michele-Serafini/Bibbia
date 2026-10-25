@@ -104,6 +104,18 @@ function Select-Option([string]$id, [string]$name) {
     $combo.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
     Start-Sleep -Milliseconds 300
 }
+function Save-WindowImage([string]$name) {
+    $diagnostics = Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts/diagnostics'
+    New-Item $diagnostics -ItemType Directory -Force | Out-Null
+    $bounds = [DesktopProbe+Rect]::new()
+    [void][DesktopProbe]::GetWindowRect($process.MainWindowHandle,[ref]$bounds)
+    $bitmap = [Drawing.Bitmap]::new($bounds.right-$bounds.left,$bounds.bottom-$bounds.top)
+    $graphics = [Drawing.Graphics]::FromImage($bitmap)
+    try {
+        $graphics.CopyFromScreen($bounds.left,$bounds.top,0,0,$bitmap.Size)
+        $bitmap.Save((Join-Path $diagnostics $name))
+    } finally { $graphics.Dispose(); $bitmap.Dispose() }
+}
 function Check-TitleTheme([int]$expected) {
     $actual = 0
     $result = [DesktopProbe]::DwmGetWindowAttribute($process.MainWindowHandle, 20, [ref]$actual, 4)
@@ -196,8 +208,14 @@ try {
     Select-Page 'SettingsNavigation'
     Select-Option 'ThemePicker' 'Chiaro'
     Check-TitleTheme 0
+    Select-Page 'ReadNavigation'
+    Save-WindowImage 'windows-light.png'
+    Select-Page 'SettingsNavigation'
     Select-Option 'ThemePicker' 'Scuro'
     Check-TitleTheme 1
+    Select-Page 'ReadNavigation'
+    Save-WindowImage 'windows-dark.png'
+    Select-Page 'SettingsNavigation'
     $font = Wait-Control $window 'FontSlider'
     # RichEditBox has a 32px minimum height; use the maximum font size so
     # a real text resize exceeds that floor and changes its rendered bounds.
@@ -246,6 +264,12 @@ try {
         if ([Math]::Abs(($after.right-$after.left)-($before.right-$before.left)) -gt 2) { throw 'Title bar restore button did not restore the window.' }
         Check-TitleTheme 1
     }
+    Select-Page 'SavedNavigation'
+    Wait-Text (Wait-Control $window 'ResultList') 'Genesi 1:1' | Out-Null
+    if ((Wait-Control $window 'SavedPreviousPage').Current.IsEnabled) { throw 'First saved page has an enabled previous button.' }
+    if ((Wait-Control $window 'SavedNextPage').Current.IsEnabled) { throw 'Single annotation unexpectedly has another page.' }
+    Select-Page 'ReadNavigation'
+    Wait-Text $window 'Chapter 1 of 50' | Out-Null
     $errorBarControl = Find-Control $window 'ErrorBar'
     if ($null -ne $errorBarControl -and -not $errorBarControl.Current.IsOffscreen) { throw "An application error was shown: $($errorBarControl.Current.Name)" }
     Write-Host 'WinUI: CEI, extended collection, animated navigation, text resizing, matching caption/surface colors, Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'

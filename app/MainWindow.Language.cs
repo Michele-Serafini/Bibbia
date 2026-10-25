@@ -17,6 +17,9 @@ public sealed partial class MainWindow
     private string T(string text, params object[] args) { var value = language == "en" ? English.GetValueOrDefault(text, text) : text; return args.Length == 0 ? value : string.Format(value,args); }
     private static readonly Dictionary<string, string> English = new()
     {
+        ["Appunti {0}–{1} · {2}"]="Annotations {0}–{1} · {2}",
+        ["Pagina precedente di appunti"]="Previous annotations page", ["Pagina successiva di appunti"]="Next annotations page",
+        ["Capitolo {0} di {1}"]="Chapter {0} of {1}",
         ["{0} libri · {1}"]="{0} books · {1}",
         ["83 sezioni in inglese: WEB ecumenica, 1 Enoc e Giubilei. Comprende 1–2 Esdra, 3–4 Maccabei, Salmo 151 e Preghiera di Manasse. È una raccolta di più canoni; non esiste un canone universale di tutti i libri."]="83 English sections: ecumenical WEB, 1 Enoch and Jubilees. Includes 1–2 Esdras, 3–4 Maccabees, Psalm 151 and Prayer of Manasseh. A collection across canons; there is no universal canon of all books.",
         ["CEI 2008 · © 2008–2024 Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena. Uso formativo e didattico non commerciale. Fonte: BibbiaEDU. Ester: G = greco, E = ebraico."]="CEI 2008 · © 2008–2024 Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena. Educational noncommercial use. Source: BibbiaEDU. Esther: G = Greek, E = Hebrew.",
@@ -36,7 +39,7 @@ public sealed partial class MainWindow
         ["Importa traduzione JSON…"]="Import JSON translation…", ["Apri cartella dati"]="Open data folder", ["I tuoi appunti restano sul dispositivo"]="Your notes stay on your device",
         ["Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento."]="Highlights, underlines, notes, bookmarks and reading position are stored locally. No account or tracking.",
         ["CEI 2008 e Martini: Bibbie cattoliche italiane complete, 73 libri. Diodati e KJV: 66 libri. Raccolta estesa in inglese: 83 libri/sezioni, compresi apocrifi, 1 Enoc e Giubilei. La lingua dell’app è indipendente dal testo."]="CEI 2008 and Martini: complete Italian Catholic Bibles, 73 books. Diodati and KJV: 66 books. Extended English collection: 83 books/sections, including apocrypha, 1 Enoch and Jubilees. App language and text language are independent.",
-        ["Bibbia · 0.3\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion."]="Bibbia · 0.3\nNative Windows interface · Rust engine\nIndependent project, not affiliated with YouVersion.",
+        ["Bibbia · 0.4\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion."]="Bibbia · 0.4\nNative Windows interface · Rust engine\nIndependent project, not affiliated with YouVersion.",
         ["Inserisci almeno due caratteri"]="Enter at least two characters", ["Ricerca troppo lunga"]="Search query is too long", ["Seleziona una parola o una frase"]="Select a word or phrase",
         ["Nome della traduzione"]="Translation name", ["Ho il diritto di utilizzare questo testo."]="I have the right to use this text.", ["Importa traduzione"]="Import translation", ["Importa"]="Import",
         ["Formato: elenco di libri con name, abbrev e chapters (elenchi di versetti). Massimo 32 MB. La traduzione sarà copiata nel database locale."]="Format: an array of books with name, abbrev and chapters (arrays of verses). Maximum 32 MB. The translation will be copied into the local database.",
@@ -91,6 +94,9 @@ public sealed partial class MainWindow
             menu.Items.Add(item);
         }
     }
+    private void UpdatePageTitle() => PageTitle.Text = section == "read" && books.Count > book
+        ? $"{books[book].Name} {chapter+1}"
+        : T(section switch {"search"=>"Trova le parole.","saved"=>"Portale con te.","settings"=>"Come piace a te.",_=>"Leggi con calma."});
     private void ApplyLanguage()
     {
         for (int i=0;i<3;i++) ((NavigationViewItem)Navigation.MenuItems[i]).Content = T(new[]{"Leggi","Cerca","La mia raccolta"}[i]);
@@ -109,6 +115,10 @@ public sealed partial class MainWindow
             BibleLanguagePicker.SelectedIndex = -1; BibleLanguagePicker.SelectedIndex = selectedBibleLanguage;
         } finally { changing = wasChanging; }
         RefreshCaptionButtons();
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(SavedPreviousPage,T("Pagina precedente di appunti"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(SavedNextPage,T("Pagina successiva di appunti"));
+        ToolTipService.SetToolTip(SavedPreviousPage,T("Pagina precedente di appunti"));
+        ToolTipService.SetToolTip(SavedNextPage,T("Pagina successiva di appunti"));
         FontSlider.Header = T("Dimensione del testo"); EditionPicker.Header = T("Traduzione");
         PreviousButton.Content = T("← Precedente"); NextButton.Content = T("Successivo →");
         SearchBox.PlaceholderText = T("Una parola o una frase…"); SearchButton.Content = T("Cerca");
@@ -116,8 +126,9 @@ public sealed partial class MainWindow
         ImportButton.Content = T("Importa traduzione JSON…"); OpenDataButton.Content = T("Apri cartella dati");
         PrivacyTitle.Text = T("I tuoi appunti restano sul dispositivo");
         PrivacyDescription.Text = T("Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento.");
-        AboutLabel.Text = T("Bibbia · 0.3\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.");
-        PageTitle.Text = T(section switch {"search"=>"Trova le parole.","saved"=>"Portale con te.","settings"=>"Come piace a te.",_=>"Leggi con calma."});
+        AboutLabel.Text = T("Bibbia · 0.4\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.");
+        UpdatePageTitle();
+        if (books.Count > book) ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BookPicker,T("Libro"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ChapterPicker,T("Capitolo"));
     }

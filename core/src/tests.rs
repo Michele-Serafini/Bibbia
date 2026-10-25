@@ -618,3 +618,37 @@ fn newly_bundled_names_do_not_shadow_existing_imports_or_mix_their_notes() {
         imported
     );
 }
+
+#[test]
+fn saved_pages_have_stable_order_and_keep_the_legacy_full_collection() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    for verse in [4, 0, 2] {
+        e.request(json!({"op":"annotate","book":0,"chapter":0,"verse":verse,"annotation":{"highlight":null,"underline":false,"bookmark":true,"note":"Paged"}})).unwrap();
+    }
+    let first = e
+        .request(json!({"op":"saved","limit":2,"offset":0}))
+        .unwrap();
+    assert_eq!(first[0]["verse"], 0);
+    assert_eq!(first[1]["verse"], 2);
+    let second = e
+        .request(json!({"op":"saved","limit":2,"offset":2}))
+        .unwrap();
+    assert_eq!(second.as_array().unwrap().len(), 1);
+    assert_eq!(second[0]["verse"], 4);
+    assert_eq!(
+        e.request(json!({"op":"saved"}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    for req in [
+        json!({"op":"saved","limit":0}),
+        json!({"op":"saved","limit":201}),
+        json!({"op":"saved","offset":-1}),
+    ] {
+        assert!(e.request(req).is_err());
+    }
+}

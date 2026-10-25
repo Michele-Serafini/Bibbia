@@ -6,6 +6,8 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+            <FontFamily x:Key="ContentControlThemeFontFamily">ms-appx:///Assets/Fonts/AdwaitaSans-Regular.ttf#Adwaita Sans</FontFamily>
+            <FontFamily x:Key="ReadingFontFamily">ms-appx:///Assets/Fonts/SourceSerif4-Regular.ttf#Source Serif 4</FontFamily>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
                     <SolidColorBrush x:Key="WindowSurfaceBrush" Color="#F8F8F8" />

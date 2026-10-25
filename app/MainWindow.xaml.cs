@@ -45,8 +45,8 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string,List<BookRow>> bookCatalogs = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? fontTimer;
     private string edition = "KJV";
-    private int book, chapter, currentVerse, searchGeneration;
-    private double fontSize = 20;
+    private int book, chapter, currentVerse, searchGeneration, savedOffset;
+    private double fontSize = 22;
     private bool ready, changing, closed;
     private string section = "read";
 
@@ -165,7 +165,8 @@ public sealed partial class MainWindow : Window
                 TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
         VerseList.ItemsSource = rows;
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
-        ReadingLabel.Text = $"{books[book].Name} {chapter + 1}";
+        ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
+        UpdatePageTitle();
         UpdateReadingStatus(rows.Count);
         PreviousButton.IsEnabled = book > 0 || chapter > 0;
         NextButton.IsEnabled = book < books.Count - 1 || chapter < books[book].Chapters - 1;
@@ -235,14 +236,15 @@ public sealed partial class MainWindow : Window
         ResultsPanel.Visibility = tag is "search" or "saved" ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
         SearchBar.Visibility = tag == "search" ? Visibility.Visible : Visibility.Collapsed;
-        PageTitle.Text = T(tag switch { "search" => "Trova le parole.", "saved" => "Portale con te.", "settings" => "Come piace a te.", _ => "Leggi con calma." });
+        UpdatePageTitle();
         if (tag == "search")
         {
             ResultList.ItemsSource = null;
             ResultStatus.Text = T("Cerca in {0}. Fino a 200 risultati per ricerca.", edition);
             SearchBox.Focus(FocusState.Programmatic);
         }
-        if (tag == "saved" && ready) LoadSaved();
+        SavedPreviousPage.Visibility = SavedNextPage.Visibility = tag == "saved" ? Visibility.Visible : Visibility.Collapsed;
+        if (tag == "saved" && ready) { savedOffset=0; LoadSaved(); }
         if (tag == "read" && ready) ScrollToCurrentVerse();
         if (changed) AnimateReveal(tag == "read" ? ReadPanel : tag == "settings" ? SettingsPanel : ResultsPanel);
     }
@@ -266,10 +268,14 @@ public sealed partial class MainWindow : Window
     }
     private void LoadSaved()
     {
-        var rows = BibleEngine.Call(new { op = "saved", edition }).EnumerateArray().Select(x => ToSearchRow(x, true)).ToList();
+        var rows = BibleEngine.Call(new { op = "saved", edition, limit=200, offset=savedOffset }).EnumerateArray().Select(x => ToSearchRow(x, true)).ToList();
         ResultList.ItemsSource = rows;
-        ResultStatus.Text = rows.Count == 0 ? T("Nessun appunto in {0}. Seleziona parole o frasi durante la lettura per iniziare.", edition) : T("{0} versetti nella tua raccolta · {1}", rows.Count, edition);
+        ResultStatus.Text = rows.Count == 0 ? T("Nessun appunto in {0}. Seleziona parole o frasi durante la lettura per iniziare.", edition) : T("Appunti {0}–{1} · {2}", savedOffset+1,savedOffset+rows.Count,edition);
+        SavedPreviousPage.IsEnabled = savedOffset>0;
+        SavedNextPage.IsEnabled = rows.Count==200;
     }
+    private void SavedPreviousClick(object sender,RoutedEventArgs e) => Guard(() => { savedOffset=Math.Max(0,savedOffset-200); LoadSaved(); });
+    private void SavedNextClick(object sender,RoutedEventArgs e) => Guard(() => { savedOffset+=200; LoadSaved(); });
     private async void SearchClick(object sender, RoutedEventArgs e) => await GuardAsync(Search);
     private async void SearchKeyDown(object sender, KeyRoutedEventArgs e)
     {

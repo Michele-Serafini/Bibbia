@@ -19,11 +19,11 @@
         </Grid>
         <NavigationView x:Name="Navigation" Grid.Row="1" PaneDisplayMode="Auto" IsBackButtonVisible="Collapsed"
             IsSettingsVisible="False" SelectionChanged="NavigationChanged" OpenPaneLength="220"
-            PaneTitle="Bibbia" AlwaysShowHeader="False">
+            PaneTitle="Bibbia" AlwaysShowHeader="False" FontFamily="{StaticResource ContentControlThemeFontFamily}">
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Leggi" Tag="read" AutomationProperties.AutomationId="ReadNavigation" Icon="Read" IsSelected="True" />
                 <NavigationViewItem Content="Cerca" Tag="search" Icon="Find" AutomationProperties.AutomationId="SearchNavigation" />
-                <NavigationViewItem Content="La mia raccolta" Tag="saved" Icon="Bookmarks" />
+                <NavigationViewItem Content="La mia raccolta" AutomationProperties.AutomationId="SavedNavigation" Tag="saved" Icon="Bookmarks" />
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem Content="Aspetto e traduzioni" Tag="settings" AutomationProperties.AutomationId="SettingsNavigation" Icon="Setting" />
@@ -33,7 +33,7 @@
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                     <RowDefinition Height="*" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <StackPanel Spacing="4">
+                <StackPanel Spacing="5" MaxWidth="800" HorizontalAlignment="Stretch">
                     <TextBlock x:Name="EyebrowLabel" Text="UNO SPAZIO PER LA PAROLA" FontSize="11" CharacterSpacing="180"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock x:Name="PageTitle" Text="Leggi con calma." Style="{ThemeResource TitleTextBlockStyle}" />
@@ -42,24 +42,24 @@
                 <Grid Grid.Row="2">
                     <Grid x:Name="ReadPanel" RowSpacing="14">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid ColumnSpacing="10" MaxWidth="850" HorizontalAlignment="Stretch">
+                        <Grid ColumnSpacing="10" MaxWidth="800" HorizontalAlignment="Stretch">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <ComboBox x:Name="BookPicker" HorizontalAlignment="Stretch" DisplayMemberPath="Name" SelectionChanged="BookChanged" AutomationProperties.Name="Libro" AutomationProperties.AutomationId="BookPicker" />
                             <ComboBox x:Name="ChapterPicker" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="ChapterChanged" AutomationProperties.Name="Capitolo" />
                             <Button Grid.Column="2" Content="Aa" Click="AppearanceClick" AutomationProperties.Name="Aspetto della lettura" ToolTipService.ToolTip="Dimensione del testo e tema" />
                         </Grid>
                         <ListView x:Name="VerseList" Grid.Row="1" SelectionMode="None"
-                            HorizontalContentAlignment="Stretch" MaxWidth="850" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch" MaxWidth="800" HorizontalAlignment="Stretch"
                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Versetti del capitolo" AutomationProperties.AutomationId="VerseList">
                             <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel CacheLength="0.5" /></ItemsPanelTemplate></ListView.ItemsPanel>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:VerseRow">
-                                    <Border Padding="12,10" Margin="0,2" CornerRadius="6">
+                                    <Border Padding="12,8" Margin="0,3" CornerRadius="6">
                                         <Grid ColumnSpacing="10">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
-                                            <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,6,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             <RichEditBox Grid.Column="1" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
-                                                FontFamily="Georgia" FontSize="{x:Bind TextSize, Mode=OneWay}" TextWrapping="Wrap" Padding="0" BorderThickness="0"
+                                                FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize, Mode=OneWay}" TextWrapping="Wrap" Padding="0" BorderThickness="0"
                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                 ScrollViewer.VerticalScrollMode="Disabled" UseSystemFocusVisuals="True">
                                                 <RichEditBox.Resources>
@@ -94,7 +94,12 @@
                             <TextBox x:Name="SearchBox" PlaceholderText="Una parola o una frase…" KeyDown="SearchKeyDown" AutomationProperties.Name="Cerca nella traduzione selezionata" AutomationProperties.AutomationId="SearchBox" />
                             <Button x:Name="SearchButton" Grid.Column="1" Content="Cerca" Click="SearchClick" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.AutomationId="SearchButton" />
                         </Grid>
-                        <TextBlock x:Name="ResultStatus" Grid.Row="1" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Grid Grid.Row="1" ColumnSpacing="10">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock x:Name="ResultStatus" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <Button x:Name="SavedPreviousPage" Grid.Column="1" Content="←" Click="SavedPreviousClick" Visibility="Collapsed" AutomationProperties.AutomationId="SavedPreviousPage" />
+                            <Button x:Name="SavedNextPage" Grid.Column="2" Content="→" Click="SavedNextClick" Visibility="Collapsed" AutomationProperties.AutomationId="SavedNextPage" />
+                        </Grid>
                         <ListView x:Name="ResultList" Grid.Row="2" IsItemClickEnabled="True" ItemClick="ResultClicked" SelectionMode="None" HorizontalContentAlignment="Stretch" AutomationProperties.AutomationId="ResultList">
                             <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel CacheLength="0.5" /></ItemsPanelTemplate></ListView.ItemsPanel>
                             <ListView.ItemTemplate>
@@ -128,7 +133,7 @@
                             <TextBlock x:Name="PrivacyDescription" Text="Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento."
                                 TextWrapping="Wrap" />
                             <Button x:Name="OpenDataButton" Content="Apri cartella dati" Click="OpenDataClick" />
-                            <TextBlock x:Name="AboutLabel" Text="Bibbia · 0.3&#x0a;Interfaccia Windows nativa · Motore Rust&#x0a;Progetto indipendente, non affiliato a YouVersion."
+                            <TextBlock x:Name="AboutLabel" Text="Bibbia · 0.4&#x0a;Interfaccia Windows nativa · Motore Rust&#x0a;Progetto indipendente, non affiliato a YouVersion."
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </ScrollViewer>

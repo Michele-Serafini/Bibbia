@@ -76,8 +76,88 @@ jobs:
           name: Bibbia-Windows-x64
           path: artifacts/Bibbia/
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: Bibbia-Windows-diagnostics
+          path: artifacts/diagnostics/
+          if-no-files-found: ignore
+  linux:
+    runs-on: ubuntu-24.04
+    container: debian:bookworm
+    timeout-minutes: 20
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      CARGO_BUILD_JOBS: 2
+      GDK_BACKEND: x11
+      GSK_RENDERER: cairo
+    steps:
+      - name: Install GNOME and package development tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git build-essential pkg-config libgtk-4-dev libadwaita-1-dev libfontconfig1-dev xvfb xauth xdotool dbus-x11 rpm python3 desktop-file-utils appstream-util fonts-dejavu-core
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.99.1'
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gnome-debian12
+          cache-on-failure: true
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked -p bibbia-gnome --all-targets -- -D warnings
+      - run: cargo test --locked -p bibbia-gnome
+      - run: cargo build --release --locked -p bibbia-gnome
+      - name: Build DEB and RPM
+        run: python3 scripts/package-linux.py --skip-build
+      - name: Exercise package installation, real GTK mouse UI and removal
+        run: xvfb-run -a -s '-screen 0 1280x960x24' dbus-run-session -- python3 scripts/test-linux-packages.py --install-deb
+      - name: Measure the complete GNOME app
+        run: |
+          dpkg-deb --extract artifacts/linux/bibbia_*_amd64.deb /tmp/bibbia-benchmark
+          xvfb-run -a -s '-screen 0 1280x960x24' dbus-run-session -- python3 scripts/benchmark-linux.py --binary /tmp/bibbia-benchmark/usr/bin/bibbia
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bibbia-Linux-x64
+          path: |
+            artifacts/linux/*.deb
+            artifacts/linux/*.rpm
+            artifacts/linux/*.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Bibbia-GNOME-diagnostics
+          path: artifacts/diagnostics/
+          if-no-files-found: ignore
+  fedora:
+    needs: linux
+    runs-on: ubuntu-24.04
+    container: fedora:43
+    timeout-minutes: 15
+    env:
+      GDK_BACKEND: x11
+      GSK_RENDERER: gl
+    steps:
+      - name: Prepare Fedora GNOME test session
+        run: dnf install -y git python3 xdotool xorg-x11-server-Xvfb dbus-daemon mesa-dri-drivers mesa-libGL
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Bibbia-Linux-x64
+          path: artifacts/linux/
+      - name: Install the RPM with dependency resolution
+        run: dnf install -y ./artifacts/linux/bibbia-*.x86_64.rpm
+      - name: Exercise installed RPM and removal on Fedora
+        run: |
+          Xvfb :99 -screen 0 1280x960x24 -nolisten tcp -ac &
+          server=$!
+          trap 'kill "$server"' EXIT
+          export DISPLAY=:99
+          dbus-run-session -- python3 scripts/test-linux-packages.py --installed-rpm
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Bibbia-Fedora-diagnostics
           path: artifacts/diagnostics/
           if-no-files-found: ignore

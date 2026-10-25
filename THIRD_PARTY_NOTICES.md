@@ -116,6 +116,26 @@ YouVersion. Una futura integrazione richiede accesso ufficiale e i relativi diri
 Per distribuire il pacchetto self-contained conservare anche gli avvisi forniti
 dai runtime e dalle dipendenze. `Cargo.lock` fissa le dipendenze Rust.
 
+## GNOME e font
+
+L’interfaccia Linux usa GTK4, libadwaita, GLib/GIO e Pango di sistema, con i
+binding Rust gtk-rs/adwaita-rs distribuiti con licenza MIT. GTK4, libadwaita,
+GLib e Pango sono librerie LGPL, collegate dinamicamente e risolte dal gestore
+pacchetti. Fontconfig ha la propria licenza permissiva. Le librerie di sistema
+non sono incorporate nei pacchetti dell’applicazione.
+
+- **Adwaita Sans 49.0**, font GNOME basato su Inter, SIL Open Font License 1.1.
+  Fonte ufficiale: https://download.gnome.org/sources/adwaita-fonts/49/adwaita-fonts-49.0.tar.xz
+  L’archivio è stato verificato con il checksum SHA-256 pubblicato da GNOME.
+- **Source Serif 4**, font di lettura di Adobe, SIL Open Font License 1.1.
+  Fonte fissata: https://github.com/adobe-fonts/source-serif/tree/80d3f8894c09c937bebfa9011247d2e1c79fd6f4
+
+I font sono distribuiti integri, con copyright e licenze originali in
+`assets/fonts/LICENSE.Adwaita` e `assets/fonts/LICENSE.SourceSerif`. Il manifest
+`assets/fonts/sources.json` conserva origini, versioni e checksum. I pacchetti
+Windows e Linux includono questi avvisi. L’app usa i font al proprio interno,
+senza sostituire i font del desktop o scrivere nelle directory dei font di sistema.
+
 ## Icona
 
 L'icona della Bibbia in `app/Assets/` è stata creata per questo progetto;

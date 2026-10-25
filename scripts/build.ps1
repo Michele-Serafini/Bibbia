@@ -30,6 +30,9 @@ try {
     foreach ($file in @('cei2008-source.json','extended-source.json','LICENSE.cei2008.txt','LICENSE.gutenberg.txt')) {
         Copy-Item "core/data/$file" "$staging/$file" -Force
     }
+    foreach ($file in @('LICENSE.Adwaita','LICENSE.SourceSerif','sources.json')) {
+        Copy-Item "assets/fonts/$file" "$staging/$file" -Force
+    }
     Copy-Item THIRD_PARTY_NOTICES.md "$staging/THIRD_PARTY_NOTICES.md" -Force
     Copy-Item LICENSE "$staging/LICENSE" -Force
     $destination = Join-Path $root 'artifacts/Bibbia'

@@ -131,6 +131,7 @@ public sealed partial class MainWindow
     private void ApplyTextStylesCore(RichEditBox editor, VerseRow row)
     {
         var whole = editor.Document.GetRange(0,row.Text.Length);
+        whole.ParagraphFormat.SetLineSpacing(LineSpacingRule.Multiple,1.2f);
         var a = row.Annotation;
         var bg = EditorBackground();
         editor.Background = new SolidColorBrush(bg);

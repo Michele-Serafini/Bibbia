@@ -1,10 +1,11 @@
-# Bibbia per Windows
+# Bibbia per Windows e GNOME
 
-Lettore biblico offline con interfaccia **WinUI 3 nativa**
-e motore **Rust**. Interfaccia italiana o inglese, tema di Windows o chiaro/scuro,
-caratteri ridimensionabili e navigazione adattiva. Nessun browser incorporato,
-server o account. È un progetto indipendente, ispirato al flusso di lettura delle
-app bibliche; non è un client ufficiale Bible.com/YouVersion.
+Lettore biblico offline con motore **Rust** condiviso. Su Linux l’applicazione è
+interamente Rust con **GTK4 e libadwaita**, tema e controlli GNOME; su Windows
+usa **WinUI 3**. Interfaccia italiana o inglese, chiaro/scuro o tema del desktop,
+font **Adwaita Sans e Source Serif 4**, colonna di lettura limitata e interlinea curata.
+Nessun browser incorporato, server o account. Progetto indipendente,
+non affiliato a GNOME o Bible.com/YouVersion.
 
 ## Funzioni implementate
 
@@ -19,14 +20,14 @@ app bibliche; non è un client ufficiale Bible.com/YouVersion.
 - Scelta indipendente della lingua dell’app (italiano/inglese) e della Bibbia.
 - Icona dedicata; barra del titolo dello stesso colore della finestra, in chiaro e scuro.
 - Transizioni brevi su navigazione, capitoli e risultati; rispettano le animazioni
-  disattivate nelle impostazioni Windows. Liste virtualizzate e menu creati all’apertura.
+  disattivate nelle impostazioni del sistema. Liste virtualizzate e menu creati all’apertura.
 - Navigazione per libro e capitolo; ripresa dell'ultimo versetto selezionato.
 - Ricerca senza distinzione maiuscole/minuscole nella traduzione selezionata;
   massimo 200 risultati con indicazione del limite.
 - Selezione di parole o frasi con il mouse: barra contestuale compatta, quattro colori,
   sottolineatura, copia, segnalibro e nota in un piccolo popup. Il pulsante ⋯ offre
   anche le azioni sul versetto intero.
-- Raccolta degli appunti con ritorno al versetto originale.
+- Raccolta degli appunti paginata a 200 elementi su entrambe le piattaforme, con ritorno al versetto originale.
 - Importazione di altre traduzioni JSON, anche italiane, senza sovrascrivere
   traduzioni esistenti o mescolare le relative annotazioni.
 - Dati personali locali in SQLite, con transazioni e modalità WAL.
@@ -35,19 +36,58 @@ La Martini è una traduzione cattolica storica dalla Vulgata, di pubblico domini
 conserva il linguaggio e la numerazione della sua edizione. Audio, piani di lettura,
 sincronizzazione cloud e catalogo online
 YouVersion non sono implementati. Non sono stati misurati tempi di avvio o RAM su
-Windows; i benchmark del solo motore sono documentati sotto. Il runtime .NET e WinUI self-contained aumentano la dimensione del download.
+Windows; i benchmark del motore e dell’app GNOME completa sono documentati sotto. Il runtime .NET e WinUI self-contained aumentano la dimensione del download.
 
 ## Architettura
 
 `core/` contiene corpus, ricerca, importazione, validazione e persistenza in Rust.
-`app/` è un piccolo host C#/.NET 8 che presenta i controlli WinUI 3 e chiama il
-motore tramite due funzioni C ABI (`bible_request`, `bible_free`). Non è quindi
-un'applicazione interamente Rust: questo confine permette di usare i controlli
-WinUI ufficiali con un motore Rust indipendente e testabile.
+`gnome/` è il frontend Linux interamente Rust con i binding ufficiali gtk-rs e
+adwaita-rs: usa il motore nello stesso eseguibile e le librerie GTK/libadwaita
+di sistema. Una sola `GtkTextView` contiene il capitolo; le ricerche e SQLite
+lavorano su un thread dedicato, che resta bloccato in attesa quando è inattivo.
+Nessun polling nell’uso normale. I risultati sono virtualizzati; i font si
+registrano solo nel processo e non sostituiscono quelli del desktop.
+
+`app/` resta l’host C#/.NET 8 per i controlli WinUI ufficiali, con due funzioni
+C ABI (`bible_request`, `bible_free`) verso lo stesso motore Rust. Solo il frontend
+Linux è interamente Rust. I pacchetti delle due piattaforme usano gli stessi
+testi e lo stesso schema delle annotazioni; si può trasferire un backup a app chiusa.
+
+## Installare su Linux
+
+Pacchetti **x86-64** per Debian 12+, Ubuntu 24.04+ e Fedora 43+:
+
+- [bibbia_0.4.0-1_amd64.deb](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.4.0/bibbia_0.4.0-1_amd64.deb)
+- [bibbia-0.4.0-1.x86_64.rpm](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.4.0/bibbia-0.4.0-1.x86_64.rpm)
+
+```sh
+sudo apt install ./bibbia_0.4.0-1_amd64.deb
+# Su Fedora:
+sudo dnf install ./bibbia-0.4.0-1.x86_64.rpm
+```
+
+Aprire **Bibbia** dal menu delle applicazioni oppure eseguire `bibbia`.
+Il gestore pacchetti installa le dipendenze mancanti: GTK4 ≥ 4.8, libadwaita ≥ 1.2,
+Fontconfig e il tema icone hicolor. Sono librerie condivise, normalmente già
+presenti su GNOME. Non servono Rust, .NET o strumenti di sviluppo.
+I pacchetti sono di circa 8 MB; il contenuto dell’app installata è di circa 49 MiB.
+Queste dimensioni escludono le eventuali dipendenze di sistema mancanti.
+
+Per aggiornare aprire il nuovo pacchetto con lo stesso comando. Per rimuovere
+usare `sudo apt remove bibbia` o `sudo dnf remove bibbia`:
+appunti e traduzioni importate restano in `$XDG_DATA_HOME/bibbia`, normalmente
+`~/.local/share/bibbia/bible.sqlite3`. Chiudere l’app prima di copiare un backup.
+`bibbia --data-dir /percorso/assoluto` permette una cartella dati alternativa.
+
+Scorciatoie: **Ctrl+F** cerca, **Ctrl+,** preferenze, **Alt+←/→** capitolo,
+**Ctrl+Q** chiude. La lingua del testo è indipendente da quella dell’interfaccia.
+Il selettore della traduzione è sotto la lettura; le preferenze includono i filtri
+per lingua e il numero dei libri. Il menu della selezione e l’editor delle note
+sono piccoli popover nativi.
 
 ## Installare su Windows
 
-[Scarica **Bibbia-Setup-0.3.0-x64.exe**](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.3.0/Bibbia-Setup-0.3.0-x64.exe): un solo installer offline,
+[Scarica **Bibbia-Setup-0.4.0-x64.exe**](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.4.0/Bibbia-Setup-0.4.0-x64.exe): un solo installer offline,
 con interfaccia italiana. Non richiede Rust, .NET, Visual Studio, account o
 download aggiuntivi sul PC destinatario. Supporta Windows 10 versione 2004 o
 successiva e Windows 11 a 64 bit.
@@ -58,18 +98,19 @@ successiva e Windows 11 a 64 bit.
 4. Per rimuovere l'app usare **Impostazioni Windows → App → Bibbia → Disinstalla**.
    Note, segnalibri e traduzioni importate vengono conservati.
 
-La [release v0.3.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.3.0)
+La [release v0.4.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.4.0)
 contiene l'installer e il checksum SHA-256. Per le nuove build il workflow
 GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-x64**.
-Il workflow manuale **Publish verified installer** pubblica gli stessi file di una
+Il workflow manuale **Publish verified packages** pubblica gli stessi file di una
 build completata con successo, dopo averne ricontrollato il checksum, senza ricompilarli.
 
-**Verifica v0.3.0:** [pipeline completata con successo](https://github.com/Michele-Serafini/Bibbia/actions/runs/40142876728), codice applicativo `cb15d45`.
-Sono passati 19 test Rust, il collegamento C# → Rust, installazione,
-aggiornamento e rimozione su Windows Server 2022. Le prove UI esercitano
-selezione con mouse, popup, note, segnalibri, ricerca, lingue, CEI e testi estesi,
-ridimensionamento del testo, animazioni, colore della barra e della superficie,
-ingrandimento/ripristino e persistenza dopo la chiusura. La release contiene l’installer prodotto da questa build e pubblicato dopo la verifica del checksum.
+La pipeline verifica 20 test del motore, la mappatura delle selezioni GTK,
+il collegamento C# → Rust e le interfacce reali con mouse: popup, note,
+segnalibri, ricerca, lingue, CEI, Enoc e Giubilei, font, colori e riapertura dei dati.
+Comprende installazione/aggiornamento/rimozione dei pacchetti Windows e Debian,
+RPM con database isolato e installazione RPM con dipendenze su Fedora.
+La pubblicazione prende gli stessi binari della pipeline riuscita e ricontrolla
+i checksum senza ricompilarli.
 La build non è firmata digitalmente; Windows può mostrare un avviso SmartScreen.
 
 ## Compilare e avviare su Windows
@@ -101,7 +142,7 @@ tutti i prerequisiti, dalla radice del repository:
 pwsh -File ./scripts/package.ps1
 ```
 
-Il risultato è `artifacts/installer/Bibbia-Setup-0.3.0-x64.exe`, con un file
+Il risultato è `artifacts/installer/Bibbia-Setup-0.4.0-x64.exe`, con un file
 `.sha256` accanto. Il flag `-SkipBuild` riutilizza una pubblicazione già completata.
 La cartella `artifacts/Bibbia/` viene sempre rigenerata da una pubblicazione pulita,
 per evitare di includere file rimasti da vecchie build.
@@ -114,7 +155,7 @@ Su un runner Windows pulito, per provare installazione, aggiornamento, interfacc
 reale, blocco con app aperta, disinstallazione e conservazione dei dati:
 
 ```powershell
-pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.3.0-x64.exe
+pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.4.0-x64.exe
 ```
 
 Il test rifiuta di avviarsi se trova dati o un'installazione Bibbia preesistenti.
@@ -125,6 +166,43 @@ Il workflow `.github/workflows/check.yml` compila il motore su Linux e l'intera
 app su Windows. L'installer viene caricato solo dopo il completamento dei test
 Windows. Per pubblicarlo, avviare `publish-release.yml` dalla scheda Actions e
 indicare il numero di una build **Check and build** riuscita sul ramo `main`.
+
+## Compilare l’interfaccia GNOME e i pacchetti
+
+Su Debian 12/Ubuntu 24.04, oltre al Rust 1.99.1 fissato nel repository:
+
+```sh
+sudo apt install build-essential pkg-config libgtk-4-dev libadwaita-1-dev libfontconfig1-dev
+cargo run -p bibbia-gnome
+cargo build --release --locked -p bibbia-gnome
+```
+
+Per creare entrambi i pacchetti:
+
+```sh
+sudo apt install rpm desktop-file-utils appstream-util python3
+python3 scripts/package-linux.py
+```
+
+I risultati sono in `artifacts/linux/`. Il builder verifica versione, risorse,
+metadati desktop/AppStream, assenza di RPATH e requisito GLIBC ≤ 2.36. La pipeline
+compila sul riferimento Debian 12, quindi prova l’RPM anche su Fedora.
+Il file `Cargo.lock` fissa i binding GTK/adwaita; `default-members = ["core"]`
+consente alle build Windows del motore di procedere senza librerie GTK.
+
+Per le prove dell’interfaccia Linux e del pacchetto in una sessione isolata:
+
+```sh
+sudo apt install xvfb xauth xdotool dbus-x11
+xvfb-run -a -s '-screen 0 1280x960x24' dbus-run-session -- python3 scripts/test-linux-packages.py
+```
+
+Non usare le opzioni `--install-deb` o `--installed-rpm` su un computer personale:
+sono riservate ai container CI puliti e installano/rimuovono il pacchetto.
+Le prove predefinite estraggono il DEB e installano l’RPM in un database privato,
+verificando che la rimozione lasci intatti appunti e file non appartenenti al pacchetto.
+Le opzioni di test dell’eseguibile richiedono una cartella dati isolata e rifiutano
+di sovrascrivere un database preesistente.
 
 ## Sviluppare il motore su Linux
 
@@ -180,7 +258,8 @@ nessuno scraping o download da quel servizio viene effettuato dall'app.
 
 ## Dati e backup
 
-Percorso: `%LOCALAPPDATA%\BibbiaRust\bible.sqlite3`.
+Percorsi: `%LOCALAPPDATA%\BibbiaRust\bible.sqlite3` su Windows;
+`$XDG_DATA_HOME/bibbia/bible.sqlite3` (di solito `~/.local/share/bibbia/bible.sqlite3`) su Linux.
 L'app non trasmette dati. Per il backup chiudere l'app, poi copiare la cartella
 `BibbiaRust` intera (compresi eventuali file `-wal` e `-shm`). Per ripristinare,
 chiudere l'app e ripristinare la cartella. I file non sono cifrati; usare le
@@ -260,3 +339,35 @@ Il codice è MIT; **i testi hanno licenze separate**. La CEI è riservata agli u
 formativi e didattici non commerciali previsti dalla fonte, con attribuzione
 visibile nel lettore. Licenze, condizioni e manifest sono inclusi nell’installer.
 Vedere [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Prestazioni dell’app GNOME completa
+
+Misura della build release Linux x86-64, profili nuovi, Martini Genesi 1,
+finestra 980×800, GTK4 4.18/libadwaita 1.7, X11/Xvfb con renderer software Cairo.
+Mediana di tre processi nuovi nella stessa macchina di prova:
+
+| Misura | App GNOME 0.4.0 |
+| --- | ---: |
+| Finestra pronta dopo il primo rendering | 304 ms |
+| Memoria residente RSS, librerie e font inclusi | 93,1 MiB |
+| Memoria proporzionale PSS | 79,2 MiB |
+| Pagine private residenti, pulite e modificate | 68,2 MiB |
+| CPU a riposo, campioni da 3 secondi | nessun tick registrato |
+
+Sono misure del processo completo, escluse quelle del server grafico e del resto
+del desktop. Le pagine delle librerie possono essere condivise con altre app.
+Non sono misure di Windows né una garanzia per altri renderer, GPU, schermi o
+font installati. I risultati grezzi sono in
+[docs/performance/v0.4.0-gnome-linux.json](docs/performance/v0.4.0-gnome-linux.json).
+La pipeline salva anche una misura sul riferimento Debian 12.
+
+```sh
+xvfb-run -a -s '-screen 0 1280x960x24' dbus-run-session -- \
+  python3 scripts/benchmark-linux.py --binary /percorso/installato/usr/bin/bibbia
+```
+
+La CPU resta inattiva senza timer di polling, con cursore di lettura non
+lampeggiante; ricerca e scritture SQLite si attivano in risposta alle azioni.
+I capitoli non ricreano controlli per ogni versetto. Il testo e gli indici
+rimangono nelle sezioni di sola lettura dell’eseguibile, e le raccolte di appunti
+caricano solo 200 elementi per pagina su entrambe le piattaforme.

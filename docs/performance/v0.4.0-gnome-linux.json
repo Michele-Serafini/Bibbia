@@ -1,0 +1,39 @@
+{
+  "context": {
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+    "renderer": "cairo",
+    "backend": "x11",
+    "edition": "Martini 1781 (cattolica)",
+    "notes": "Fresh private profiles, first chapter, no pending searches or selections. Includes GTK/libadwaita and fonts. CPU percent is one core. Xvfb/display-server memory excluded; this is not a Windows benchmark."
+  },
+  "samples": [
+    {
+      "startup_ms": 349.83,
+      "rss_mib": 94.12,
+      "pss_mib": 80.22,
+      "private_mib": 69.14,
+      "idle_cpu_percent": 0.0
+    },
+    {
+      "startup_ms": 303.71,
+      "rss_mib": 92.64,
+      "pss_mib": 78.91,
+      "private_mib": 67.88,
+      "idle_cpu_percent": 0.0
+    },
+    {
+      "startup_ms": 263.43,
+      "rss_mib": 93.1,
+      "pss_mib": 79.2,
+      "private_mib": 68.17,
+      "idle_cpu_percent": 0.0
+    }
+  ],
+  "median": {
+    "startup_ms": 303.71,
+    "rss_mib": 93.1,
+    "pss_mib": 79.2,
+    "private_mib": 68.17,
+    "idle_cpu_percent": 0.0
+  }
+}

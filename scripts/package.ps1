@@ -7,7 +7,7 @@ try {
     if (-not $IsWindows) { throw 'La build completa WinUI richiede Windows x64.' }
     if (-not $SkipBuild) { & "$PSScriptRoot/build.ps1" }
     $payload = Join-Path $root 'artifacts/Bibbia'
-    $required = @('Bibbia.Windows.exe', 'Bibbia.Windows.dll', 'Bibbia.Windows.runtimeconfig.json', 'Bibbia.Windows.deps.json', 'bible_core.dll', 'Microsoft.ui.xaml.dll', 'Bibbia.Windows.pri', 'coreclr.dll', 'Assets/Bibbia.ico', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'LICENSE.cei2008.txt', 'LICENSE.gutenberg.txt', 'cei2008-source.json', 'extended-source.json')
+    $required = @('Bibbia.Windows.exe', 'Bibbia.Windows.dll', 'Bibbia.Windows.runtimeconfig.json', 'Bibbia.Windows.deps.json', 'bible_core.dll', 'Microsoft.ui.xaml.dll', 'Bibbia.Windows.pri', 'coreclr.dll', 'Assets/Bibbia.ico', 'Assets/Fonts/AdwaitaSans-Regular.ttf', 'Assets/Fonts/SourceSerif4-Regular.ttf', 'LICENSE.Adwaita', 'LICENSE.SourceSerif', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'LICENSE.cei2008.txt', 'LICENSE.gutenberg.txt', 'cei2008-source.json', 'extended-source.json')
     foreach ($file in $required) {
         if (-not (Test-Path (Join-Path $payload $file) -PathType Leaf)) { throw "Pubblicazione incompleta: manca $file." }
     }

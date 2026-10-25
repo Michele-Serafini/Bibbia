@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.MicheleSerafini.Bibbia</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Bibbia</name>
+  <summary>Read the Bible and keep your notes offline</summary>
+  <summary xml:lang="it">Leggi la Bibbia e conserva i tuoi appunti offline</summary>
+  <description>
+    <p>A native GNOME Bible reader with Italian and English translations, phrase highlights, notes, bookmarks and search. Your notes stay on your device without an account.</p>
+    <p>Includes complete Catholic Italian CEI 2008 and Martini translations, Diodati, KJV, and an extended English collection with apocrypha, 1 Enoch and Jubilees. Bible texts and fonts have separate licenses. CEI text is for educational noncommercial use under the source's terms.</p>
+  </description>
+  <launchable type="desktop-id">io.github.MicheleSerafini.Bibbia.desktop</launchable>
+  <url type="homepage">https://github.com/Michele-Serafini/Bibbia</url>
+  <url type="bugtracker">https://github.com/Michele-Serafini/Bibbia/issues</url>
+  <developer_name>Michele Serafini</developer_name>
+  <provides><binary>bibbia</binary></provides>
+  <categories><category>Education</category><category>Literature</category></categories>
+  <content_rating type="oars-1.1"/>
+  <releases><release version="0.4.0" date="2026-10-25"/></releases>
+</component>

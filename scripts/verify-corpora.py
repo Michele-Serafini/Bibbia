@@ -28,3 +28,8 @@ for name, count, chapters in [('kjv', 66, 1189), ('diodati', 66, 1189),
                 assert len(labels[n]) == len(verses) == len(set(labels[n]))
                 assert all(isinstance(v, str) and v.strip() for v in labels[n])
     print(f'{name}: checksum, {count} books/sections, {chapters} chapters and labels verified')
+
+fonts = root.parents[1] / 'assets/fonts'
+for name, meta in json.loads((fonts / 'sources.json').read_text(encoding='utf-8')).items():
+    assert hashlib.sha256((fonts / name).read_bytes()).hexdigest() == meta['sha256'], name
+print('Private fonts: source checksums verified')
