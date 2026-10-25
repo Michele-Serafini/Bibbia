@@ -86,7 +86,8 @@ def exercise(app):
         run('lipo', binary, '-verify_arch', 'arm64', 'x86_64')
         libraries = subprocess.check_output(['otool', '-L', str(binary)], text=True)
         print(libraries)
-        assert all('/usr/lib/' in line or '/System/Library/' in line for line in libraries.splitlines()[1:]), libraries
+        dependencies = [line.strip().split(' (', 1)[0] for line in libraries.splitlines() if line.startswith('\t')]
+        assert dependencies and all(path.startswith(('/usr/lib/', '/System/Library/')) for path in dependencies), libraries
         notices = list((installed / 'Contents/Resources').rglob('LICENSE.cei2008.txt'))
         assert len(notices) == 1 and notices[0].stat().st_size > 100
         profile = root / 'bibbia-macos-smoke-profile'

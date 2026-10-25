@@ -229,3 +229,16 @@ private struct Fixture {
     #expect(snapshot.verses[0].text == "My text")
     #expect(snapshot.verses[0].annotation.note == "keep me")
 }
+
+@Test func oldReadingPositionWithoutVerseDefaultsToFirstVerse() async throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    do {
+        let db = try Database(directory: directory)
+        _ = try db.rows("INSERT INTO settings VALUES (?,?)", [.text("position"), .text("""
+            {"edition":"KJV","book":1,"chapter":2}
+            """)])
+    }
+    let store = try BibleStore(directory: directory)
+    #expect(try await store.bootstrap().position == Position(edition: "KJV", book: 1, chapter: 2))
+}

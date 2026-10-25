@@ -7,7 +7,7 @@ macOS, i font Apple di sistema e il disegno serif per la lettura. Supporta macOS
 Vedi [istruzioni macOS e architettura](macos/README.md).
 Windows e Linux restano alla versione verificata 0.4.0 documentata sotto.
 
-Lettore biblico offline con motore **Rust** condiviso. Su Linux l’applicazione è
+Su Windows e Linux il lettore biblico offline usa un motore **Rust** condiviso. Su Linux l’applicazione è
 interamente Rust con **GTK4 e libadwaita**, tema e controlli GNOME; su Windows
 usa **WinUI 3**. Interfaccia italiana o inglese, chiaro/scuro o tema del desktop,
 font **Adwaita Sans e Source Serif 4**, colonna di lettura limitata e interlinea curata.

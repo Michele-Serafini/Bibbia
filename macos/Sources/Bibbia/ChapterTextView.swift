@@ -123,8 +123,8 @@ final class ReadingTextView: NSTextView {
 
     private func addHighlight(_ name: String, to content: NSMutableAttributedString, range: NSRange) {
         guard let color = Self.highlightColor(name) else { return }
-        content.addAttributes([.backgroundColor: color.withAlphaComponent(0.55),
-                               .foregroundColor: dark ? NSColor.white : NSColor.black], range: range)
+        content.addAttributes([.backgroundColor: color.withAlphaComponent(dark ? 0.28 : 0.35),
+                               .foregroundColor: NSColor.textColor], range: range)
     }
 
     static func highlightColor(_ name: String) -> NSColor? {

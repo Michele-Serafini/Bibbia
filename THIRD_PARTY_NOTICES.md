@@ -1,5 +1,14 @@
 # Testi e dipendenze
 
+## Applicazione macOS
+
+La versione macOS è sviluppata in Swift con SwiftUI, AppKit, Foundation e SQLite
+forniti da macOS. Usa i font di sistema Apple tramite le API del sistema, senza
+redistribuirne i file. Non include il motore Rust, GTK, WinUI, .NET o i font GNOME
+delle altre versioni. Il sorgente vettoriale dell’icona macOS è parte del progetto,
+con la stessa licenza MIT del codice. Le condizioni dei testi biblici sotto
+si applicano anche al pacchetto macOS.
+
 ## CEI 2008, cattolica italiana
 
 Testo dei **73 libri** dalla fonte ufficiale [BibbiaEDU](https://www.bibbiaedu.it/CEI2008/),

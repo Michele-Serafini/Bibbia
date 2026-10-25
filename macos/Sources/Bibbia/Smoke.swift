@@ -34,6 +34,7 @@ extension AppModel {
                   let text = findReadingView(root) else { throw BibleError.invalid("Native reader window not found") }
             try check(window.frame.width >= 760, "Native window allocated")
             try check(text.string.contains(verses[0].text), "Chapter rendered in NSTextView")
+            try screenshot(window, name: "macos-initial.png")
             let font = text.textStorage?.attribute(.font, at: text.readingLayout.spans[0].location, effectiveRange: nil) as? NSFont
             try check(font != nil && font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")
             let selection = NSRange(location: text.readingLayout.spans[0].location, length: 8)
