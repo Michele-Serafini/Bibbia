@@ -4,7 +4,8 @@ La nuova versione **macOS 0.5.0** è sviluppata interamente in **Swift**, motore
 compreso, con **SwiftUI e AppKit**. Usa la barra laterale e gli strumenti nativi
 macOS, i font Apple di sistema e il disegno serif per la lettura. Supporta macOS
 13 Ventura e successivi su Apple Silicon e Intel con un unico pacchetto Universal.
-Vedi [istruzioni macOS e architettura](macos/README.md).
+[Scarica il DMG macOS](https://github.com/Michele-Serafini/Bibbia/releases/download/macos-v0.5.0/Bibbia-0.5.0-universal.dmg)
+e consulta [istruzioni macOS e architettura](macos/README.md).
 Windows e Linux restano alla versione verificata 0.4.0 documentata sotto.
 
 Su Windows e Linux il lettore biblico offline usa un motore **Rust** condiviso. Su Linux l’applicazione è
@@ -15,6 +16,13 @@ Nessun browser incorporato, server o account. Progetto indipendente,
 non affiliato a GNOME o Bible.com/YouVersion.
 
 ## Aspetto
+
+macOS, tema chiaro:
+
+![Bibbia nativa SwiftUI/AppKit con San Francisco e New York](docs/screenshots/macos-light.png)
+
+[Schermata macOS scura](docs/screenshots/macos-dark.png). Catture reali della
+versione 0.5.0 su macOS 15.7.9; la stessa app Universal è verificata su Apple Silicon e Intel.
 
 GNOME, tema chiaro:
 
@@ -28,7 +36,7 @@ Sono schermate reali della versione 0.4.0 nelle prove Windows Server e Debian 12
 Disponibili anche [GNOME scuro](docs/screenshots/gnome-dark.png) e
 [Windows scuro](docs/screenshots/windows-dark.png).
 
-## Funzioni implementate
+## Funzioni Windows e Linux
 
 - **CEI 2008**, Bibbia cattolica italiana completa di 73 libri, offline, per uso
   formativo e didattico non commerciale secondo le condizioni della fonte ufficiale.
@@ -61,7 +69,11 @@ Windows; i benchmark del motore e dell’app GNOME completa sono documentati sot
 
 ## Architettura
 
-`core/` contiene corpus, ricerca, importazione, validazione e persistenza in Rust.
+`macos/` contiene il nuovo motore Swift e il frontend SwiftUI/AppKit, con corpus
+mappati e SQLite di sistema. [Dettagli e verifiche macOS](macos/README.md).
+
+`core/` contiene corpus, ricerca, importazione, validazione e persistenza in Rust
+per Windows e Linux.
 `gnome/` è il frontend Linux interamente Rust con i binding ufficiali gtk-rs e
 adwaita-rs: usa il motore nello stesso eseguibile e le librerie GTK/libadwaita
 di sistema. Una sola `GtkTextView` contiene il capitolo; le ricerche e SQLite

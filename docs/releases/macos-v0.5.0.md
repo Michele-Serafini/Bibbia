@@ -25,3 +25,18 @@ macOS può bloccare il primo avvio. Dopo aver controllato provenienza e checksum
 usare **Impostazioni di Sistema → Privacy e sicurezza → Apri comunque**.
 
 Le versioni Windows e Linux 0.4.0 restano disponibili nella rispettiva release.
+
+Verificata la stessa app Universal su Apple Silicon e Intel, su macOS 15.7.9:
+20 test Swift, selezione con eventi mouse AppKit, popover, salvataggio e riapertura
+in un secondo processo, CEI, ricerca, font e temi. Verificati firma locale,
+risorse dopo ricollocazione, dipendenze di sistema e montaggio del DMG su Intel.
+
+[Pipeline macOS riuscita](https://github.com/Michele-Serafini/Bibbia/actions/runs/40229905984),
+codice `0248dac`. [Controlli delle altre piattaforme riusciti](https://github.com/Michele-Serafini/Bibbia/actions/runs/40229906006).
+
+Misure dell’intera app sulle macchine CI, tre profili nuovi per runner:
+RAM RSS a regime mediana **78 MiB su Intel**, **105 MiB su Apple Silicon**;
+CPU a regime mediana **0.00%**, campioni **0.00–0.32%** su finestre di tre secondi.
+I runner sono macchine diverse: questi numeri non confrontano le architetture
+e non promettono gli stessi consumi su ogni Mac. WindowServer è escluso.
+Il DMG è circa **20.5 MB**; l’app installata circa **47.2 MiB** con tutti i testi.

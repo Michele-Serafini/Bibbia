@@ -5,8 +5,10 @@ di terze parti. macOS 13 Ventura o successivi, Apple Silicon e Intel.
 
 ## Installazione
 
-Il workflow **Build macOS** produce `Bibbia-0.5.0-universal.dmg` e una copia ZIP
-della stessa `.app`. Aprire il DMG e trascinare Bibbia in **Applicazioni**.
+La [release macOS 0.5.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/macos-v0.5.0)
+contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/macos-v0.5.0/Bibbia-0.5.0-universal.dmg)
+e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/macos-v0.5.0/Bibbia-0.5.0-universal.zip),
+ciascuno con checksum SHA-256. Aprire il DMG e trascinare Bibbia in **Applicazioni**.
 Non occorrono runtime, account, librerie aggiuntive o Internet.
 
 La firma è **ad-hoc**, senza certificato Apple Developer ID e senza notarizzazione:
@@ -57,8 +59,31 @@ attribuzione visibile durante la lettura e condizioni nel menu
   Build release con ottimizzazione `-Osize` e binario Universal senza simboli debug.
 
 Il workflow misura l’intera app su Mac, con tre profili nuovi, tempo fino al primo
-layout/display, RSS e CPU per tre secondi a riposo. I risultati sono negli artefatti
-diagnostici; non sono promesse valide per ogni computer e non comprendono WindowServer.
+layout/display, RSS e CPU per tre secondi dopo 1,5 secondi di assestamento,
+poi di nuovo dopo altri cinque secondi senza input. L’hook di disponibilità attende
+anche 100 ms prima del layout/display. Non sono avvii a cache del sistema fredda.
+I campioni dei due runner non sono un confronto tra architetture; RSS include
+librerie e pagine condivise, escludendo il processo WindowServer.
+
+Misure della release sui runner macOS 15.7.9, mediane di tre campioni:
+
+| Runner | Primo layout/display | RAM RSS a regime | CPU a regime |
+| --- | ---: | ---: | ---: |
+| Apple Silicon | 1.448 s | 105.22 MiB | 0.00% |
+| Intel | 1.101 s | 77.98 MiB | 0.00% |
+
+I campioni della CPU a regime vanno da 0.00% a 0.32%; la risoluzione di `ps`
+e la finestra di tre secondi non dimostrano assenza assoluta di attività.
+Nei primi secondi la CPU mediana è circa 1% per il lavoro iniziale di macOS.
+L’analisi `sample` mostra il thread principale in attesa degli eventi e
+attività sporadiche di AppKit per conservare lo stato della finestra.
+I [dati Apple Silicon](../docs/performance/v0.5.0-macos-arm64-ci.json) e
+[Intel](../docs/performance/v0.5.0-macos-intel-ci.json) conservano tutti i campioni.
+Sono misure su macchine CI virtuali, senza garanzie sugli stessi valori su altri Mac.
+
+DMG di circa **20.5 MB**, ZIP di circa **15.9 MB**; app installata circa
+**47.2 MiB**, comprendendo tutte e cinque le traduzioni e i relativi indici.
+L’eseguibile Universal è circa 1.2 MB. Non vengono distribuiti runtime aggiuntivi.
 
 ## Compilare e verificare
 
@@ -82,7 +107,18 @@ piattaforme. La prova nativa apre realmente la `.app` ricollocata, seleziona tes
 mostra i popover, applica annotazioni, cerca CEI, naviga, cambia font e tema,
 cattura schermate e riapre SQLite. Si usa una cartella temporanea con marcatore
 `.bibbia-test-fixture`; `--ui-smoke` rifiuta profili non marcati.
-Il medesimo DMG è provato su Apple Silicon e Intel prima della pubblicazione.
+La medesima app Universal è provata su Apple Silicon e Intel. Si verificano
+firma ad-hoc, entrambe le architetture Mach-O, dipendenze esclusivamente di
+sistema, checksum e integrità del DMG; su Intel si monta il DMG in sola lettura
+e si prova la copia in una cartella con spazi nel nome.
+
+**Verifica 0.5.0:** [Build macOS completata](https://github.com/Michele-Serafini/Bibbia/actions/runs/40229905984),
+codice `0248dac`: 20 test Swift e prove native sulle due architetture, incluse
+selezione con eventi mouse AppKit, popover, note, evidenziatori, segnalibri,
+CEI, ricerca, dimensione reale dei font e riapertura in un secondo processo.
+Sono passati anche i [controlli Windows, Rust, Debian e Fedora](https://github.com/Michele-Serafini/Bibbia/actions/runs/40229906006).
+Il workflow **Publish verified macOS package** pubblica i file già verificati
+di una build riuscita, dopo averne ricontrollato i checksum, senza ricompilarli.
 
 Lo schema SQLite e gli offset UTF-16 sono compatibili con Windows/Linux.
 Per trasferire i dati chiudere tutte le istanze e copiare la cartella del database,

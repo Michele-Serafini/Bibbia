@@ -1,0 +1,35 @@
+{
+  "platform": "macOS-15.7.9-x86_64-i386-64bit-Mach-O",
+  "architecture": "x86_64",
+  "method": "Whole release app; 3 fresh profiles; ready after layout/display plus 100ms one-shot; early RSS/CPU after 1.5s settle over 3s; steady RSS/CPU after another 5s settle over 3s. ps RSS/CPU time, no input. Excludes WindowServer. Not a cross-machine comparison.",
+  "samples": [
+    {
+      "startup_ms": 1111.17,
+      "rss_mib": 76.14,
+      "idle_cpu_percent": 0.98,
+      "steady_rss_mib": 76.14,
+      "steady_idle_cpu_percent": 0.32
+    },
+    {
+      "startup_ms": 1101.25,
+      "rss_mib": 77.98,
+      "idle_cpu_percent": 1.27,
+      "steady_rss_mib": 77.98,
+      "steady_idle_cpu_percent": 0.0
+    },
+    {
+      "startup_ms": 1001.03,
+      "rss_mib": 78.0,
+      "idle_cpu_percent": 1.0,
+      "steady_rss_mib": 77.99,
+      "steady_idle_cpu_percent": 0.0
+    }
+  ],
+  "medians": {
+    "startup_ms": 1101.25,
+    "rss_mib": 77.98,
+    "idle_cpu_percent": 1.0,
+    "steady_rss_mib": 77.98,
+    "steady_idle_cpu_percent": 0.0
+  }
+}
