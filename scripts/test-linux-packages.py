@@ -110,11 +110,11 @@ def main():
         prefix = work / 'rpm/usr'
         rpm_args = ['rpm', '--dbpath', str(database)]
         run('rpmdb', '--dbpath', database, '--initdb')
-        run(*rpm_args, '--install', '--nodeps', '--noscripts', '--notriggers', '--prefix', prefix, rpm)
+        run(*rpm_args, '--install', '--excludedocs', '--nodeps', '--noscripts', '--notriggers', '--prefix', prefix, rpm)
         data = native_ui(prefix, work, 'rpm-relocated')
         before = hashlib.sha256((data / 'bible.sqlite3').read_bytes()).hexdigest()
         sentinel = prefix / 'share/doc/bibbia/user-file.txt'; sentinel.write_text('Not owned by the package')
-        run(*rpm_args, '--upgrade', '--replacepkgs', '--nodeps', '--noscripts', '--notriggers', '--prefix', prefix, rpm)
+        run(*rpm_args, '--upgrade', '--replacepkgs', '--excludedocs', '--nodeps', '--noscripts', '--notriggers', '--prefix', prefix, rpm)
         run(prefix / 'bin/bibbia', '--smoke-reopen', '--data-dir', data, timeout=45)
         run(*rpm_args, '--erase', '--noscripts', '--notriggers', 'bibbia')
         assert not (prefix / 'bin/bibbia').exists() and sentinel.read_text() == 'Not owned by the package'

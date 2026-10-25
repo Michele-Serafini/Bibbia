@@ -104,7 +104,9 @@ Description: Native GNOME offline Bible reader
         for directory in ['BUILD', 'BUILDROOT', 'RPMS', 'SOURCES', 'SPECS', 'SRPMS']:
             (rpm / directory).mkdir(parents=True)
         spec = rpm / 'SPECS/bibbia.spec'
-        files = '\n'.join(f'%attr({"0755" if path == stage / "usr/bin/bibbia" else "0644"},root,root) /{path.relative_to(stage)}' for path in sorted(stage.rglob('*')) if path.is_file())
+        # Minimal Fedora images commonly install with tsflags=nodocs. License
+        # notices are mandatory content, so preserve them as RPM LICENSE files.
+        files = '\n'.join(f'%{"license " if path.name.startswith("LICENSE") or path.name == "THIRD_PARTY_NOTICES.md" else ""}%attr({"0755" if path == stage / "usr/bin/bibbia" else "0644"},root,root) /{path.relative_to(stage)}' for path in sorted(stage.rglob('*')) if path.is_file())
         spec.write_text(f'''Name: bibbia
 Version: {VERSION}
 Release: 1
