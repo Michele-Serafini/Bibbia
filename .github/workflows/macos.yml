@@ -1,0 +1,52 @@
+name: Build macOS
+on:
+  push:
+    paths: ['macos/**', 'scripts/*macos*', '.github/workflows/*macos*', 'core/data/**', 'LICENSE', 'THIRD_PARTY_NOTICES.md']
+  pull_request:
+    paths: ['macos/**', 'scripts/*macos*', '.github/workflows/*macos*', 'core/data/**', 'LICENSE', 'THIRD_PARTY_NOTICES.md']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: python3 scripts/prepare-macos.py
+      - name: Test the pure Swift engine and SQLite compatibility
+        run: swift test --package-path macos -c release
+      - name: Build Universal application and packages
+        run: python3 scripts/package-macos.py
+      - name: Test the installed app and measure idle resource use
+        run: python3 scripts/test-macos.py --app artifacts/macos-staging/Bibbia.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bibbia-macOS-Universal
+          path: artifacts/macos/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Bibbia-macOS-diagnostics
+          path: artifacts/macos-diagnostics/
+          if-no-files-found: ignore
+  intel:
+    needs: build
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Bibbia-macOS-Universal
+          path: artifacts/macos/
+      - name: Verify and exercise the same Universal DMG on Intel
+        run: python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.5.0-universal.dmg
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Bibbia-macOS-Intel-diagnostics
+          path: artifacts/macos-diagnostics/
+          if-no-files-found: ignore

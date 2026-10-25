@@ -1,0 +1,27 @@
+Bibbia 0.5.0 per macOS 13 Ventura e successivi
+Apple Silicon e Intel: una sola applicazione Universal.
+
+INSTALLAZIONE
+Aprire il DMG e trascinare Bibbia.app in Applicazioni. Aprire Bibbia.
+Non occorrono Swift, Rust, librerie aggiuntive, account o connessione Internet.
+
+Questa build ha una firma locale ad-hoc, non un certificato Apple Developer ID,
+e non è notarizzata. macOS può bloccare il primo avvio di un download Internet.
+Dopo aver tentato di aprire l'app, verificare la provenienza e il checksum,
+quindi usare Impostazioni di Sistema > Privacy e sicurezza > Apri comunque.
+Non occorre disattivare Gatekeeper o modificare la sicurezza del sistema.
+
+AGGIORNAMENTO E RIMOZIONE
+Chiudere l'app e sostituirla in Applicazioni. Per rimuoverla, spostarla nel Cestino.
+Gli appunti restano in ~/Library/Application Support/Bibbia/bible.sqlite3.
+Copiare i backup solo a tutte le istanze dell'app chiuse, includendo gli eventuali
+file bible.sqlite3-wal e bible.sqlite3-shm se presenti.
+
+CEI 2008: solo uso formativo e didattico non commerciale secondo la fonte ufficiale.
+Testi, attribuzioni e condizioni sono nel menu Lettura > Testi e licenze.
+
+English: drag Bibbia.app to Applications. Native universal build for macOS 13+.
+No runtime or Internet connection needed. This build is ad-hoc signed, without
+Apple Developer ID/notarization: macOS may require Privacy & Security > Open Anyway
+on the first launch. Notes remain in ~/Library/Application Support/Bibbia.
+See Reading > Texts and licenses for Bible copyrights and conditions.

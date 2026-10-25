@@ -1,4 +1,11 @@
-# Bibbia per Windows e GNOME
+# Bibbia per Windows, GNOME e macOS
+
+La nuova versione **macOS 0.5.0** è sviluppata interamente in **Swift**, motore
+compreso, con **SwiftUI e AppKit**. Usa la barra laterale e gli strumenti nativi
+macOS, i font Apple di sistema e il disegno serif per la lettura. Supporta macOS
+13 Ventura e successivi su Apple Silicon e Intel con un unico pacchetto Universal.
+Vedi [istruzioni macOS e architettura](macos/README.md).
+Windows e Linux restano alla versione verificata 0.4.0 documentata sotto.
 
 Lettore biblico offline con motore **Rust** condiviso. Su Linux l’applicazione è
 interamente Rust con **GTK4 e libadwaita**, tema e controlli GNOME; su Windows
