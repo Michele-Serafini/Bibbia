@@ -138,9 +138,10 @@ jobs:
     env:
       GDK_BACKEND: x11
       GSK_RENDERER: gl
+      LIBGL_ALWAYS_SOFTWARE: '1'
     steps:
       - name: Prepare Fedora GNOME test session
-        run: dnf install -y git python3 xdotool xorg-x11-server-Xvfb dbus-daemon mesa-dri-drivers mesa-libGL
+        run: dnf install -y git python3 xdotool xorg-x11-server-Xvfb dbus-daemon mesa-dri-drivers mesa-libGL 'libGLESv2.so.2()(64bit)'
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
