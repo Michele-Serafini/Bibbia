@@ -15,7 +15,7 @@ extension AppModel {
             try check(notes.first?.annotation.note == "Nota macOS 😀" && notes.first?.annotation.bookmark == true,
                       "Second process restores notes and bookmarks")
             try Data("passed\n".utf8).write(to: directory.appendingPathComponent("reopen-passed.txt"))
-            DispatchQueue.main.async { NSApp.terminate(nil) }
+            NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
         } catch {
             FileHandle.standardError.write(Data("macOS reopen smoke failed: \(error)\n".utf8))
             Darwin.exit(1)
@@ -32,11 +32,15 @@ extension AppModel {
             guard let window = NSApp.windows.first(where: { $0.contentView != nil && $0.isVisible }),
                   let root = window.contentView,
                   let text = findReadingView(root) else { throw BibleError.invalid("Native reader window not found") }
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            try await Task.sleep(for: .milliseconds(200))
             try check(window.frame.width >= 760, "Native window allocated")
             try check(text.string.contains(verses[0].text), "Chapter rendered in NSTextView")
             try screenshot(window, name: "macos-initial.png")
             let font = text.textStorage?.attribute(.font, at: text.readingLayout.spans[0].location, effectiveRange: nil) as? NSFont
             try check(font != nil && font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")
+            FileHandle.standardOutput.write(Data("Reading font: \(font?.fontName ?? "missing")\n".utf8))
             let selection = NSRange(location: text.readingLayout.spans[0].location, length: 8)
             try nativeDrag(text, range: selection)
             try check(text.annotationPopover?.isShown == true && !text.capturedSelection.isEmpty,
@@ -102,7 +106,10 @@ extension AppModel {
             let marker = directory.appendingPathComponent("ui-passed.txt")
             try Data("Native macOS UI checks passed\n".utf8).write(to: marker)
             print("Native macOS UI checks passed")
-            DispatchQueue.main.async { NSApp.terminate(nil) }
+            // A run-loop selector follows the same route as the native Quit
+            // command. Calling terminate inside a main-dispatch block prevents
+            // that queue from servicing the asynchronous terminateLater flush.
+            NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
         } catch {
             FileHandle.standardError.write(Data("macOS UI smoke failed: \(error)\n".utf8))
             // This path is only reachable in the explicit integration-test mode.

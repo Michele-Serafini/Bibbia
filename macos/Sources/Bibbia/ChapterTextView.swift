@@ -121,6 +121,7 @@ final class ReadingTextView: NSTextView {
             }
         } else { textStorage?.setAttributedString(content) }
         textStorage?.endEditing()
+        if let container = textContainer { layoutManager?.ensureLayout(for: container) }
         if !chapterChanged, NSMaxRange(selected) <= content.length {
             setSelectedRange(selected)
             if let scrollOrigin, let scroll = enclosingScrollView {

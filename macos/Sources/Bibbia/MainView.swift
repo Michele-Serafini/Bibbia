@@ -55,20 +55,24 @@ struct MainView: View {
                 Label(model.t("Libri", "Books"), systemImage: "books.vertical").tag(AppModel.Panel.books)
                 Label(model.t("Cerca", "Search"), systemImage: "magnifyingglass").tag(AppModel.Panel.search)
                 Label(model.t("Appunti", "Saved"), systemImage: "bookmark").tag(AppModel.Panel.saved)
-            }.pickerStyle(.segmented).padding(12)
+            }.pickerStyle(.segmented).labelsHidden().padding(12)
             switch model.panel {
             case .books:
-                List(selection: Binding<Int?>(get: { model.position.book }, set: { index in
-                    if let index { var target = model.position; target.book = index; target.chapter = 0; target.verse = 0; model.navigate(target) }
-                })) {
-                    ForEach(Array(model.books.enumerated()), id: \.offset) { index, book in
-                        HStack {
-                            Text(book.name)
-                            Spacer()
-                            Text("\(book.chapters.count)").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                        }.tag(index)
-                    }
-                }.listStyle(.sidebar).accessibilityIdentifier("bookList")
+                ScrollViewReader { proxy in
+                    List(selection: Binding<Int?>(get: { model.position.book }, set: { index in
+                        if let index { var target = model.position; target.book = index; target.chapter = 0; target.verse = 0; model.navigate(target) }
+                    })) {
+                        ForEach(Array(model.books.enumerated()), id: \.offset) { index, book in
+                            HStack {
+                                Text(book.name)
+                                Spacer()
+                                Text("\(book.chapters.count)").font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                            }.tag(index).id(index)
+                        }
+                    }.listStyle(.sidebar).accessibilityIdentifier("bookList")
+                        .onChange(of: model.position.book) { proxy.scrollTo($0) }
+                        .onAppear { proxy.scrollTo(model.position.book) }
+                }
             case .search:
                 TextField(model.t("Parola o frase", "Word or phrase"), text: $model.query)
                     .textFieldStyle(.roundedBorder).padding(.horizontal, 12).padding(.bottom, 8)
