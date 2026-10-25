@@ -93,16 +93,18 @@ def exercise(app):
         profile = root / 'bibbia-macos-smoke-profile'
         profile.mkdir()
         (profile / '.bibbia-test-fixture').write_text('disposable integration fixture\n')
-        with (DIAGNOSTICS / 'ui.log').open('w') as log:
-            run(binary, '--data-dir', profile, '--ui-smoke', stdout=log, stderr=log, timeout=90)
-        print((DIAGNOSTICS / 'ui.log').read_text())
+        try:
+            with (DIAGNOSTICS / 'ui.log').open('w') as log:
+                run(binary, '--data-dir', profile, '--ui-smoke', stdout=log, stderr=log, timeout=90)
+        finally:
+            print((DIAGNOSTICS / 'ui.log').read_text())
+            for screenshot in (profile / 'screenshots').glob('*.png'):
+                shutil.copyfile(screenshot, DIAGNOSTICS / screenshot.name)
         assert (profile / 'ui-passed.txt').exists()
         with (DIAGNOSTICS / 'reopen.log').open('w') as log:
             run(binary, '--data-dir', profile, '--ui-reopen', stdout=log, stderr=log, timeout=30)
         print((DIAGNOSTICS / 'reopen.log').read_text())
         assert (profile / 'reopen-passed.txt').exists()
-        for screenshot in (profile / 'screenshots').glob('*.png'):
-            shutil.copyfile(screenshot, DIAGNOSTICS / screenshot.name)
         db = profile / 'bible.sqlite3'
         with sqlite3.connect(db) as connection:
             assert connection.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'

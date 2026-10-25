@@ -67,6 +67,13 @@ private struct Fixture {
     #expect(lower.hits.first?.position == Position(edition: "CEI 2008"))
 }
 
+@Test func ceiJohn316SearchPreservesOfficialText() async throws {
+    let f = try Fixture(); defer { f.cleanup() }
+    let result = try await f.store.search(edition: "CEI 2008", query: "HA TANTO AMATO IL MONDO")
+    let verse = try #require(result.hits.first { $0.name == "Giovanni" && $0.position.chapter == 2 && $0.label == "16" })
+    #expect(verse.text.hasPrefix("Dio infatti ha tanto amato il mondo"))
+}
+
 @Test func searchDoesNotCrossVerseBoundaries() async throws {
     let f = try Fixture(); defer { f.cleanup() }
     let file = try f.write("""

@@ -106,7 +106,9 @@ final class Database {
     }
 
     func set<T: Encodable>(_ key: String, _ value: T) throws {
-        let payload = String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let payload = String(decoding: try encoder.encode(value), as: UTF8.self)
         _ = try rows("INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET payload=excluded.payload WHERE payload<>excluded.payload",
                      [.text(key), .text(payload)])
     }

@@ -38,6 +38,10 @@ extension AppModel {
             let font = text.textStorage?.attribute(.font, at: text.readingLayout.spans[0].location, effectiveRange: nil) as? NSFont
             try check(font != nil && font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")
             let selection = NSRange(location: text.readingLayout.spans[0].location, length: 8)
+            try nativeDrag(text, range: selection)
+            try check(text.annotationPopover?.isShown == true && !text.capturedSelection.isEmpty,
+                      "AppKit mouse drag automatically opens the selection toolbar")
+            text.closePopover()
             text.setSelectedRange(selection)
             text.showSelection()
             try check(text.annotationPopover?.isShown == true, "Native selection popover shown")
@@ -60,7 +64,7 @@ extension AppModel {
             try check(saved.count == 1 && saved[0].annotation.bookmark, "Saved collection populated")
             let cei = try await store.books(edition: "CEI 2008")
             try check(cei.count == 73, "CEI Catholic 73 books")
-            let result = try await store.search(edition: "CEI 2008", query: "Dio ha tanto amato il mondo")
+            let result = try await store.search(edition: "CEI 2008", query: "ha tanto amato il mondo")
             guard let john = result.hits.first(where: { $0.position.chapter == 2 && $0.label == "16" }) else {
                 throw BibleError.invalid("CEI John 3:16 not found")
             }
@@ -116,6 +120,30 @@ extension AppModel {
         if let reader = view as? ReadingTextView { return reader }
         for child in view.subviews { if let reader = findReadingView(child) { return reader } }
         return nil
+    }
+
+    private func nativeDrag(_ view: ReadingTextView, range: NSRange) throws {
+        guard let window = view.window else { throw BibleError.invalid("Reader has no window") }
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(view)
+        view.scrollRangeToVisible(range)
+        let first = view.firstRect(forCharacterRange: NSRange(location: range.location, length: 1), actualRange: nil)
+        let last = view.firstRect(forCharacterRange: NSRange(location: NSMaxRange(range), length: 1), actualRange: nil)
+        let start = window.convertPoint(fromScreen: NSPoint(x: first.minX + 0.2, y: first.midY))
+        let end = window.convertPoint(fromScreen: NSPoint(x: last.minX + 0.2, y: last.midY))
+        func event(_ type: NSEvent.EventType, _ point: NSPoint, _ number: Int) throws -> NSEvent {
+            guard let result = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                context: nil, eventNumber: number, clickCount: 1, pressure: 1) else {
+                throw BibleError.invalid("Unable to create native mouse event")
+            }
+            return result
+        }
+        // AppKit's real mouseDown tracking loop consumes these queued drag/up
+        // events. This needs no Accessibility permission or external click tool.
+        NSApp.postEvent(try event(.leftMouseUp, end, 3), atStart: true)
+        NSApp.postEvent(try event(.leftMouseDragged, end, 2), atStart: true)
+        view.mouseDown(with: try event(.leftMouseDown, start, 1))
     }
 
     private func screenshot(_ window: NSWindow, name: String) throws {
