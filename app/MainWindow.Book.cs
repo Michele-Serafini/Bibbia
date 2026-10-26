@@ -17,6 +17,11 @@ public sealed partial class MainWindow
     private int chapterRenderGeneration;
     private (string Edition,int Book,int Chapter)? displayedChapter;
     private bool BookMotionAllowed => motionSettings.AnimationsEnabled || Environment.GetEnvironmentVariable("BIBBIA_UI_TEST_MOTION") == "1";
+    private void TraceBook(string message)
+    {
+        if (!selectionDiagnostics) return;
+        try { File.AppendAllText(Path.Combine(dataDirectory,"ui-events.log"),$"{DateTime.UtcNow:O} book {message}\n"); } catch { }
+    }
 
     private void InitializeBookMotion()
     {
@@ -36,8 +41,10 @@ public sealed partial class MainWindow
         var width=BookViewport.ActualWidth; var height=BookViewport.ActualHeight;
         var scale=Math.Min(Root.XamlRoot.RasterizationScale,Math.Min(1600/width,Math.Sqrt(2_000_000/(width*height))));
         var image=new RenderTargetBitmap();
+        TraceBook("capture begin");
         try { await image.RenderAsync(BookViewport,Math.Max(1,(int)(width*scale)),Math.Max(1,(int)(height*scale))); }
         catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); return null; }
+        TraceBook("capture complete");
         return new(image,width,height);
     }
 
@@ -52,8 +59,7 @@ public sealed partial class MainWindow
         var linear=compositor.CreateLinearEasingFunction();
         TurnCanvas.Clip=new RectangleGeometry {Rect=new Rect(0,0,width,height)};
         TurnCanvas.Visibility=Visibility.Visible;
-        bookBatch=compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
-        bookBatch.Completed += BookTurnCompleted;
+        TraceBook("build strips");
         for (var i=0;i<PageTurnMath.Strips;i++) {
             var start=frames[0][i];
             var slice=new Grid {Width=width/PageTurnMath.Strips+0.7,Height=height,Background=BookViewport.Background,
@@ -78,25 +84,35 @@ public sealed partial class MainWindow
                 face.InsertKeyFrame(t,(float)f.Front,linear);
                 light.InsertKeyFrame(t,(float)f.Shade,linear);
             }
-            slice.StartAnimation(scale); slice.StartAnimation(move); front.StartAnimation(face); shade.StartAnimation(light);
             bookMotionElements.AddRange([(slice,scale),(slice,move),(front,face),(shade,light)]);
         }
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(BookStage,"page-turn-active");
+        TurnCanvas.UpdateLayout();
+        TraceBook($"strips allocated loaded={TurnCanvas.Children[0] is FrameworkElement {{IsLoaded:true}}}");
+        bookBatch=compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        bookBatch.Completed += BookTurnCompleted;
+        foreach (var motion in bookMotionElements) motion.Element.StartAnimation(motion.Animation);
+        TraceBook("animations started");
+        if (selectionDiagnostics) Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(BookStage,"page-turn-active");
         bookBatch.End();
     }
 
     private void BookTurnCompleted(object sender,CompositionBatchCompletedEventArgs args)
     {
-        if (ReferenceEquals(sender,bookBatch)) CancelBookTurn();
+        TraceBook("completed");
+        if (ReferenceEquals(sender,bookBatch)) DispatcherQueue.TryEnqueue(() => {
+            if (ReferenceEquals(sender,bookBatch)) CancelBookTurn();
+        });
     }
 
     private void CancelBookTurn()
     {
-        if (bookBatch!=null) { bookBatch.Completed-=BookTurnCompleted; bookBatch.Dispose(); bookBatch=null; }
+        var batch=bookBatch; bookBatch=null;
+        if (batch!=null) batch.Completed-=BookTurnCompleted;
         foreach (var motion in bookMotionElements) motion.Element.StopAnimation(motion.Animation);
+        batch?.Dispose();
         bookMotionElements.Clear();
         TurnCanvas?.Children.Clear();
         if (TurnCanvas!=null) TurnCanvas.Visibility=Visibility.Collapsed;
-        if (BookStage!=null) Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(BookStage,"page-turn-idle");
+        if (selectionDiagnostics && BookStage!=null) Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(BookStage,"page-turn-idle");
     }
 }

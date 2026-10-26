@@ -299,6 +299,13 @@ catch {
         if (Test-Path $errorLog) { Get-Content $errorLog; Copy-Item $errorLog $diagnostics }
         $eventLog = Join-Path $env:LOCALAPPDATA 'BibbiaRust/ui-events.log'
         if (Test-Path $eventLog) { Get-Content $eventLog; Copy-Item $eventLog $diagnostics }
+        $process.Refresh()
+        if ($process.HasExited) {
+            Write-Host "Application exit code: $($process.ExitCode)"
+            Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=(Get-Date).AddMinutes(-10); Id=1000,1001} -ErrorAction SilentlyContinue |
+                Where-Object { $_.Message -like '*Bibbia.Windows*' } |
+                ForEach-Object { $_.Message } | Set-Content (Join-Path $diagnostics 'native-crash.log')
+        }
         $elements = [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Descendants, [Windows.Automation.Condition]::TrueCondition)
         $snapshot = foreach ($element in $elements) {
             if ($element.Current.ProcessId -eq $process.Id) {
