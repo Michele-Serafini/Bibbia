@@ -25,6 +25,7 @@ final class AppModel: ObservableObject {
     @Published var showNotices = false
     private(set) var store: BibleStore?
     private var generation = 0
+    private var pendingPosition: Position?
     private var searchTask: Task<Void, Never>?
     private var preferencesTask: Task<Void, Never>?
     private var positionTask: Task<Void, Never>?
@@ -75,6 +76,7 @@ final class AppModel: ObservableObject {
         guard let store else { return }
         generation += 1
         let token = generation
+        pendingPosition = target
         let editionChanged = target.edition != position.edition
         positionTask?.cancel()
         if editionChanged { searchTask?.cancel(); searching = false; hits = []; saved = [] }
@@ -89,23 +91,26 @@ final class AppModel: ObservableObject {
                 try await store.savePosition(target)
                 guard token == generation else { return }
                 self.position = target; self.books = books; self.verses = verses
+                pendingPosition = nil
                 scrollTarget = target.verse; revision += 1; loading = false
                 if editionChanged && panel == .saved { loadSaved(reset: true) }
                 if editionChanged && panel == .search { search() }
             } catch {
                 guard token == generation else { return }
+                pendingPosition = nil
                 self.error = error.localizedDescription; loading = false
             }
         }
     }
 
     func step(_ delta: Int) {
-        var target = position; target.verse = 0
+        var target = pendingPosition ?? position; target.verse = 0
+        guard target.edition == position.edition, books.indices.contains(target.book) else { return }
         target.chapter += delta
         if target.chapter < 0 {
             guard target.book > 0 else { return }
             target.book -= 1; target.chapter = books[target.book].chapters.count - 1
-        } else if target.chapter >= chapterCount {
+        } else if target.chapter >= books[target.book].chapters.count {
             guard target.book + 1 < books.count else { return }
             target.book += 1; target.chapter = 0
         }

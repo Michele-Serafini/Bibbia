@@ -48,7 +48,15 @@
                             <ComboBox x:Name="ChapterPicker" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="ChapterChanged" AutomationProperties.Name="Capitolo" />
                             <Button Grid.Column="2" Content="Aa" Click="AppearanceClick" AutomationProperties.Name="Aspetto della lettura" ToolTipService.ToolTip="Dimensione del testo e tema" />
                         </Grid>
-                        <ListView x:Name="VerseList" Grid.Row="1" SelectionMode="None"
+                        <Grid x:Name="BookStage" Grid.Row="1" MaxWidth="800" HorizontalAlignment="Stretch" Margin="0,3,0,8" AutomationProperties.AutomationId="BookStage">
+                          <Border Background="{ThemeResource BookEdgeBrush}" CornerRadius="7" Margin="5,7,0,-5" />
+                          <Border Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7" Margin="2,3,2,-2" />
+                          <Border Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7">
+                            <Grid x:Name="BookViewport" Background="{ThemeResource BookPaperBrush}" CornerRadius="7">
+                              <Border Width="16" HorizontalAlignment="Left" IsHitTestVisible="False">
+                                <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#14000000" Offset="0" /><GradientStop Color="#00000000" Offset="1" /></LinearGradientBrush></Border.Background>
+                              </Border>
+                        <ListView x:Name="VerseList" SelectionMode="None" Margin="12,8,10,8"
                             HorizontalContentAlignment="Stretch" MaxWidth="800" HorizontalAlignment="Stretch"
                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Versetti del capitolo" AutomationProperties.AutomationId="VerseList">
                             <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel CacheLength="0.5" /></ItemsPanelTemplate></ListView.ItemsPanel>
@@ -58,7 +66,7 @@
                                         <Grid ColumnSpacing="10">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <RichEditBox Grid.Column="1" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
+                                            <RichEditBox Grid.Column="1" Background="Transparent" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
                                                 FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize, Mode=OneWay}" TextWrapping="Wrap" Padding="0" BorderThickness="0"
                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                 ScrollViewer.VerticalScrollMode="Disabled" UseSystemFocusVisuals="True">
@@ -75,6 +83,10 @@
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
+                              <Canvas x:Name="TurnCanvas" Visibility="Collapsed" IsHitTestVisible="False" AutomationProperties.AccessibilityView="Raw" />
+                            </Grid>
+                          </Border>
+                        </Grid>
                         <Grid Grid.Row="2">
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <StackPanel HorizontalAlignment="Center" Spacing="4" Margin="0,0,0,8">

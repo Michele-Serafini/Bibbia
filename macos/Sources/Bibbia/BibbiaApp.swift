@@ -46,7 +46,7 @@ struct BibbiaApp: App {
             CommandGroup(replacing: .appInfo) {
                 Button(model.t("Informazioni su Bibbia", "About Bibbia")) {
                     NSApp.orderFrontStandardAboutPanel(options: [
-                        .applicationName: "Bibbia", .applicationVersion: "0.5.0",
+                        .applicationName: "Bibbia", .applicationVersion: "0.6.0",
                         .credits: NSAttributedString(string: model.t("Lettore offline nativo per macOS. Swift · SwiftUI · AppKit\nTesti e licenze nel menu Lettura.", "Native offline reader for macOS. Swift · SwiftUI · AppKit\nTexts and licenses in the Reading menu."))
                     ])
                 }

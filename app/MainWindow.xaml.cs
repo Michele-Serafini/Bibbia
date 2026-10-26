@@ -53,6 +53,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializeBookMotion();
         ConfigureWindowCaption();
         Navigation.IsEnabled = false;
         var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
@@ -68,6 +69,8 @@ public sealed partial class MainWindow : Window
             closed = true;
             ready = false;
             searchGeneration++;
+            chapterRenderGeneration++;
+            CancelBookTurn();
             selectionTimer?.Stop();
             fontTimer?.Stop();
             try {
@@ -152,18 +155,28 @@ public sealed partial class MainWindow : Window
         finally { changing = false; }
     }
 
-    private void LoadChapter(int focusVerse = -1)
+    private void LoadChapter(int focusVerse = -1) => _ = GuardAsync(() => LoadChapterAsync(focusVerse));
+    private async Task LoadChapterAsync(int focusVerse)
     {
+        var generation=++chapterRenderGeneration;
+        var target=(Edition:edition,Book:book,Chapter:chapter);
         selectionTimer?.Stop();
         selectionEditor = null;
         activeSelectionFlyout?.Hide();
         activeSelectionFlyout = null;
         liveEditors.Clear();
-        var animate = VerseList.ItemsSource != null;
+        var animate = displayedChapter!=null && displayedChapter!=target;
         var rows = BibleEngine.Call(new { op = "chapter", edition, book, chapter }).EnumerateArray().Select(x =>
             new VerseRow { Index = x.GetProperty("verse").GetInt32(), Number=x.GetProperty("label").GetString()!, Text = x.GetProperty("text").GetString()!,
                 TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
+        VerseList.IsHitTestVisible=false;
+        var snapshot=animate ? await CaptureBookPage() : null;
+        if (closed || generation!=chapterRenderGeneration) return;
+        var forward=displayedChapter==null || displayedChapter.Value.Edition!=edition ||
+            (displayedChapter.Value.Book,displayedChapter.Value.Chapter).CompareTo((book,chapter))<0;
         VerseList.ItemsSource = rows;
+        displayedChapter=target;
+        VerseList.IsHitTestVisible=true;
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
         ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
         UpdatePageTitle();
@@ -172,7 +185,9 @@ public sealed partial class MainWindow : Window
         NextButton.IsEnabled = book < books.Count - 1 || chapter < books[book].Chapters - 1;
         SavePosition();
         ScrollToCurrentVerse();
-        if (animate && section == "read") AnimateReveal(VerseList,140);
+        if (animate && section == "read") DispatcherQueue.TryEnqueue(() => {
+            if (!closed && generation==chapterRenderGeneration) TurnBookPage(snapshot,forward);
+        });
     }
 
     private void UpdateReadingStatus(int count)
@@ -229,6 +244,7 @@ public sealed partial class MainWindow : Window
     }
     private void ShowSection(string tag)
     {
+        CancelBookTurn();
         var changed = section != tag;
         section = tag;
         searchGeneration++;
@@ -329,6 +345,7 @@ public sealed partial class MainWindow : Window
     private void FontChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         if (!ready || changing) return;
+        CancelBookTurn();
         fontSize = e.NewValue;
         if (fontTimer == null) {
             fontTimer = DispatcherQueue.CreateTimer(); fontTimer.Interval = TimeSpan.FromMilliseconds(100); fontTimer.IsRepeating = false;

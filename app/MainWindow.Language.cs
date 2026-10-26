@@ -39,7 +39,7 @@ public sealed partial class MainWindow
         ["Importa traduzione JSON…"]="Import JSON translation…", ["Apri cartella dati"]="Open data folder", ["I tuoi appunti restano sul dispositivo"]="Your notes stay on your device",
         ["Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento."]="Highlights, underlines, notes, bookmarks and reading position are stored locally. No account or tracking.",
         ["CEI 2008 e Martini: Bibbie cattoliche italiane complete, 73 libri. Diodati e KJV: 66 libri. Raccolta estesa in inglese: 83 libri/sezioni, compresi apocrifi, 1 Enoc e Giubilei. La lingua dell’app è indipendente dal testo."]="CEI 2008 and Martini: complete Italian Catholic Bibles, 73 books. Diodati and KJV: 66 books. Extended English collection: 83 books/sections, including apocrypha, 1 Enoch and Jubilees. App language and text language are independent.",
-        ["Bibbia · 0.4\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion."]="Bibbia · 0.4\nNative Windows interface · Rust engine\nIndependent project, not affiliated with YouVersion.",
+        ["Bibbia · 0.6\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion."]="Bibbia · 0.6\nNative Windows interface · Rust engine\nIndependent project, not affiliated with YouVersion.",
         ["Inserisci almeno due caratteri"]="Enter at least two characters", ["Ricerca troppo lunga"]="Search query is too long", ["Seleziona una parola o una frase"]="Select a word or phrase",
         ["Nome della traduzione"]="Translation name", ["Ho il diritto di utilizzare questo testo."]="I have the right to use this text.", ["Importa traduzione"]="Import translation", ["Importa"]="Import",
         ["Formato: elenco di libri con name, abbrev e chapters (elenchi di versetti). Massimo 32 MB. La traduzione sarà copiata nel database locale."]="Format: an array of books with name, abbrev and chapters (arrays of verses). Maximum 32 MB. The translation will be copied into the local database.",
@@ -126,7 +126,7 @@ public sealed partial class MainWindow
         ImportButton.Content = T("Importa traduzione JSON…"); OpenDataButton.Content = T("Apri cartella dati");
         PrivacyTitle.Text = T("I tuoi appunti restano sul dispositivo");
         PrivacyDescription.Text = T("Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento.");
-        AboutLabel.Text = T("Bibbia · 0.4\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.");
+        AboutLabel.Text = T("Bibbia · 0.6\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.");
         UpdatePageTitle();
         if (books.Count > book) ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BookPicker,T("Libro"));

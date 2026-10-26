@@ -8,10 +8,9 @@ struct ChapterTextView: NSViewRepresentable {
     @ObservedObject var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
 
-    func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSScrollView()
-        scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true
-        scroll.borderType = .noBorder; scroll.drawsBackground = false
+    func makeNSView(context: Context) -> BookSurface {
+        let surface = BookSurface(frame: .zero)
+        let scroll = surface.scroll
         let view = ReadingTextView(frame: .zero)
         view.isEditable = false; view.isSelectable = true; view.isRichText = true
         view.importsGraphics = false; view.allowsUndo = false
@@ -28,11 +27,20 @@ struct ChapterTextView: NSViewRepresentable {
         view.setAccessibilityIdentifier("bibleText")
         view.setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
         scroll.documentView = view
-        return scroll
+        return surface
     }
 
-    func updateNSView(_ scroll: NSScrollView, context: Context) {
+    func updateNSView(_ surface: BookSurface, context: Context) {
+        let scroll = surface.scroll
         guard let view = scroll.documentView as? ReadingTextView else { return }
+        let old = surface.position
+        let targetPosition = model.position
+        let changed = old != nil && (old?.edition != targetPosition.edition || old?.book != targetPosition.book || old?.chapter != targetPosition.chapter)
+        let image = changed ? surface.capture() : nil
+        let captureGeneration = surface.generation
+        let captureSize = surface.bounds.size
+        if !changed && (view.readingSize != model.preferences.fontSize || view.readingDark != (colorScheme == .dark)) { surface.cancelTurn() }
+        surface.position = targetPosition
         view.model = model
         view.render(revision: model.revision, size: model.preferences.fontSize, dark: colorScheme == .dark)
         if let target = model.scrollTarget, view.readingLayout.spans.indices.contains(target) {
@@ -46,12 +54,17 @@ struct ChapterTextView: NSViewRepresentable {
                 if let container = view.textContainer { view.layoutManager?.ensureLayout(for: container) }
                 view.scrollRangeToVisible(view.readingLayout.spans[target])
                 model.scrollTarget = nil
+                if changed && surface.generation == captureGeneration && surface.bounds.size == captureSize {
+                    let forward = old?.edition != position.edition || (old!.book, old!.chapter) < (position.book, position.chapter)
+                    surface.turn(image, forward: forward)
+                }
             }
         }
     }
 
-    static func dismantleNSView(_ scroll: NSScrollView, coordinator: ()) {
-        (scroll.documentView as? ReadingTextView)?.closePopover()
+    static func dismantleNSView(_ surface: BookSurface, coordinator: ()) {
+        surface.cancelTurn()
+        (surface.scroll.documentView as? ReadingTextView)?.closePopover()
     }
 }
 
@@ -62,6 +75,8 @@ final class ReadingTextView: NSTextView {
     private var revision = -1
     private var size = 0
     private var dark = false
+    var readingSize: Int { size }
+    var readingDark: Bool { dark }
     private var renderedPosition: Position?
     private(set) var annotationPopover: NSPopover?
     private(set) var capturedSelection: [SelectedSpan] = []
@@ -149,6 +164,7 @@ final class ReadingTextView: NSTextView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        (enclosingScrollView?.superview as? BookSurface)?.cancelTurn()
         closePopover()
         super.mouseDown(with: event) // AppKit tracks the complete drag synchronously.
         showSelection()

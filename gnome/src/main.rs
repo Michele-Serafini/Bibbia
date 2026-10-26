@@ -103,8 +103,14 @@ fn main() -> glib::ExitCode {
         .build();
     app.connect_startup(|_| {
         let provider = gtk::CssProvider::new();
-        provider.load_from_data(".bibbia { font-family: 'Adwaita Sans', sans-serif; } .bible-text { background: transparent; } .highlight-yellow { color: #b18b00; } .highlight-green { color: #268326; } .highlight-blue { color: #3584e4; } .highlight-pink { color: #b44893; }");
-        if let Some(display) = gtk::gdk::Display::default() { gtk::style_context_add_provider_for_display(&display, &provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION); }
+        provider.load_from_data(include_str!("style.css"));
+        if let Some(display) = gtk::gdk::Display::default() {
+            gtk::style_context_add_provider_for_display(
+                &display,
+                &provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
+        }
     });
     let state: Rc<RefCell<Option<Rc<ui::Ui>>>> = Rc::new(RefCell::new(None));
     let active = state.clone();

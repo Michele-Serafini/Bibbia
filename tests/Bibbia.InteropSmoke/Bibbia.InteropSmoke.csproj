@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../app/BibleEngine.cs" Link="BibleEngine.cs" />
+    <Compile Include="../../app/PageTurnMath.cs" Link="PageTurnMath.cs" />
   </ItemGroup>
 </Project>

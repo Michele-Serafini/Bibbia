@@ -9,6 +9,18 @@ var directory = Path.Combine(Path.GetTempPath(), "bibbia-interop-" + Guid.NewGui
 void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 try
 {
+    foreach (var forward in new[]{false,true}) {
+        foreach (var strip in PageTurnMath.Frame(800,600,0,forward))
+            Check(Math.Abs(strip.X-strip.Source)<0.001 && Math.Abs(strip.ScaleX-1)<0.001 && strip.Front==1,"Flat page geometry is incorrect.");
+        for (var k=0;k<=100;k++) {
+            var frame=PageTurnMath.Frame(800,600,k/100.0,forward);
+            Check(frame.All(s=>double.IsFinite(s.X) && double.IsFinite(s.ScaleY) && s.ScaleY>0),"Nonfinite page projection.");
+            for (var i=0;i<frame.Length-1;i++) {
+                var gap=forward?frame[i].X+25*frame[i].ScaleX-frame[i+1].X:frame[i+1].X+25*frame[i+1].ScaleX-frame[i].X;
+                Check(Math.Abs(gap)<0.001,"A gap opened between adjacent paper strips.");
+            }
+        }
+    }
     var boot = BibleEngine.Call(new { op = "init", directory });
     Check(boot.GetProperty("defaultEdition").GetString() == "Martini 1781 (cattolica)", "Traduzione italiana iniziale mancante.");
     const string catholic = "Martini 1781 (cattolica)";

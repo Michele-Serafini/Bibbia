@@ -14,6 +14,8 @@ use std::{
 };
 
 mod annotations;
+mod book;
+mod book_math;
 mod preferences;
 pub mod smoke;
 
@@ -41,6 +43,7 @@ pub struct Ui {
     closed: Cell<bool>,
     changing: Cell<bool>,
     generation: Cell<u64>,
+    pending_position: RefCell<Option<Position>>,
     search_generation: Cell<u64>,
     saved_offset: Cell<usize>,
     mouse_down: Cell<bool>,
@@ -61,6 +64,7 @@ pub struct Ui {
     previous: gtk::Button,
     next: gtk::Button,
     reader: gtk::TextView,
+    book_surface: book::BookSurface,
     body_tag: gtk::TextTag,
     number_tag: gtk::TextTag,
     popup: gtk::Popover,
@@ -178,6 +182,20 @@ impl Ui {
             .default_height(800)
             .build();
         window.add_css_class("bibbia");
+        let style = adw::StyleManager::default();
+        if style.is_dark() {
+            window.add_css_class("book-dark");
+        }
+        let weak_window = window.downgrade();
+        style.connect_dark_notify(move |style| {
+            if let Some(window) = weak_window.upgrade() {
+                if style.is_dark() {
+                    window.add_css_class("book-dark");
+                } else {
+                    window.remove_css_class("book-dark");
+                }
+            }
+        });
         window.set_icon_name(Some(APP_ID));
         let stack = adw::ViewStack::new();
         stack.set_vexpand(true);
@@ -226,6 +244,7 @@ impl Ui {
             .build();
         read.append(&top_clamp);
         let paper = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        paper.add_css_class("book-paper");
         let reference = gtk::Label::builder()
             .label("Bibbia")
             .css_classes(["title-1"])
@@ -281,19 +300,26 @@ impl Ui {
                     .build(),
             );
         }
-        read.append(&paper);
         let scrolled = scroll(&reader);
+        let book_surface = book::BookSurface::new(&scrolled);
+        paper.append(&book_surface);
+        paper.set_vexpand(true);
         let clamp = adw::Clamp::builder()
             .maximum_size(820)
             .tightening_threshold(600)
-            .child(&scrolled)
+            .child(&paper)
             .vexpand(true)
             .build();
         read.append(&clamp);
+        clamp.set_margin_start(18);
+        clamp.set_margin_end(18);
+        clamp.set_margin_bottom(12);
         let footer = gtk::Box::new(gtk::Orientation::Horizontal, 12);
         margin(&footer, 12);
         let previous = icon_button("go-previous-symbolic", "Capitolo precedente");
         let next = icon_button("go-next-symbolic", "Capitolo successivo");
+        previous.add_css_class("book-nav");
+        next.add_css_class("book-nav");
         let edition = gtk::DropDown::from_strings(&[]);
         edition.set_hexpand(true);
         edition.set_tooltip_text(Some("Traduzione"));
@@ -421,6 +447,7 @@ impl Ui {
             closed: Cell::new(false),
             changing: Cell::new(false),
             generation: Cell::new(0),
+            pending_position: RefCell::new(None),
             search_generation: Cell::new(0),
             saved_offset: Cell::new(0),
             mouse_down: Cell::new(false),
@@ -441,6 +468,7 @@ impl Ui {
             previous,
             next,
             reader,
+            book_surface,
             body_tag,
             number_tag,
             popup,
@@ -744,6 +772,7 @@ impl Ui {
         self.launch(async move { u.navigate(p).await });
     }
     pub async fn navigate(self: &Rc<Self>, mut position: Position) -> Result<(), String> {
+        self.pending_position.replace(Some(position.clone()));
         self.popup.popdown();
         self.note_popup.popdown();
         self.cancel_selection();
@@ -771,6 +800,19 @@ impl Ui {
         }
         let verses: Vec<Verse> = serde_json::from_value(value).map_err(|e| e.to_string())?;
         position.verse = position.verse.min(verses.len() - 1);
+        let old = self.position();
+        let changed = self.ready.get()
+            && (old.edition != position.edition
+                || old.book != position.book
+                || old.chapter != position.chapter);
+        let texture = if changed {
+            self.book_surface.capture()
+        } else {
+            None
+        };
+        let capture_generation = self.book_surface.generation();
+        let forward = old.edition != position.edition
+            || (old.book, old.chapter) < (position.book, position.chapter);
         self.changing.set(true);
         {
             let mut s = self.state.borrow_mut();
@@ -807,6 +849,20 @@ impl Ui {
         self.changing.set(false);
         self.refresh_editions();
         self.render();
+        if changed {
+            let surface = self.book_surface.clone();
+            let weak = self.weak();
+            glib::idle_add_local_once(move || {
+                if let Some(ui) = weak.upgrade()
+                    && !ui.closed.get()
+                    && ui.generation.get() == generation
+                    && surface.generation() == capture_generation
+                {
+                    surface.turn(texture, forward);
+                }
+            });
+        }
+        self.pending_position.borrow_mut().take();
         self.save_position();
         Ok(())
     }
@@ -814,7 +870,11 @@ impl Ui {
         if !self.ready.get() {
             return;
         }
-        let mut p = self.position();
+        let mut p = self
+            .pending_position
+            .borrow()
+            .clone()
+            .unwrap_or_else(|| self.position());
         {
             let s = self.state.borrow();
             if direction < 0 {
@@ -1064,6 +1124,7 @@ impl Ui {
             return;
         }
         self.cancel_selection();
+        self.book_surface.cancel();
         if let Some(source) = self.font_source.borrow_mut().take() {
             source.remove();
         }

@@ -1,0 +1,22 @@
+.bibbia { font-family: 'Adwaita Sans', sans-serif; }
+.bible-text, .bible-text text { background: transparent; }
+.book-paper {
+  background-color: #fffdf7;
+  border: 1px solid alpha(black, 0.10);
+  border-radius: 7px;
+  box-shadow: -3px 0 12px alpha(black, 0.06), 0 5px 12px alpha(black, 0.10);
+}
+.book-dark .book-paper {
+  background-color: #242320;
+  border-color: alpha(white, 0.10);
+  box-shadow: -3px 0 12px alpha(black, 0.12), 0 5px 12px alpha(black, 0.22);
+}
+.book-nav { border-radius: 50%; min-width: 28px; min-height: 28px; transition: background-color 120ms ease-out; }
+.book-nav:hover { background-color: alpha(@accent_color, 0.13); }
+.book-nav image { transition: -gtk-icon-transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.book-nav:hover image { -gtk-icon-transform: scale(1.08); }
+.book-nav:active image { -gtk-icon-transform: scale(0.94); }
+.highlight-yellow { color: #b18b00; }
+.highlight-green { color: #268326; }
+.highlight-blue { color: #3584e4; }
+.highlight-pink { color: #b44893; }

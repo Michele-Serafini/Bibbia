@@ -10,21 +10,29 @@
             <FontFamily x:Key="ReadingFontFamily">ms-appx:///Assets/Fonts/SourceSerif4-Regular.ttf#Source Serif 4</FontFamily>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="BookPaperBrush" Color="#FFFDF7" />
+                    <SolidColorBrush x:Key="BookEdgeBrush" Color="#DDD8CB" />
                     <SolidColorBrush x:Key="WindowSurfaceBrush" Color="#F8F8F8" />
                     <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#F8F8F8" />
                     <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#F8F8F8" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="BookPaperBrush" Color="#FFFDF7" />
+                    <SolidColorBrush x:Key="BookEdgeBrush" Color="#DDD8CB" />
                     <SolidColorBrush x:Key="WindowSurfaceBrush" Color="#F8F8F8" />
                     <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#F8F8F8" />
                     <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#F8F8F8" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="BookPaperBrush" Color="#242320" />
+                    <SolidColorBrush x:Key="BookEdgeBrush" Color="#48463F" />
                     <SolidColorBrush x:Key="WindowSurfaceBrush" Color="#202020" />
                     <SolidColorBrush x:Key="NavigationViewContentBackground" Color="#202020" />
                     <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#202020" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="BookPaperBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="BookEdgeBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="WindowSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NavigationViewContentBackground" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="{ThemeResource SystemColorWindowColor}" />

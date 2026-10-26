@@ -1,4 +1,4 @@
-Bibbia 0.5.0 per macOS 13 Ventura e successivi
+Bibbia 0.6.0 per macOS 13 Ventura e successivi
 Apple Silicon e Intel: una sola applicazione Universal.
 
 INSTALLAZIONE

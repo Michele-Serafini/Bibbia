@@ -1,10 +1,5 @@
 name: Build macOS
-on:
-  push:
-    paths: ['macos/**', 'scripts/*macos*', '.github/workflows/*macos*', 'core/data/**', 'LICENSE', 'THIRD_PARTY_NOTICES.md']
-  pull_request:
-    paths: ['macos/**', 'scripts/*macos*', '.github/workflows/*macos*', 'core/data/**', 'LICENSE', 'THIRD_PARTY_NOTICES.md']
-  workflow_dispatch:
+on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
@@ -43,7 +38,7 @@ jobs:
           name: Bibbia-macOS-Universal
           path: artifacts/macos/
       - name: Verify and exercise the same Universal DMG on Intel
-        run: python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.5.0-universal.dmg
+        run: python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.6.0-universal.dmg
       - uses: actions/upload-artifact@v4
         if: always()
         with:

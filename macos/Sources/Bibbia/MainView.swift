@@ -4,6 +4,7 @@ import BibleKit
 struct MainView: View {
     @ObservedObject var model: AppModel
     @FocusState private var searchFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationSplitView {
@@ -15,9 +16,11 @@ struct MainView: View {
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
                 Button { model.step(-1) } label: { Image(systemName: "chevron.left") }
+                    .buttonStyle(BookButtonStyle())
                     .help(model.t("Capitolo precedente (⌥⌘←)", "Previous chapter (⌥⌘←)"))
                     .accessibilityIdentifier("previousChapter")
                 Button { model.step(1) } label: { Image(systemName: "chevron.right") }
+                    .buttonStyle(BookButtonStyle())
                     .help(model.t("Capitolo successivo (⌥⌘→)", "Next chapter (⌥⌘→)"))
                     .accessibilityIdentifier("nextChapter")
             }
@@ -131,8 +134,9 @@ struct MainView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(model.title).font(.system(size: 30, weight: .semibold, design: .serif))
+                        .id(model.title).transition(.opacity)
                     Text(model.position.edition).font(.subheadline).foregroundStyle(.secondary)
-                }
+                }.animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.title)
                 Spacer()
                 if model.loading { ProgressView().controlSize(.small) }
             }.padding(.horizontal, 32).padding(.top, 26).padding(.bottom, 16)
@@ -152,7 +156,27 @@ struct MainView: View {
                         .font(.system(size: 10)).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }.buttonStyle(.plain).padding(.horizontal, 16).padding(.bottom, 8)
             }
-        }.frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .textBackgroundColor))
+        }.frame(maxWidth: 860, maxHeight: .infinity)
+            .background(Color(nsColor: BookSurface.paperColor))
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .overlay(alignment: .leading) {
+                LinearGradient(colors: [.black.opacity(0.08), .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 16).allowsHitTesting(false).accessibilityHidden(true)
+            }
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(.primary.opacity(0.09), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.10), radius: 12, y: 5)
+            .padding(.horizontal, 20).padding(.vertical, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+private struct BookButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.padding(6)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 6))
+            .scaleEffect(reduceMotion ? 1 : configuration.isPressed ? 0.94 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.82), value: configuration.isPressed)
     }
 }
