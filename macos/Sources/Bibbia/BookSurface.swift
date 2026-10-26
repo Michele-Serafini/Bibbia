@@ -15,6 +15,7 @@ final class BookSurface: NSView {
     private(set) var turnsStarted = 0
     var position: Position?
     private var motionObserver: NSObjectProtocol?
+    var allowsMotion = true { didSet { if !allowsMotion { cancelTurn() } } }
 
     override var isFlipped: Bool { true }
     static var paperColor: NSColor {
@@ -25,7 +26,7 @@ final class BookSurface: NSView {
         }
     }
     var motionAllowed: Bool {
-        !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        allowsMotion && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
     override init(frame: NSRect) {
@@ -135,5 +136,18 @@ final class BookSurface: NSView {
         token += 1
         overlay?.removeAllAnimations()
         overlay?.removeFromSuperlayer(); overlay = nil; image = nil; isTurning = false
+    }
+
+    func saveMotionFrame(to url: URL) throws {
+        guard let live = layer?.presentation(), isTurning else { throw BibleError.invalid("No active paper animation") }
+        let width = max(1, Int(bounds.width)), height = max(1, Int(bounds.height))
+        guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let context = NSGraphicsContext(bitmapImageRep: bitmap) else { throw BibleError.invalid("No frame context") }
+        live.render(in: context.cgContext)
+        guard let png = bitmap.representation(using: .png, properties: [:]) else { throw BibleError.invalid("No motion frame") }
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try png.write(to: url)
     }
 }

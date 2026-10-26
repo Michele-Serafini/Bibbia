@@ -95,8 +95,8 @@
                                     <Button.Flyout><MenuFlyout Opening="QuickEditionsOpening" /></Button.Flyout>
                                 </Button>
                             </StackPanel>
-                            <Button x:Name="PreviousButton" Grid.Row="1" Content="← Precedente" Click="PreviousClick" HorizontalAlignment="Left" />
-                            <Button x:Name="NextButton" Grid.Row="1" Content="Successivo →" Click="NextClick" HorizontalAlignment="Right" />
+                            <Button x:Name="PreviousButton" AutomationProperties.AutomationId="PreviousChapter" Grid.Row="1" Content="← Precedente" Click="PreviousClick" HorizontalAlignment="Left" />
+                            <Button x:Name="NextButton" AutomationProperties.AutomationId="NextChapter" Grid.Row="1" Content="Successivo →" Click="NextClick" HorizontalAlignment="Right" />
                         </Grid>
                     </Grid>
                     <Grid x:Name="ResultsPanel" Visibility="Collapsed" RowSpacing="16">

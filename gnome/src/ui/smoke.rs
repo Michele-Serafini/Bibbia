@@ -111,6 +111,40 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         "Private Source Serif font did not load",
     )?;
     set_theme("Light");
+    if let Some(settings) = gtk::Settings::default() {
+        let initial = ui.position();
+        settings.set_gtk_enable_animations(true);
+        ui.next.emit_clicked();
+        until(|| ui.book_surface.is_turning(), "Page turn did not start").await?;
+        screenshot(&ui, "gnome-page-turn.png").await?;
+        until(
+            || !ui.book_surface.is_turning(),
+            "Page image or frame callback was not released",
+        )
+        .await?;
+        ui.next.emit_clicked();
+        ui.next.emit_clicked();
+        until(
+            || ui.position().chapter == 3,
+            "Rapid turns lost the latest destination",
+        )
+        .await?;
+        until(
+            || !ui.book_surface.is_turning(),
+            "Rapid turn did not settle",
+        )
+        .await?;
+        let started = ui.book_surface.turns_started();
+        settings.set_gtk_enable_animations(false);
+        ui.navigate(initial).await?;
+        glib::timeout_future(Duration::from_millis(60)).await;
+        check(
+            !ui.book_surface.is_turning() && ui.book_surface.turns_started() == started,
+            "Reduced motion allocated a page animation",
+        )?;
+        settings.set_gtk_enable_animations(true);
+        println!("Book motion: curved turn, rapid navigation, reduced motion and cleanup passed");
+    }
     screenshot(&ui, "gnome-light.png").await?;
     // Real pointer events exercise capture, GTK selection, and the automatic popup.
     let id = command(&[

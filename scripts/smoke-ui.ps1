@@ -159,6 +159,23 @@ try {
     $firstVerse = 'Al principio cre' + [char]0xF2 + ' Dio il cielo e la terra.'
     Wait-Text $verses $firstVerse | Out-Null
     Write-Host 'WinUI: Catholic Italian chapter rendered.'
+    $bookStage = Wait-Control $window 'BookStage'
+    Invoke-Control (Wait-Control $window 'NextChapter')
+    $turnDeadline = [DateTime]::UtcNow.AddSeconds(5)
+    do {
+        if ($bookStage.Current.HelpText -eq 'page-turn-active') { break }
+        Start-Sleep -Milliseconds 15
+    } while ([DateTime]::UtcNow -lt $turnDeadline)
+    if ($bookStage.Current.HelpText -ne 'page-turn-active') { throw 'Native paper animation did not start.' }
+    Start-Sleep -Milliseconds 110
+    Save-WindowImage 'windows-page-turn.png'
+    $turnDeadline = [DateTime]::UtcNow.AddSeconds(3)
+    while ($bookStage.Current.HelpText -ne 'page-turn-idle' -and [DateTime]::UtcNow -lt $turnDeadline) { Start-Sleep -Milliseconds 30 }
+    if ($bookStage.Current.HelpText -ne 'page-turn-idle') { throw 'Paper snapshot was not released.' }
+    Invoke-Control (Wait-Control $window 'PreviousChapter')
+    Start-Sleep -Milliseconds 700
+    Wait-Text (Wait-Control $window 'VerseList') $firstVerse | Out-Null
+    Write-Host 'WinUI: native curved paper turn and completion cleanup passed.'
 
     # Drag the mouse over part of the text, rather than invoking a whole-verse menu.
     $editor = Wait-Control $window 'VerseText_0'

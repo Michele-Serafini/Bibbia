@@ -37,6 +37,26 @@ extension AppModel {
             try await Task.sleep(for: .milliseconds(200))
             try check(window.frame.width >= 760, "Native window allocated")
             try check(text.string.contains(verses[0].text), "Chapter rendered in NSTextView")
+            guard let book = text.enclosingScrollView?.superview as? BookSurface else { throw BibleError.invalid("Book surface missing") }
+            if book.motionAllowed {
+                step(1)
+                try await waitUntil { book.isTurning && self.position.chapter == 1 }
+                try await Task.sleep(for: .milliseconds(130))
+                try book.saveMotionFrame(to: directory.appendingPathComponent("screenshots/macos-page-turn.png"))
+                try await waitUntil { !book.isTurning }
+                try check(book.turnsStarted > 0, "Curved page animation completes and releases the image")
+                step(1); step(1)
+                try await waitUntil { self.position.chapter == 3 && !self.loading }
+                try await waitUntil { !book.isTurning }
+                try check(position.chapter == 3, "Rapid page turns preserve the latest destination")
+                let started = book.turnsStarted
+                book.allowsMotion = false
+                navigate(Position())
+                try await waitUntil { self.position.chapter == 0 && !self.loading }
+                try await Task.sleep(for: .milliseconds(80))
+                try check(!book.isTurning && book.turnsStarted == started, "Reduced motion skips paper capture and animation")
+                book.allowsMotion = true
+            }
             try screenshot(window, name: "macos-initial.png")
             let font = text.textStorage?.attribute(.font, at: text.readingLayout.spans[0].location, effectiveRange: nil) as? NSFont
             try check(font != nil && font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")

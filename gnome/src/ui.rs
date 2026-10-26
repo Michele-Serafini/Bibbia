@@ -875,6 +875,9 @@ impl Ui {
             .borrow()
             .clone()
             .unwrap_or_else(|| self.position());
+        if p.edition != self.state.borrow().position.edition {
+            return;
+        }
         {
             let s = self.state.borrow();
             if direction < 0 {
@@ -896,6 +899,7 @@ impl Ui {
             }
         }
         p.verse = 0;
+        self.pending_position.replace(Some(p.clone()));
         let u = self.clone();
         self.launch(async move { u.navigate(p).await });
     }

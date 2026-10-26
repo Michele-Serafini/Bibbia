@@ -170,6 +170,7 @@ public sealed partial class MainWindow : Window
             new VerseRow { Index = x.GetProperty("verse").GetInt32(), Number=x.GetProperty("label").GetString()!, Text = x.GetProperty("text").GetString()!,
                 TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
         VerseList.IsHitTestVisible=false;
+        if (animate) BookPicker.Focus(FocusState.Programmatic);
         var snapshot=animate ? await CaptureBookPage() : null;
         if (closed || generation!=chapterRenderGeneration) return;
         var forward=displayedChapter==null || displayedChapter.Value.Edition!=edition ||
@@ -180,6 +181,7 @@ public sealed partial class MainWindow : Window
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
         ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
         UpdatePageTitle();
+        if (animate && section == "read") AnimateReveal(PageTitle,160);
         UpdateReadingStatus(rows.Count);
         PreviousButton.IsEnabled = book > 0 || chapter > 0;
         NextButton.IsEnabled = book < books.Count - 1 || chapter < books[book].Chapters - 1;

@@ -196,6 +196,9 @@ final class ReadingTextView: NSTextView {
 
     private func capture() {
         guard let model else { return }
+        guard renderedPosition?.edition == model.position.edition,
+              renderedPosition?.book == model.position.book,
+              renderedPosition?.chapter == model.position.chapter else { capturedSelection = []; return }
         capturedSelection = readingLayout.selection(selectedRange())
         capturedPosition = model.position
         if let first = capturedSelection.first {
