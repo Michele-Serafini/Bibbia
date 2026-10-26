@@ -11,10 +11,11 @@ namespace Bibbia.Windows;
 
 public sealed partial class MainWindow
 {
-    private sealed record PageSnapshot(RenderTargetBitmap Bitmap,double Width,double Height);
+    private sealed record PageSnapshot(RenderTargetBitmap Bitmap,double Width,double Height,int Generation);
     private CompositionScopedBatch? bookBatch;
     private readonly List<(UIElement Element,ICompositionAnimationBase Animation)> bookMotionElements = [];
     private int chapterRenderGeneration;
+    private int bookMotionGeneration;
     private (string Edition,int Book,int Chapter)? displayedChapter;
     private bool BookMotionAllowed => motionSettings.AnimationsEnabled || Environment.GetEnvironmentVariable("BIBBIA_UI_TEST_MOTION") == "1";
     private void TraceBook(string message)
@@ -29,14 +30,18 @@ public sealed partial class MainWindow
         Root.ActualThemeChanged += (_,_) => CancelBookTurn();
         Root.AddHandler(UIElement.PointerPressedEvent,new Microsoft.UI.Xaml.Input.PointerEventHandler((_,_) => CancelBookTurn()),true);
         BookStage.AddHandler(UIElement.PointerWheelChangedEvent,new Microsoft.UI.Xaml.Input.PointerEventHandler((_,_) => CancelBookTurn()),true);
-        motionSettings.AnimationsEnabledChanged += (_,_) => DispatcherQueue.TryEnqueue(() => {
-            if (!motionSettings.AnimationsEnabled) CancelBookTurn();
-        });
+        var owner=new WeakReference<MainWindow>(this);
+        motionSettings.AnimationsEnabledChanged += (_,_) => {
+            if (owner.TryGetTarget(out var window) && !window.closed) window.DispatcherQueue.TryEnqueue(() => {
+                if (!window.motionSettings.AnimationsEnabled) window.CancelBookTurn();
+            });
+        };
     }
 
     private async Task<PageSnapshot?> CaptureBookPage()
     {
         CancelBookTurn();
+        var generation=bookMotionGeneration;
         if (!BookMotionAllowed || section != "read" || !BookViewport.IsLoaded || BookViewport.ActualWidth<20 || BookViewport.ActualHeight<20) return null;
         var width=BookViewport.ActualWidth; var height=BookViewport.ActualHeight;
         var scale=Math.Min(Root.XamlRoot.RasterizationScale,Math.Min(1600/width,Math.Sqrt(2_000_000/(width*height))));
@@ -45,11 +50,12 @@ public sealed partial class MainWindow
         try { await image.RenderAsync(BookViewport,Math.Max(1,(int)(width*scale)),Math.Max(1,(int)(height*scale))); }
         catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); return null; }
         TraceBook("capture complete");
-        return new(image,width,height);
+        return new(image,width,height,generation);
     }
 
     private void TurnBookPage(PageSnapshot? snapshot,bool forward)
     {
+        if (snapshot!=null && snapshot.Generation!=bookMotionGeneration) return;
         CancelBookTurn();
         if (closed || !BookMotionAllowed || snapshot==null || section!="read" ||
             Math.Abs(snapshot.Width-BookViewport.ActualWidth)>1 || Math.Abs(snapshot.Height-BookViewport.ActualHeight)>1) return;
@@ -117,6 +123,7 @@ public sealed partial class MainWindow
 
     private void CancelBookTurn()
     {
+        bookMotionGeneration++;
         var batch=bookBatch; bookBatch=null;
         if (batch!=null) batch.Completed-=BookTurnCompleted;
         foreach (var motion in bookMotionElements) motion.Element.StopAnimation(motion.Animation);

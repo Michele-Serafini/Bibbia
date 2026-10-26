@@ -29,6 +29,11 @@ final class BookSurface: NSView {
         allowsMotion && (!NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ||
             (ProcessInfo.processInfo.arguments.contains("--ui-smoke") && ProcessInfo.processInfo.environment["BIBBIA_UI_TEST_MOTION"] == "1"))
     }
+    private var paperCGColor: CGColor {
+        var color = CGColor(gray: 1, alpha: 1)
+        effectiveAppearance.performAsCurrentDrawingAppearance { color = Self.paperColor.cgColor }
+        return color
+    }
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -90,6 +95,7 @@ final class BookSurface: NSView {
         let samples = (0...32).map { PageTurn.frame(width: width, height: height,
                                                  progress: Double($0) / 32, forward: forward) }
         let flat = samples[0]
+        let paper = paperCGColor
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         CATransaction.setCompletionBlock { [weak self] in
@@ -108,7 +114,7 @@ final class BookSurface: NSView {
             slice.bounds = CGRect(x: 0, y: 0, width: width / Double(PageTurn.strips) + 0.7, height: height)
             slice.anchorPoint = .zero
             slice.position = CGPoint(x: s.x, y: s.y)
-            slice.backgroundColor = Self.paperColor.cgColor
+            slice.backgroundColor = paper
             slice.masksToBounds = true
             canvas.addSublayer(slice)
             let front = CALayer()
@@ -155,6 +161,11 @@ final class BookSurface: NSView {
               let context = NSGraphicsContext(bitmapImageRep: bitmap) else { throw BibleError.invalid("No frame context") }
         bitmap.size = bounds.size
         scroll.cacheDisplay(in: scroll.bounds, to: bitmap)
+        context.cgContext.saveGState()
+        context.cgContext.setBlendMode(.destinationOver)
+        context.cgContext.setFillColor(paperCGColor)
+        context.cgContext.fill(bounds)
+        context.cgContext.restoreGState()
         context.cgContext.translateBy(x: 0, y: bounds.height)
         context.cgContext.scaleBy(x: 1, y: -1)
         live.render(in: context.cgContext)
