@@ -8,6 +8,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - run: python3 scripts/check-versions.py
       - run: swift --version
       - run: python3 scripts/prepare-macos.py
       - name: Test the pure Swift engine and SQLite compatibility
@@ -38,7 +39,7 @@ jobs:
           name: Bibbia-macOS-Universal
           path: artifacts/macos/
       - name: Verify and exercise the same Universal DMG on Intel
-        run: python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.6.0-universal.dmg
+        run: python3 scripts/test-macos.py --dmg "artifacts/macos/Bibbia-$(cat VERSION)-universal.dmg"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

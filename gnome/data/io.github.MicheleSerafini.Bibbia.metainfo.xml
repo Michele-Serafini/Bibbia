@@ -17,5 +17,10 @@
   <provides><binary>bibbia</binary></provides>
   <categories><category>Education</category><category>Literature</category></categories>
   <content_rating type="oars-1.1"/>
-  <releases><release version="0.4.0" date="2026-10-25"/></releases>
+  <releases>
+    <release version="0.6.0" date="2026-10-26">
+      <description><p>Book-style reading with a curved chapter turn, paper shading and native animations that respect reduced motion.</p></description>
+    </release>
+    <release version="0.4.0" date="2026-10-25"/>
+  </releases>
 </component>

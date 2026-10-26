@@ -16,6 +16,7 @@ def run(*args, **kwargs):
 
 
 def package():
+    run(sys.executable, ROOT / 'scripts/check-versions.py')
     if sys.platform != 'darwin':
         raise SystemExit('This script requires macOS with Xcode Command Line Tools.')
     version = plistlib.loads((ROOT / 'macos/Info.plist').read_bytes())['CFBundleShortVersionString']

@@ -59,6 +59,7 @@ public sealed partial class MainWindow
         CancelBookTurn();
         if (closed || !BookMotionAllowed || snapshot==null || section!="read" ||
             Math.Abs(snapshot.Width-BookViewport.ActualWidth)>1 || Math.Abs(snapshot.Height-BookViewport.ActualHeight)>1) return;
+        var generation=bookMotionGeneration;
         var width=snapshot.Width; var height=snapshot.Height;
         var frames=Enumerable.Range(0,33).Select(i=>PageTurnMath.Frame(width,height,i/32.0,forward)).ToArray();
         var compositor=ElementCompositionPreview.GetElementVisual(BookViewport).Compositor;
@@ -103,7 +104,10 @@ public sealed partial class MainWindow
             bookMotionElements.AddRange([(slice,scale),(slice,move),(front,face),(shade,light)]);
         }
         TurnCanvas.UpdateLayout();
-        TraceBook("strips allocated loaded=" + ((FrameworkElement)TurnCanvas.Children[0]).IsLoaded);
+        // Layout may synchronously resize the reader and cancel this turn.
+        // Never start or inspect visuals that its SizeChanged handler released.
+        if (generation!=bookMotionGeneration || closed) return;
+        TraceBook("strips allocated loaded=" + TurnCanvas.IsLoaded);
         bookBatch=compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
         bookBatch.Completed += BookTurnCompleted;
         foreach (var motion in bookMotionElements) motion.Element.StartAnimation(motion.Animation);

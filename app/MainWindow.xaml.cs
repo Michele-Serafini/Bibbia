@@ -84,6 +84,7 @@ public sealed partial class MainWindow : Window
     private void ShowError(Exception e)
     {
         if (closed) return;
+        TraceBook("error " + e);
         ErrorBar.Message = T(e.Message);
         ErrorBar.IsOpen = true;
     }

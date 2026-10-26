@@ -1,13 +1,13 @@
 # Bibbia per macOS
 
-Versione 0.5.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
+Versione 0.6.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
 di terze parti. macOS 13 Ventura o successivi, Apple Silicon e Intel.
 
 ## Installazione
 
-La [release macOS 0.5.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/macos-v0.5.0)
-contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/macos-v0.5.0/Bibbia-0.5.0-universal.dmg)
-e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/macos-v0.5.0/Bibbia-0.5.0-universal.zip),
+La [release unificata 0.6.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.6.0)
+contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.6.0/Bibbia-0.6.0-universal.dmg)
+e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.6.0/Bibbia-0.6.0-universal.zip),
 ciascuno con checksum SHA-256. Aprire il DMG e trascinare Bibbia in **Applicazioni**.
 Non occorrono runtime, account, librerie aggiuntive o Internet.
 
@@ -31,7 +31,10 @@ sottolineatura, segnalibro, nota e copia. Gli appunti sono paginati a 200 elemen
 **⌘F** cerca, **⌘,** apre le impostazioni, **⌥⌘←/→** cambia capitolo,
 **⇧⌘I** importa una traduzione JSON. Italiano e inglese per l’interfaccia,
 indipendentemente dalla lingua del testo. Tema automatico, chiaro o scuro.
-Le animazioni dei popover rispettano Riduci movimento di macOS.
+La lettura riproduce una pagina di carta: al cambio di capitolo il foglio
+si incurva con prospettiva e ombre, in 460 ms. I capitoli lunghi rimangono
+scorrevoli. Titoli e pulsanti hanno transizioni brevi native. Tutte queste
+animazioni rispettano Riduci movimento di macOS.
 
 Stessi testi verificati della versione 0.4.0: Martini, CEI 2008, Diodati, KJV
 e raccolta estesa di 83 sezioni, compresi Enoc e Giubilei. CEI 2008 è inclusa
@@ -55,6 +58,9 @@ attribuzione visibile durante la lettura e condizioni nel menu
   gli attributi conservando selezione e posizione di scorrimento.
 - Nessun polling, rete o timer ricorrente nell’uso normale. Le modifiche rapide
   di font, preferenze, posizione e query sono accorpate con task cancellabili.
+- Lo sfogliamento usa Core Animation, senza timer a ogni frame sul thread
+  principale. Una sola immagine temporanea, limitata a due milioni di pixel,
+  viene condivisa dalle 32 parti del foglio e liberata dopo la transizione.
 - Font, controlli e SQLite di macOS, senza runtime distribuiti o font incorporati.
   Build release con ottimizzazione `-Osize` e binario Universal senza simboli debug.
 
@@ -65,7 +71,7 @@ anche 100 ms prima del layout/display. Non sono avvii a cache del sistema fredda
 I campioni dei due runner non sono un confronto tra architetture; RSS include
 librerie e pagine condivise, escludendo il processo WindowServer.
 
-Misure della release sui runner macOS 15.7.9, mediane di tre campioni:
+Misure precedenti della release 0.5.0 sui runner macOS 15.7.9, mediane di tre campioni:
 
 | Runner | Primo layout/display | RAM RSS a regime | CPU a regime |
 | --- | ---: | ---: | ---: |
@@ -94,7 +100,7 @@ python3 scripts/prepare-macos.py
 swift test --package-path macos -c release
 swift run --package-path macos Bibbia
 python3 scripts/package-macos.py
-python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.5.0-universal.dmg
+python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.6.0-universal.dmg
 ```
 
 `swift run` serve allo sviluppo; per provare icona, menu, firma locale e risorse
@@ -117,8 +123,11 @@ codice `0248dac`: 20 test Swift e prove native sulle due architetture, incluse
 selezione con eventi mouse AppKit, popover, note, evidenziatori, segnalibri,
 CEI, ricerca, dimensione reale dei font e riapertura in un secondo processo.
 Sono passati anche i [controlli Windows, Rust, Debian e Fedora](https://github.com/Michele-Serafini/Bibbia/actions/runs/40229906006).
-Il workflow **Publish verified macOS package** pubblica i file già verificati
-di una build riuscita, dopo averne ricontrollato i checksum, senza ricompilarli.
+Il workflow **Publish verified packages** pubblica EXE Windows, DEB/RPM Linux
+e DMG/ZIP macOS nella stessa release. Richiede build native riuscite della
+stessa revisione, controlla le versioni e ricontrolla tutti i checksum.
+`VERSION` definisce la versione comune; `scripts/check-versions.py` verifica
+i manifest delle tre piattaforme prima di compilare e creare i pacchetti.
 
 Lo schema SQLite e gli offset UTF-16 sono compatibili con Windows/Linux.
 Per trasferire i dati chiudere tutte le istanze e copiare la cartella del database,

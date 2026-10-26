@@ -13,6 +13,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import tomllib
 
@@ -50,6 +51,7 @@ def payload(directory, binary):
 
 
 def main():
+    run(sys.executable, ROOT / 'scripts/check-versions.py')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skip-build', action='store_true')
     parser.add_argument('--binary', type=Path, default=ROOT / 'target/release/bibbia')

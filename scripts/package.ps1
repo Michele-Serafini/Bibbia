@@ -22,6 +22,8 @@ try {
     [xml]$project = Get-Content app/Bibbia.Windows.csproj -Raw
     $version = [string]$project.Project.PropertyGroup.Version
     if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Versione applicazione non valida.' }
+    $releaseVersion = (Get-Content (Join-Path $root 'VERSION') -Raw).Trim()
+    if ($version -ne $releaseVersion) { throw "La versione Windows $version non corrisponde alla release $releaseVersion." }
     $manifestDir = Join-Path $root 'artifacts/installer-manifest'
     New-Item $manifestDir -ItemType Directory -Force | Out-Null
     & "$PSScriptRoot/write-installer-manifest.ps1" -Payload $payload -OutputDirectory $manifestDir
