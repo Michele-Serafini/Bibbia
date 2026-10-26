@@ -3,7 +3,11 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: Successful Check and build run containing the tested installer
+        description: Successful Check and build run for Windows and Linux
+        required: true
+        type: string
+      macos_run_id:
+        description: Successful Build macOS run from the same commit
         required: true
         type: string
 permissions:
@@ -19,31 +23,47 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_RUN_ID: ${{ inputs.run_id }}
+          MACOS_BUILD_RUN_ID: ${{ inputs.macos_run_id }}
         shell: bash
         run: |
           set -euo pipefail
           [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$MACOS_BUILD_RUN_ID" =~ ^[0-9]+$ ]]
           gh run view "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion,status,headSha,headBranch,workflowName > "$RUNNER_TEMP/bibbia-build.json"
-          build_sha=$(python3 - "$RUNNER_TEMP/bibbia-build.json" <<'PY'
+          gh run view "$MACOS_BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion,status,headSha,headBranch,workflowName > "$RUNNER_TEMP/bibbia-macos-build.json"
+          build_sha=$(python3 - "$RUNNER_TEMP/bibbia-build.json" "$RUNNER_TEMP/bibbia-macos-build.json" <<'PY'
           import json, sys
           run = json.load(open(sys.argv[1]))
           assert run['status'] == 'completed' and run['conclusion'] == 'success', 'Build not successful'
           assert run['headBranch'] == 'main' and run['workflowName'] == 'Check and build', 'Unexpected build source'
+          mac = json.load(open(sys.argv[2]))
+          assert mac['status'] == 'completed' and mac['conclusion'] == 'success', 'Mac build not successful'
+          assert mac['headBranch'] == 'main' and mac['workflowName'] == 'Build macOS', 'Unexpected Mac build source'
+          assert mac['headSha'] == run['headSha'], 'All platforms must be tested from the same commit'
           print(run['headSha'])
           PY
           )
           git fetch --no-tags --depth=1 origin "$build_sha"
           git show "$build_sha:app/Bibbia.Windows.csproj" > "$RUNNER_TEMP/bibbia-tested.csproj"
-          build_version=$(python3 - "$RUNNER_TEMP/bibbia-tested.csproj" <<'PY'
-          import re, sys, xml.etree.ElementTree as ET
+          git show "$build_sha:macos/Info.plist" > "$RUNNER_TEMP/bibbia-tested.plist"
+          build_version=$(python3 - "$RUNNER_TEMP/bibbia-tested.csproj" "$RUNNER_TEMP/bibbia-tested.plist" <<'PY'
+          import plistlib, re, sys, xml.etree.ElementTree as ET
           version = ET.parse(sys.argv[1]).findtext('./PropertyGroup/Version')
           assert version and re.fullmatch(r'\d+\.\d+\.\d+', version), 'Invalid version'
+          assert plistlib.load(open(sys.argv[2], 'rb'))['CFBundleShortVersionString'] == version, 'Platform versions do not match'
           print(version)
           PY
           )
           build_tag="v$build_version"
           gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name Bibbia-Installer-x64 --dir "$RUNNER_TEMP/bibbia-installer"
           gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name Bibbia-Linux-x64 --dir "$RUNNER_TEMP/bibbia-linux"
+          gh run download "$MACOS_BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --name Bibbia-macOS-Universal --dir "$RUNNER_TEMP/bibbia-macos"
+          cd "$RUNNER_TEMP/bibbia-macos"
+          mac_dmg="Bibbia-$build_version-universal.dmg"
+          mac_zip="Bibbia-$build_version-universal.zip"
+          test -f "$mac_dmg" && test -f "$mac_zip"
+          sha256sum -c "$mac_dmg.sha256"
+          sha256sum -c "$mac_zip.sha256"
           cd "$RUNNER_TEMP/bibbia-linux"
           linux_deb="bibbia_$build_version-1_amd64.deb"
           linux_rpm="bibbia-$build_version-1.x86_64.rpm"
@@ -56,4 +76,4 @@ jobs:
           sha256sum -c "$installer_file.sha256"
           notes_file="$GITHUB_WORKSPACE/docs/releases/$build_tag.md"
           test -f "$notes_file"
-          gh release create "$build_tag" "$installer_file" "$installer_file.sha256" "$RUNNER_TEMP/bibbia-linux/$linux_deb" "$RUNNER_TEMP/bibbia-linux/$linux_deb.sha256" "$RUNNER_TEMP/bibbia-linux/$linux_rpm" "$RUNNER_TEMP/bibbia-linux/$linux_rpm.sha256" --repo "$GITHUB_REPOSITORY" --target "$build_sha" --title "Bibbia $build_version per Windows e Linux" --notes-file "$notes_file"
+          gh release create "$build_tag" "$installer_file" "$installer_file.sha256" "$RUNNER_TEMP/bibbia-linux/$linux_deb" "$RUNNER_TEMP/bibbia-linux/$linux_deb.sha256" "$RUNNER_TEMP/bibbia-linux/$linux_rpm" "$RUNNER_TEMP/bibbia-linux/$linux_rpm.sha256" "$RUNNER_TEMP/bibbia-macos/$mac_dmg" "$RUNNER_TEMP/bibbia-macos/$mac_dmg.sha256" "$RUNNER_TEMP/bibbia-macos/$mac_zip" "$RUNNER_TEMP/bibbia-macos/$mac_zip.sha256" --repo "$GITHUB_REPOSITORY" --target "$build_sha" --title "Bibbia $build_version per Windows, Linux e macOS" --notes-file "$notes_file"
