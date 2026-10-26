@@ -167,7 +167,7 @@ try {
         Start-Sleep -Milliseconds 15
     } while ([DateTime]::UtcNow -lt $turnDeadline)
     if ($bookStage.Current.HelpText -ne 'page-turn-active') { throw 'Native paper animation did not start.' }
-    Start-Sleep -Milliseconds 110
+    Start-Sleep -Milliseconds 180
     Save-WindowImage 'windows-page-turn.png'
     $turnDeadline = [DateTime]::UtcNow.AddSeconds(3)
     while ($bookStage.Current.HelpText -ne 'page-turn-idle' -and [DateTime]::UtcNow -lt $turnDeadline) { Start-Sleep -Milliseconds 30 }

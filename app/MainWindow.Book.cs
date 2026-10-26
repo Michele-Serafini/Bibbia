@@ -86,7 +86,6 @@ public sealed partial class MainWindow
             var shade=new Border {Background=new SolidColorBrush(Microsoft.UI.Colors.Black),Opacity=0};
             slice.Children.Add(content); slice.Children.Add(shade);
             TurnCanvas.Children.Add(slice);
-            ElementCompositionPreview.SetIsTranslationEnabled(slice,true);
             slice.CenterPoint=Vector3.Zero;
             slice.Translation=new Vector3((float)start.X,(float)start.Y,0);
             var scale=compositor.CreateVector3KeyFrameAnimation(); scale.Target="Scale";

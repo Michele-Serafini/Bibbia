@@ -188,7 +188,10 @@ public sealed partial class MainWindow : Window
         SavePosition();
         ScrollToCurrentVerse();
         if (animate && section == "read") DispatcherQueue.TryEnqueue(() => {
-            if (!closed && generation==chapterRenderGeneration) Guard(() => TurnBookPage(snapshot,forward));
+            if (!closed && generation==chapterRenderGeneration) Guard(() => {
+                try { TurnBookPage(snapshot,forward); }
+                catch { CancelBookTurn(); throw; }
+            });
         });
     }
 
