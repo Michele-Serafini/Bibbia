@@ -1,6 +1,6 @@
 use super::book_math;
 use adw::prelude::*;
-use gtk::{gdk, glib, graphene, subclass::prelude::*};
+use gtk::{gdk, glib, graphene, gsk, subclass::prelude::*};
 use std::cell::{Cell, OnceCell, RefCell};
 
 mod imp {
@@ -70,6 +70,19 @@ mod imp {
             };
             let full = graphene::Rect::new(0.0, 0.0, width, height);
             snapshot.push_clip(&full);
+            let forward = self.forward.get();
+            let shadow_width = width * 0.36;
+            let shadow_x = if forward { 0.0 } else { width - shadow_width };
+            let opacity = (0.18 * (std::f64::consts::PI * self.progress.get()).sin()) as f32;
+            snapshot.append_linear_gradient(
+                &graphene::Rect::new(shadow_x, 0.0, shadow_width, height),
+                &graphene::Point::new(if forward { shadow_x } else { width }, 0.0),
+                &graphene::Point::new(if forward { shadow_width } else { shadow_x }, 0.0),
+                &[
+                    gsk::ColorStop::new(0.0, gdk::RGBA::new(0.0, 0.0, 0.0, opacity)),
+                    gsk::ColorStop::new(1.0, gdk::RGBA::new(0.0, 0.0, 0.0, 0.0)),
+                ],
+            );
             // One cached texture, sampled through narrow affine projections.
             // This path works with GSK GL/Vulkan and the Cairo renderer.
             for strip in book_math::frame(

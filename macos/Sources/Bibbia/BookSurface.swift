@@ -95,6 +95,13 @@ final class BookSurface: NSView {
         CATransaction.setCompletionBlock { [weak self] in
             MainActor.assumeIsolated { if self?.token == epoch { self?.cancelTurn() } }
         }
+        let shadow = CAGradientLayer()
+        shadow.frame = CGRect(x: forward ? 0 : width * 0.64, y: 0, width: width * 0.36, height: height)
+        shadow.colors = [NSColor.black.withAlphaComponent(0.18).cgColor, NSColor.clear.cgColor]
+        shadow.startPoint = CGPoint(x: forward ? 0 : 1, y: 0.5)
+        shadow.endPoint = CGPoint(x: forward ? 1 : 0, y: 0.5)
+        shadow.opacity = 0; canvas.addSublayer(shadow)
+        animate(shadow, key: "opacity", values: (0...32).map { NSNumber(value: sin(.pi * Double($0) / 32)) })
         for i in 0..<PageTurn.strips {
             let s = flat[i]
             let slice = CALayer()
@@ -140,12 +147,16 @@ final class BookSurface: NSView {
     }
 
     func saveMotionFrame(to url: URL) throws {
-        guard let live = layer?.presentation(), isTurning else { throw BibleError.invalid("No active paper animation") }
+        guard let live = overlay?.presentation(), isTurning else { throw BibleError.invalid("No active paper animation") }
         let width = max(1, Int(bounds.width)), height = max(1, Int(bounds.height))
         guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
               let context = NSGraphicsContext(bitmapImageRep: bitmap) else { throw BibleError.invalid("No frame context") }
+        bitmap.size = bounds.size
+        scroll.cacheDisplay(in: scroll.bounds, to: bitmap)
+        context.cgContext.translateBy(x: 0, y: bounds.height)
+        context.cgContext.scaleBy(x: 1, y: -1)
         live.render(in: context.cgContext)
         guard let png = bitmap.representation(using: .png, properties: [:]) else { throw BibleError.invalid("No motion frame") }
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

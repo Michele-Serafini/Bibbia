@@ -60,6 +60,17 @@ public sealed partial class MainWindow
         TurnCanvas.Clip=new RectangleGeometry {Rect=new Rect(0,0,width,height)};
         TurnCanvas.Visibility=Visibility.Visible;
         TraceBook("build strips");
+        var castShadow=new Border {Width=width*0.36,Height=height,Opacity=0,
+            Background=new LinearGradientBrush {
+                StartPoint=new Point(forward?0:1,0.5),EndPoint=new Point(forward?1:0,0.5),
+                GradientStops={new GradientStop {Color=global::Windows.UI.Color.FromArgb(46,0,0,0),Offset=0},
+                               new GradientStop {Color=Microsoft.UI.Colors.Transparent,Offset=1}}
+            }};
+        Canvas.SetLeft(castShadow,forward?0:width*0.64); TurnCanvas.Children.Add(castShadow);
+        var cast=compositor.CreateScalarKeyFrameAnimation(); cast.Target="Opacity";
+        cast.Duration=TimeSpan.FromMilliseconds(PageTurnMath.Milliseconds);
+        for (var k=0;k<=32;k++) cast.InsertKeyFrame(k/32f,(float)Math.Sin(Math.PI*k/32),linear);
+        bookMotionElements.Add((castShadow,cast));
         for (var i=0;i<PageTurnMath.Strips;i++) {
             var start=frames[0][i];
             var slice=new Grid {Width=width/PageTurnMath.Strips+0.7,Height=height,Background=BookViewport.Background,
@@ -87,7 +98,7 @@ public sealed partial class MainWindow
             bookMotionElements.AddRange([(slice,scale),(slice,move),(front,face),(shade,light)]);
         }
         TurnCanvas.UpdateLayout();
-        TraceBook($"strips allocated loaded={TurnCanvas.Children[0] is FrameworkElement {{IsLoaded:true}}}");
+        TraceBook("strips allocated loaded=" + ((FrameworkElement)TurnCanvas.Children[0]).IsLoaded);
         bookBatch=compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
         bookBatch.Completed += BookTurnCompleted;
         foreach (var motion in bookMotionElements) motion.Element.StartAnimation(motion.Animation);
