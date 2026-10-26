@@ -26,7 +26,8 @@ final class BookSurface: NSView {
         }
     }
     var motionAllowed: Bool {
-        allowsMotion && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        allowsMotion && (!NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ||
+            (ProcessInfo.processInfo.arguments.contains("--ui-smoke") && ProcessInfo.processInfo.environment["BIBBIA_UI_TEST_MOTION"] == "1"))
     }
 
     override init(frame: NSRect) {

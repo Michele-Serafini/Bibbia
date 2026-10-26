@@ -41,7 +41,8 @@ def stop(process):
 
 def ui_process(binary, profile, mode, log_name, timeout):
     with (DIAGNOSTICS / log_name).open('w') as log:
-        process = subprocess.Popen([str(binary), '--data-dir', str(profile), mode], stdout=log, stderr=log)
+        process = subprocess.Popen([str(binary), '--data-dir', str(profile), mode],
+                                   env=dict(os.environ, BIBBIA_UI_TEST_MOTION='1'), stdout=log, stderr=log)
         try:
             status = process.wait(timeout=timeout)
             if status:

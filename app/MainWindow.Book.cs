@@ -92,7 +92,7 @@ public sealed partial class MainWindow
         bookBatch.Completed += BookTurnCompleted;
         foreach (var motion in bookMotionElements) motion.Element.StartAnimation(motion.Animation);
         TraceBook("animations started");
-        if (selectionDiagnostics) Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(BookStage,"page-turn-active");
+        if (selectionDiagnostics) Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(VerseList,"page-turn-active");
         bookBatch.End();
     }
 
@@ -113,6 +113,6 @@ public sealed partial class MainWindow
         bookMotionElements.Clear();
         TurnCanvas?.Children.Clear();
         if (TurnCanvas!=null) TurnCanvas.Visibility=Visibility.Collapsed;
-        if (selectionDiagnostics && BookStage!=null) Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(BookStage,"page-turn-idle");
+        if (selectionDiagnostics && VerseList!=null) Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(VerseList,"page-turn-idle");
     }
 }

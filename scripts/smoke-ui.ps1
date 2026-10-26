@@ -159,7 +159,7 @@ try {
     $firstVerse = 'Al principio cre' + [char]0xF2 + ' Dio il cielo e la terra.'
     Wait-Text $verses $firstVerse | Out-Null
     Write-Host 'WinUI: Catholic Italian chapter rendered.'
-    $bookStage = Wait-Control $window 'BookStage'
+    $bookStage = Wait-Control $window 'VerseList'
     Invoke-Control (Wait-Control $window 'NextChapter')
     $turnDeadline = [DateTime]::UtcNow.AddSeconds(5)
     do {
