@@ -172,7 +172,13 @@ final class BookSurface: NSView {
 
     private func animate(_ layer: CALayer, key: String, values: [Any]) {
         let animation = CAKeyframeAnimation(keyPath: key)
-        animation.values = values; animation.duration = PageTurn.duration
+        animation.values = values
+        // The disposable UI fixture slows the same compositor keyframes so
+        // WindowServer capture can show the early fold on loaded CI machines.
+        // Ordinary launches always use the shared 620 ms duration.
+        let recording = ProcessInfo.processInfo.arguments.contains("--ui-smoke") &&
+            ProcessInfo.processInfo.environment["BIBBIA_UI_TEST_MOTION"] == "1"
+        animation.duration = recording ? 1.8 : PageTurn.duration
         animation.calculationMode = .linear
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.isRemovedOnCompletion = false; animation.fillMode = .forwards
