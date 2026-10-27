@@ -190,8 +190,20 @@ final class BookSurface: NSView {
         // presentation layer can otherwise capture its children's model poses.
         func freeze(_ model: CALayer) -> CALayer {
             let live = model.presentation() ?? model
-            let copy = model is CAGradientLayer ? CAGradientLayer(layer: live) : CALayer(layer: live)
-            copy.removeAllAnimations()
+            let copy: CALayer
+            if let gradient = live as? CAGradientLayer {
+                let clone = CAGradientLayer()
+                clone.colors = gradient.colors; clone.locations = gradient.locations
+                clone.startPoint = gradient.startPoint; clone.endPoint = gradient.endPoint
+                copy = clone
+            } else { copy = CALayer() }
+            copy.bounds = live.bounds; copy.anchorPoint = live.anchorPoint
+            copy.position = live.position; copy.transform = live.transform
+            copy.opacity = live.opacity; copy.isHidden = live.isHidden
+            copy.masksToBounds = live.masksToBounds; copy.isGeometryFlipped = live.isGeometryFlipped
+            copy.contents = live.contents; copy.contentsRect = live.contentsRect
+            copy.contentsGravity = live.contentsGravity; copy.contentsScale = live.contentsScale
+            copy.backgroundColor = live.backgroundColor
             copy.sublayers = model.sublayers?.map { freeze($0) }
             return copy
         }
