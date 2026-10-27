@@ -31,7 +31,7 @@ final class BookPager {
             loaded = true
         }
         if second == nil, let storage = primary.textStorage {
-            let manager = NSLayoutManager(), container = NSTextContainer(size: NSSize(width: 600, height: .greatestFiniteMagnitude))
+            let manager = NSLayoutManager(), container = NSTextContainer(size: NSSize(width: 600, height: CGFloat.greatestFiniteMagnitude))
             storage.addLayoutManager(manager); manager.addTextContainer(container)
             let view = ReadingTextView(frame: .zero, textContainer: container)
             view.configureForReading(); view.setAccessibilityIdentifier("bibleTextRight")
@@ -67,7 +67,7 @@ final class BookPager {
             scroll.hasVerticalScroller = !mode
             scroll.frame = NSRect(x: CGFloat(n)*(width+24), y: 0, width: width, height: height)
             view.setFrameSize(NSSize(width: width, height: max(height, view.frame.height)))
-            view.textContainer?.containerSize = NSSize(width: max(20,width-56), height: .greatestFiniteMagnitude)
+            view.textContainer?.containerSize = NSSize(width: max(20,width-56), height: CGFloat.greatestFiniteMagnitude)
             view.layoutManager?.ensureLayout(for: view.textContainer!)
         }
         guard mode, let manager = primary.layoutManager, let container = primary.textContainer else {

@@ -1,13 +1,13 @@
 # Bibbia per macOS
 
-Versione 0.7.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
+Versione 0.8.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
 di terze parti. macOS 13 Ventura o successivi, Apple Silicon e Intel.
 
 ## Installazione
 
-La [release unificata 0.7.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.7.0)
-contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.7.0/Bibbia-0.7.0-universal.dmg)
-e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.7.0/Bibbia-0.7.0-universal.zip),
+La [release unificata 0.8.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.8.0)
+contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.8.0/Bibbia-0.8.0-universal.dmg)
+e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.8.0/Bibbia-0.8.0-universal.zip),
 ciascuno con checksum SHA-256. Aprire il DMG e trascinare Bibbia in **Applicazioni**.
 Non occorrono runtime, account, librerie aggiuntive o Internet.
 
@@ -33,8 +33,7 @@ sottolineatura, segnalibro, nota e copia. Gli appunti sono paginati a 200 elemen
 indipendentemente dalla lingua del testo. Tema automatico, chiaro o scuro.
 La lettura riproduce una pagina di carta: al cambio di capitolo il foglio
 si solleva dall’angolo superiore e si arrotola lungo una piega diagonale
-che raggiunge progressivamente il bordo inferiore, in 620 ms. I capitoli lunghi rimangono
-scorrevoli. Titoli e pulsanti hanno transizioni brevi native. Tutte queste
+che raggiunge progressivamente il bordo inferiore, in 1.100 ms. La modalità Libro impagina anche i capitoli lunghi. Titoli e pulsanti hanno transizioni brevi native. Tutte queste
 animazioni rispettano Riduci movimento di macOS.
 
 Stessi testi verificati della versione 0.4.0: Martini, CEI 2008, Diodati, KJV
@@ -101,7 +100,7 @@ python3 scripts/prepare-macos.py
 swift test --package-path macos -c release
 swift run --package-path macos Bibbia
 python3 scripts/package-macos.py
-python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.7.0-universal.dmg
+python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.8.0-universal.dmg
 ```
 
 `swift run` serve allo sviluppo; per provare icona, menu, firma locale e risorse

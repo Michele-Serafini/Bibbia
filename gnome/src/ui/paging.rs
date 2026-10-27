@@ -94,13 +94,6 @@ impl Ui {
                 .move_(*scrolled, n as f64 * f64::from(w + 24), 0.0);
             scrolled.set_visible(n < (columns as usize));
         }
-        if std::env::var_os("BIBBIA_SMOKE_SCREENSHOTS").is_some() {
-            eprintln!(
-                "PAGER mode={mode} size={width}x{height} desired={w} actual={} text={}",
-                self.read_scroll.width(),
-                self.reader.width()
-            );
-        }
         if self.read_scroll.width() != w {
             let weak = self.weak();
             glib::timeout_add_local_once(Duration::from_millis(40), move || {
@@ -125,9 +118,6 @@ impl Ui {
             if !self.reader.forward_display_line(&mut iter) {
                 break;
             }
-        }
-        if std::env::var_os("BIBBIA_SMOKE_SCREENSHOTS").is_some() {
-            eprintln!("PAGER lines={} last={:?}", lines.len(), lines.last());
         }
         let mut pages = vec![Page { y: 0, character: 0 }];
         let mut start = 0;
@@ -227,7 +217,9 @@ impl Ui {
             return false;
         }
         drop(p);
-        self.popup.popdown();self.note_popup.popdown();self.cancel_selection();
+        self.popup.popdown();
+        self.note_popup.popdown();
+        self.cancel_selection();
         let texture = self.book_surface.capture();
         self.pager.borrow_mut().index = target as usize;
         self.show_book();

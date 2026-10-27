@@ -185,8 +185,21 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         "Previous page did not restore first spread",
     )?;
     screenshot(&ui, "gnome-book.png").await?;
+    ui.window.set_default_size(1400, 900);
+    until(
+        || ui.pager.borrow().columns == 2,
+        "Wide book did not display two pages",
+    )
+    .await?;
+    glib::timeout_future(Duration::from_millis(120)).await;
+    check(
+        ui.right_scroll.is_visible() && ui.right_scroll.vadjustment().value() > 0.0,
+        "Facing page did not show the next text range",
+    )?;
+    screenshot(&ui, "gnome-spread.png").await?;
+    ui.window.set_default_size(980, 800);
     ui.set_book_mode(false);
-    glib::timeout_future(Duration::from_millis(100)).await;
+    glib::timeout_future(Duration::from_millis(180)).await;
     screenshot(&ui, "gnome-light.png").await?;
     // Real pointer events exercise capture, GTK selection, and the automatic popup.
     let id = command(&[
