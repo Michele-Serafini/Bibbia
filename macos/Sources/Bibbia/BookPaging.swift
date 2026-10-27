@@ -19,7 +19,7 @@ final class BookPager {
     var lastChapter: String = ""
     var anchor = 0
     var place = ReaderPlace()
-    var loaded = false, updating = false, lastPage = false
+    var loaded = false, restored = false, updating = false, lastPage = false
     var pageCount: Int { pages.count }
     var mode: Bool { model?.bookMode ?? false }
 
@@ -43,11 +43,12 @@ final class BookPager {
         if lastChapter != key || target != nil {
             let verse = min(target ?? model.position.verse, max(0, primary.readingLayout.spans.count-1))
             anchor = primary.readingLayout.spans.indices.contains(verse) ? primary.readingLayout.spans[verse].location : 0
-            if lastChapter.isEmpty, place.edition == model.position.edition, place.book == model.position.book,
+            if !restored, !primary.readingLayout.spans.isEmpty, place.edition == model.position.edition, place.book == model.position.book,
                place.chapter == model.position.chapter, place.verse == verse,
                primary.readingLayout.spans.indices.contains(verse) {
                 anchor += min(place.offset, primary.readingLayout.spans[verse].length)
             }
+            if !primary.readingLayout.spans.isEmpty { restored = true }
             lastChapter = key
         }
         reflow()

@@ -68,7 +68,24 @@ extension AppModel {
             try check(position.chapter == chapterBeforePage && book.pager.index > 0, "Next page stays within the chapter")
             step(-1)
             try check(book.pager.index == 0, "Previous page restores the first spread")
+            let originalFrame = window.frame
+            window.setFrame(NSRect(x: originalFrame.minX, y: originalFrame.minY, width: 1500, height: 900), display: true)
+            try await waitUntil { book.pager.columns == 2 }
+            try check(!book.pager.right.isHidden, "Wide book displays facing native pages")
+            if let right = book.pager.second {
+                let character = book.pager.pages[1].character
+                let verse = text.readingLayout.spans.firstIndex { $0.location >= character } ?? 0
+                try nativeDrag(right, range: NSRange(location: text.readingLayout.spans[verse].location, length: 8))
+                try check(right.annotationPopover?.isShown == true && right.capturedSelection.first?.verse == verse,
+                          "Right page native selection keeps original verse offsets")
+                right.closePopover()
+            }
+            try screenshot(window, name: "macos-spread.png")
+            window.setFrame(originalFrame, display: true)
             bookMode = false; book.pager.reflow(); book.pager.save()
+            navigate(Position())
+            try await waitUntil { !self.loading && self.position.chapter == 0 }
+            try await Task.sleep(for: .milliseconds(160))
             text.scrollRangeToVisible(NSRange(location: 0, length: 1))
             let font = text.textStorage?.attribute(.font, at: text.readingLayout.spans[0].location, effectiveRange: nil) as? NSFont
             try check(font != nil && font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")

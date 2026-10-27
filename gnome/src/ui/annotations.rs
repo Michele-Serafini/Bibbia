@@ -86,69 +86,46 @@ impl Ui {
         self.reader.set_extra_menu(Some(&menu));
         self.reader_right.set_extra_menu(Some(&menu));
         verse_menu.set_menu_model(Some(&menu));
-        let events = gtk::EventControllerLegacy::new();
-        events.set_propagation_phase(gtk::PropagationPhase::Capture);
-        let w = self.weak();
-        events.connect_event(move |_, event| {
-            if let Some(button) = event.downcast_ref::<gdk::ButtonEvent>()
-                && button.button() != 1
-            {
-                if let Some(ui) = w.upgrade() {
-                    ui.context_click.set(true);
-                    ui.cancel_selection();
-                    ui.popup.popdown();
-                }
-                return glib::Propagation::Proceed;
-            }
-            if let Some(ui) = w.upgrade() {
-                match event.event_type() {
-                    gdk::EventType::KeyPress => ui.context_click.set(false),
-                    gdk::EventType::ButtonPress => {
-                        ui.context_click.set(false);
-                        ui.mouse_down.set(true);
+        for (reader, is_right) in [(&self.reader, false), (&self.reader_right, true)] {
+            let events = gtk::EventControllerLegacy::new();
+            events.set_propagation_phase(gtk::PropagationPhase::Capture);
+            let w = self.weak();
+            events.connect_event(move |_, event| {
+                if let Some(button) = event.downcast_ref::<gdk::ButtonEvent>()
+                    && button.button() != 1
+                {
+                    if let Some(ui) = w.upgrade() {
+                        ui.context_click.set(true);
                         ui.cancel_selection();
+                        ui.popup.popdown();
                     }
-                    gdk::EventType::ButtonRelease | gdk::EventType::TouchEnd => {
-                        ui.mouse_down.set(false);
-                        let weak = ui.weak();
-                        glib::idle_add_local_once(move || {
-                            if let Some(ui) = weak.upgrade() {
-                                ui.selection_finished();
-                            }
-                        });
-                    }
-                    _ => {}
+                    return glib::Propagation::Proceed;
                 }
-            }
-            glib::Propagation::Proceed
-        });
-        self.reader.add_controller(events);
-        let events = gtk::GestureClick::new();
-        let weak = self.weak();
-        events.connect_pressed(move |_, _, _, _| {
-            if let Some(ui) = weak.upgrade() {
-                ui.active_right.set(true);
-                ui.mouse_down.set(true);
-            }
-        });
-        let weak = self.weak();
-        events.connect_released(move |_, _, _, _| {
-            if let Some(ui) = weak.upgrade() {
-                ui.mouse_down.set(false);
-                ui.selection_finished();
-            }
-        });
-        events.set_propagation_phase(gtk::PropagationPhase::Capture);
-        self.reader_right.add_controller(events);
-        let left = gtk::GestureClick::new();
-        let weak = self.weak();
-        left.connect_pressed(move |_, _, _, _| {
-            if let Some(ui) = weak.upgrade() {
-                ui.active_right.set(false);
-            }
-        });
-        left.set_propagation_phase(gtk::PropagationPhase::Capture);
-        self.reader.add_controller(left);
+                if let Some(ui) = w.upgrade() {
+                    match event.event_type() {
+                        gdk::EventType::KeyPress => ui.context_click.set(false),
+                        gdk::EventType::ButtonPress => {
+                            ui.active_right.set(is_right);
+                            ui.context_click.set(false);
+                            ui.mouse_down.set(true);
+                            ui.cancel_selection();
+                        }
+                        gdk::EventType::ButtonRelease | gdk::EventType::TouchEnd => {
+                            ui.mouse_down.set(false);
+                            let weak = ui.weak();
+                            glib::idle_add_local_once(move || {
+                                if let Some(ui) = weak.upgrade() {
+                                    ui.selection_finished();
+                                }
+                            });
+                        }
+                        _ => {}
+                    }
+                }
+                glib::Propagation::Proceed
+            });
+            reader.add_controller(events);
+        }
         let w = self.weak();
         self.reader.buffer().connect_mark_set(move |_, _, mark| {
             if let Some(ui) = w.upgrade()

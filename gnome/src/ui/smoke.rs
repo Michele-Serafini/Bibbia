@@ -112,6 +112,59 @@ fn toolbar_button(ui: &Ui, index: u32) -> gtk::Button {
         .unwrap()
 }
 
+async fn native_drag(
+    reader: &gtk::TextView,
+    window: &adw::ApplicationWindow,
+    start: i32,
+) -> Result<(), String> {
+    let id = command(&[
+        "xdotool".into(),
+        "search".into(),
+        "--sync".into(),
+        "--onlyvisible".into(),
+        "--pid".into(),
+        std::process::id().to_string(),
+        "--name".into(),
+        "^Bibbia$".into(),
+    ])
+    .await?;
+    let id = id
+        .lines()
+        .next()
+        .ok_or("X11 test window missing")?
+        .to_owned();
+    let rect = reader.iter_location(&reader.buffer().iter_at_offset(start));
+    let (x, y) = reader.buffer_to_window_coords(gtk::TextWindowType::Widget, rect.x(), rect.y());
+    let bounds = reader
+        .compute_bounds(window)
+        .ok_or("Reader has no window bounds")?;
+    let x = x + bounds.x() as i32 + 3;
+    let y = y + bounds.y() as i32 + rect.height() / 2;
+    command(&[
+        "xdotool".into(),
+        "mousemove".into(),
+        "--window".into(),
+        id.clone(),
+        x.to_string(),
+        y.to_string(),
+        "mousedown".into(),
+        "1".into(),
+        "sleep".into(),
+        "0.12".into(),
+        "mousemove".into(),
+        "--window".into(),
+        id,
+        (x + 120).to_string(),
+        y.to_string(),
+        "sleep".into(),
+        "0.12".into(),
+        "mouseup".into(),
+        "1".into(),
+    ])
+    .await?;
+    Ok(())
+}
+
 pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
     ui.set_book_mode(false);
     glib::timeout_future(Duration::from_millis(400)).await;
@@ -197,62 +250,42 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         "Facing page did not show the next text range",
     )?;
     screenshot(&ui, "gnome-spread.png").await?;
+    let right_char = ui.pager.borrow().pages[1].character;
+    let right_verse = ui
+        .state
+        .borrow()
+        .spans
+        .iter()
+        .position(|span| span.start >= right_char)
+        .unwrap();
+    let right_start = ui.state.borrow().spans[right_verse].start;
+    native_drag(&ui.reader_right, &ui.window, right_start).await?;
+    until(
+        || ui.popup.is_visible(),
+        "Right page mouse selection did not open its toolbar",
+    )
+    .await?;
+    check(
+        ui.active_right.get()
+            && ui
+                .state
+                .borrow()
+                .selection
+                .first()
+                .is_some_and(|s| s.verse == right_verse),
+        "Right page selection lost its original verse offset",
+    )?;
+    ui.popup.popdown();
+    let buffer = ui.reader.buffer();
+    buffer.place_cursor(&buffer.start_iter());
+
     ui.window.set_default_size(980, 800);
     ui.set_book_mode(false);
     glib::timeout_future(Duration::from_millis(180)).await;
     screenshot(&ui, "gnome-light.png").await?;
     // Real pointer events exercise capture, GTK selection, and the automatic popup.
-    let id = command(&[
-        "xdotool".into(),
-        "search".into(),
-        "--sync".into(),
-        "--onlyvisible".into(),
-        "--pid".into(),
-        std::process::id().to_string(),
-        "--name".into(),
-        "^Bibbia$".into(),
-    ])
-    .await?;
-    let id = id
-        .lines()
-        .next()
-        .ok_or("X11 test window missing")?
-        .to_owned();
     let start = ui.state.borrow().spans[0].start;
-    let rect = ui
-        .reader
-        .iter_location(&ui.reader.buffer().iter_at_offset(start));
-    let (x, y) = ui
-        .reader
-        .buffer_to_window_coords(gtk::TextWindowType::Widget, rect.x(), rect.y());
-    let bounds = ui
-        .reader
-        .compute_bounds(&ui.window)
-        .ok_or("Reader has no window bounds")?;
-    let x = x + bounds.x() as i32 + 3;
-    let y = y + bounds.y() as i32 + rect.height() / 2;
-    command(&[
-        "xdotool".into(),
-        "mousemove".into(),
-        "--window".into(),
-        id.clone(),
-        x.to_string(),
-        y.to_string(),
-        "mousedown".into(),
-        "1".into(),
-        "sleep".into(),
-        "0.12".into(),
-        "mousemove".into(),
-        "--window".into(),
-        id,
-        (x + 120).to_string(),
-        y.to_string(),
-        "sleep".into(),
-        "0.12".into(),
-        "mouseup".into(),
-        "1".into(),
-    ])
-    .await?;
+    native_drag(&ui.reader, &ui.window, start).await?;
     until(
         || ui.popup.is_visible(),
         "Mouse selection did not show the annotation popup",

@@ -155,13 +155,14 @@ try {
     if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'Application window did not open.' }
     [void][DesktopProbe]::SetForegroundWindow($process.MainWindowHandle)
     $window = [Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
-    $mode = Wait-Control $window 'BookModeToggle'
-    $toggle = $mode.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
-    if ($toggle.Current.ToggleState -eq [Windows.Automation.ToggleState]::On) { $toggle.Toggle(); Start-Sleep -Milliseconds 250 }
     $verses = Wait-Control $window 'VerseList'
     $firstVerse = 'Al principio cre' + [char]0xF2 + ' Dio il cielo e la terra.'
     Wait-Text $verses $firstVerse | Out-Null
     Write-Host 'WinUI: Catholic Italian chapter rendered.'
+    $mode = Wait-Control $window 'BookModeToggle'
+    $toggle = $mode.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
+    if ($toggle.Current.ToggleState -eq [Windows.Automation.ToggleState]::On) { $toggle.Toggle(); Start-Sleep -Milliseconds 250 }
+
     $bookStage = Wait-Control $window 'VerseList'
     Invoke-Control (Wait-Control $window 'NextChapter')
     $turnDeadline = [DateTime]::UtcNow.AddSeconds(5)
