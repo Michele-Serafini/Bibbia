@@ -89,6 +89,9 @@ final class BookSurface: NSView {
         let epoch = token
         let canvas = CALayer()
         canvas.frame = bounds; canvas.masksToBounds = true
+        // AppKit manages the NSView's backing layer. Our standalone containers
+        // must explicitly use top-left coordinates for the corner and bitmap.
+        canvas.isGeometryFlipped = true
         root.addSublayer(canvas); overlay = canvas
         isTurning = true; turnsStarted += 1
         let width = bounds.width, height = bounds.height
@@ -121,6 +124,7 @@ final class BookSurface: NSView {
         for i in 0..<PageTurn.strips {
             let s = samples[0].strips[i]
             let slice = CALayer()
+            slice.isGeometryFlipped = true
             slice.bounds = CGRect(x: 0, y: 0, width: l.step+0.65, height: l.spanV)
             slice.anchorPoint = .zero
             slice.position = CGPoint(x: s.x, y: s.y)
@@ -128,6 +132,7 @@ final class BookSurface: NSView {
             slice.masksToBounds = true
             canvas.addSublayer(slice)
             let source = CALayer()
+            source.isGeometryFlipped = true
             source.bounds = CGRect(x: 0, y: 0, width: width, height: height)
             source.anchorPoint = .zero
             source.position = CGPoint(x: (forward ? 0 : l.nx*width)-s.source,
@@ -208,6 +213,16 @@ final class BookSurface: NSView {
             return copy
         }
         let live = freeze(overlay)
+        // Also retain the actual WindowServer frame when screen capture is
+        // available in the disposable native CI session.
+        if let window {
+            let capture = Process()
+            capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            capture.arguments = ["-x", "-l", String(window.windowNumber),
+                url.deletingLastPathComponent().appendingPathComponent("macos-page-turn-desktop.png").path]
+            try? capture.run()
+            if capture.isRunning { capture.waitUntilExit() }
+        }
         let width = max(1, Int(bounds.width)), height = max(1, Int(bounds.height))
         guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
