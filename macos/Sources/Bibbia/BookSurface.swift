@@ -106,8 +106,11 @@ final class BookSurface: NSView {
         let sign = forward ? 1.0 : -1.0
         restingCornerX = sign*l.nx
         func transform(_ sx: Double, _ sy: Double) -> CATransform3D {
+            // The cached AppKit bitmap and standalone CALayer geometry have
+            // opposite vertical origins. Reflect both source and destination;
+            // flat text stays unchanged and the physical upper corner lifts.
             CATransform3DMakeAffineTransform(CGAffineTransform(
-                a: sign*l.nx*sx, b: l.ny*sx, c: -sign*l.ny*sy, d: l.nx*sy, tx: 0, ty: 0))
+                a: sign*l.nx*sx, b: -l.ny*sx, c: -sign*l.ny*sy, d: -l.nx*sy, tx: 0, ty: 0))
         }
         let paper = paperCGColor
         CATransaction.begin()
@@ -118,30 +121,30 @@ final class BookSurface: NSView {
         let shadow = CAGradientLayer()
         shadow.bounds = CGRect(x: 0, y: 0, width: width*0.30, height: l.spanV)
         shadow.anchorPoint = .zero
-        shadow.position = CGPoint(x: samples[0].shadow.x, y: samples[0].shadow.y)
+        shadow.position = CGPoint(x: samples[0].shadow.x, y: height-samples[0].shadow.y)
         shadow.transform = transform(1, 1)
         shadow.colors = [NSColor.clear.cgColor, NSColor.black.withAlphaComponent(0.10).cgColor,
                          NSColor.black.withAlphaComponent(0.22).cgColor, NSColor.clear.cgColor]
         shadow.locations = [0, 0.40, 0.68, 1]
         shadow.startPoint = CGPoint(x: 0, y: 0.5); shadow.endPoint = CGPoint(x: 1, y: 0.5)
         shadow.opacity = 0; canvas.addSublayer(shadow)
-        animate(shadow, key: "position", values: samples.map { NSValue(point: NSPoint(x: $0.shadow.x, y: $0.shadow.y)) })
+        animate(shadow, key: "position", values: samples.map { NSValue(point: NSPoint(x: $0.shadow.x, y: height-$0.shadow.y)) })
         animate(shadow, key: "opacity", values: samples.map { NSNumber(value: $0.shadow.opacity) })
         for i in 0..<PageTurn.strips {
             let s = samples[0].strips[i]
             let slice = CALayer()
             slice.bounds = CGRect(x: 0, y: 0, width: l.step+0.65, height: l.spanV)
             slice.anchorPoint = .zero
-            slice.position = CGPoint(x: s.x, y: s.y)
+            slice.position = CGPoint(x: s.x, y: height-s.y)
             slice.transform = transform(s.scaleX, 1)
             slice.masksToBounds = true
             canvas.addSublayer(slice)
             let source = CALayer()
             source.bounds = CGRect(x: 0, y: 0, width: width, height: height)
             source.anchorPoint = .zero
-            source.position = CGPoint(x: (forward ? 0 : l.nx*width)-s.source,
-                                      y: (forward ? 0 : -l.ny*width)-l.minV)
-            source.setAffineTransform(CGAffineTransform(a: sign*l.nx, b: -sign*l.ny, c: l.ny, d: l.nx, tx: 0, ty: 0))
+            source.position = CGPoint(x: (forward ? 0 : l.nx*width)-s.source+l.ny*height,
+                                      y: (forward ? 0 : -l.ny*width)-l.minV+l.nx*height)
+            source.setAffineTransform(CGAffineTransform(a: sign*l.nx, b: -sign*l.ny, c: -l.ny, d: -l.nx, tx: 0, ty: 0))
             source.backgroundColor = paper; source.masksToBounds = true
             slice.addSublayer(source)
             let front = CALayer()
@@ -153,15 +156,15 @@ final class BookSurface: NSView {
             func shade(_ reverse: Bool) -> CAGradientLayer {
                 let gradient = CAGradientLayer()
                 gradient.frame = source.bounds
-                gradient.startPoint = CGPoint(x: (forward ? sx : width-sx)/width, y: sy/height)
-                gradient.endPoint = CGPoint(x: (forward ? ex : width-ex)/width, y: ey/height)
+                gradient.startPoint = CGPoint(x: (forward ? sx : width-sx)/width, y: 1-sy/height)
+                gradient.endPoint = CGPoint(x: (forward ? ex : width-ex)/width, y: 1-ey/height)
                 gradient.colors = reverse ? [NSColor.clear.cgColor, NSColor.black.cgColor]
                                           : [NSColor.black.cgColor, NSColor.clear.cgColor]
                 gradient.opacity = 0; source.addSublayer(gradient)
                 return gradient
             }
             let shadeStart = shade(false), shadeEnd = shade(true)
-            animate(slice, key: "position", values: samples.map { NSValue(point: NSPoint(x: $0.strips[i].x, y: $0.strips[i].y)) })
+            animate(slice, key: "position", values: samples.map { NSValue(point: NSPoint(x: $0.strips[i].x, y: height-$0.strips[i].y)) })
             animate(slice, key: "transform", values: samples.map { NSValue(caTransform3D: transform($0.strips[i].scaleX, 1)) })
             animate(front, key: "opacity", values: samples.map { NSNumber(value: $0.strips[i].front) })
             animate(shadeStart, key: "opacity", values: samples.map { NSNumber(value: $0.strips[i].shadeStart) })
