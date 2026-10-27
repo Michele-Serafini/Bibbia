@@ -41,7 +41,8 @@ extension AppModel {
             if book.motionAllowed {
                 step(1)
                 try await waitUntil { book.isTurning && self.position.chapter == 1 }
-                try await Task.sleep(for: .milliseconds(200))
+                try await waitUntil { book.hasCurledPresentation }
+                try await Task.sleep(for: .milliseconds(60))
                 try book.saveMotionFrame(to: directory.appendingPathComponent("screenshots/macos-page-turn.png"))
                 try await waitUntil { !book.isTurning }
                 try check(book.turnsStarted > 0, "Curved page animation completes and releases the image")

@@ -9,6 +9,7 @@ final class BookSurface: NSView {
     let scroll = NSScrollView()
     private var image: CGImage?
     private var overlay: CALayer?
+    private var restingCornerX: CGFloat = 0
     private var token = 0
     var generation: Int { token }
     private(set) var isTurning = false
@@ -16,6 +17,10 @@ final class BookSurface: NSView {
     var position: Position?
     private var motionObserver: NSObjectProtocol?
     var allowsMotion = true { didSet { if !allowsMotion { cancelTurn() } } }
+    var hasCurledPresentation: Bool {
+        guard isTurning, let corner = overlay?.sublayers?.last?.presentation() else { return false }
+        return abs(corner.transform.m11-restingCornerX) > 0.02
+    }
 
     override var isFlipped: Bool { true }
     static var paperColor: NSColor {
@@ -99,6 +104,7 @@ final class BookSurface: NSView {
             progress: Double($0) / Double(PageTurn.samples), forward: forward) }
         let l = samples[0].layout
         let sign = forward ? 1.0 : -1.0
+        restingCornerX = sign*l.nx
         func transform(_ sx: Double, _ sy: Double) -> CATransform3D {
             CATransform3DMakeAffineTransform(CGAffineTransform(
                 a: sign*l.nx*sx, b: l.ny*sx, c: -sign*l.ny*sy, d: l.nx*sy, tx: 0, ty: 0))
@@ -182,13 +188,12 @@ final class BookSurface: NSView {
     }
 
     func saveMotionFrame(to url: URL) throws {
-        guard let overlay, let corner = overlay.sublayers?.last?.presentation(), isTurning else {
+        guard let overlay, isTurning else {
             throw BibleError.invalid("No active paper animation")
         }
         // Verify the compositor is actually deforming the corner, rather than
         // merely waiting for the completion callback with a static bitmap.
-        let resting = PageTurn.frame(width: bounds.width, height: bounds.height, progress: 0, forward: true).layout.nx
-        guard abs(abs(corner.transform.m11)-resting) > 0.02 || corner.transform.m11 < 0 else {
+        guard hasCurledPresentation else {
             throw BibleError.invalid("Corner presentation has not curled")
         }
         // Freeze each presentation layer separately. Rendering only the parent
