@@ -213,6 +213,7 @@ final class BookSurface: NSView {
             return copy
         }
         let live = freeze(overlay)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         // Also retain the actual WindowServer frame when screen capture is
         // available in the disposable native CI session.
         if let window {
