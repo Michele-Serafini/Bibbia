@@ -130,7 +130,6 @@ final class BookSurface: NSView {
         for i in 0..<PageTurn.strips {
             let s = samples[0].strips[i]
             let slice = CALayer()
-            slice.isGeometryFlipped = true
             slice.bounds = CGRect(x: 0, y: 0, width: l.step+0.65, height: l.spanV)
             slice.anchorPoint = .zero
             slice.position = CGPoint(x: s.x, y: s.y)
@@ -138,7 +137,6 @@ final class BookSurface: NSView {
             slice.masksToBounds = true
             canvas.addSublayer(slice)
             let source = CALayer()
-            source.isGeometryFlipped = true
             source.bounds = CGRect(x: 0, y: 0, width: width, height: height)
             source.anchorPoint = .zero
             source.position = CGPoint(x: (forward ? 0 : l.nx*width)-s.source,
