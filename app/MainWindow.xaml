@@ -33,7 +33,7 @@
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                     <RowDefinition Height="*" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <StackPanel Spacing="5" MaxWidth="800" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="5" MaxWidth="1600" HorizontalAlignment="Stretch">
                     <TextBlock x:Name="EyebrowLabel" Text="UNO SPAZIO PER LA PAROLA" FontSize="11" CharacterSpacing="180"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock x:Name="PageTitle" Text="Leggi con calma." Style="{ThemeResource TitleTextBlockStyle}" />
@@ -42,13 +42,14 @@
                 <Grid Grid.Row="2">
                     <Grid x:Name="ReadPanel" RowSpacing="14">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid ColumnSpacing="10" MaxWidth="800" HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Grid ColumnSpacing="10" MaxWidth="1600" HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <ComboBox x:Name="BookPicker" HorizontalAlignment="Stretch" DisplayMemberPath="Name" SelectionChanged="BookChanged" AutomationProperties.Name="Libro" AutomationProperties.AutomationId="BookPicker" />
                             <ComboBox x:Name="ChapterPicker" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="ChapterChanged" AutomationProperties.Name="Capitolo" />
                             <Button Grid.Column="2" Content="Aa" Click="AppearanceClick" AutomationProperties.Name="Aspetto della lettura" ToolTipService.ToolTip="Dimensione del testo e tema" />
+                            <ToggleButton x:Name="BookModeToggle" Grid.Column="3" Content="Libro" IsChecked="True" Checked="BookModeChanged" Unchecked="BookModeChanged" AutomationProperties.AutomationId="BookModeToggle" />
                         </Grid>
-                        <Grid x:Name="BookStage" Grid.Row="1" MaxWidth="800" HorizontalAlignment="Stretch" Margin="0,3,0,8" AutomationProperties.AutomationId="BookStage">
+                        <Grid x:Name="BookStage" Grid.Row="1" MaxWidth="1600" HorizontalAlignment="Stretch" Margin="0,3,0,8" AutomationProperties.AutomationId="BookStage">
                           <Border Background="{ThemeResource BookEdgeBrush}" CornerRadius="7" Margin="5,7,0,-5" />
                           <Border Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7" Margin="2,3,2,-2" />
                           <Border Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7">
@@ -56,8 +57,9 @@
                               <Border Width="16" HorizontalAlignment="Left" IsHitTestVisible="False">
                                 <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#14000000" Offset="0" /><GradientStop Color="#00000000" Offset="1" /></LinearGradientBrush></Border.Background>
                               </Border>
+                        <Grid x:Name="BookColumns"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="0" /></Grid.ColumnDefinitions>
                         <ListView x:Name="VerseList" SelectionMode="None" Margin="12,8,10,8"
-                            HorizontalContentAlignment="Stretch" MaxWidth="800" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch" MaxWidth="1600" HorizontalAlignment="Stretch"
                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Versetti del capitolo" AutomationProperties.AutomationId="VerseList">
                             <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel CacheLength="0.5" /></ItemsPanelTemplate></ListView.ItemsPanel>
                             <ListView.ItemTemplate>
@@ -83,6 +85,8 @@
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
+                        <ListView x:Name="VerseRight" Grid.Column="1" SelectionMode="None" Margin="12,8,10,8" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Pagina destra" Visibility="Collapsed" />
+                        </Grid>
                               <Canvas x:Name="TurnCanvas" Visibility="Collapsed" IsHitTestVisible="False" AutomationProperties.AccessibilityView="Raw" />
                             </Grid>
                           </Border>
@@ -90,6 +94,7 @@
                         <Grid Grid.Row="2">
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <StackPanel HorizontalAlignment="Center" Spacing="4" Margin="0,0,0,8">
+                                <TextBlock x:Name="BookPageLabel" HorizontalAlignment="Center" FontSize="12" AutomationProperties.AutomationId="BookPageLabel" />
                                 <TextBlock x:Name="ReadingLabel" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <Button x:Name="QuickEditionButton" AutomationProperties.AutomationId="QuickEditionButton" Padding="10,4" Background="Transparent" BorderThickness="0" FontSize="12" MaxWidth="400">
                                     <Button.Flyout><MenuFlyout Opening="QuickEditionsOpening" /></Button.Flyout>

@@ -155,6 +155,9 @@ try {
     if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'Application window did not open.' }
     [void][DesktopProbe]::SetForegroundWindow($process.MainWindowHandle)
     $window = [Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
+    $mode = Wait-Control $window 'BookModeToggle'
+    $toggle = $mode.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
+    if ($toggle.Current.ToggleState -eq [Windows.Automation.ToggleState]::On) { $toggle.Toggle(); Start-Sleep -Milliseconds 250 }
     $verses = Wait-Control $window 'VerseList'
     $firstVerse = 'Al principio cre' + [char]0xF2 + ' Dio il cielo e la terra.'
     Wait-Text $verses $firstVerse | Out-Null
@@ -173,7 +176,7 @@ try {
     while ($bookStage.Current.HelpText -ne 'page-turn-idle' -and [DateTime]::UtcNow -lt $turnDeadline) { Start-Sleep -Milliseconds 30 }
     if ($bookStage.Current.HelpText -ne 'page-turn-idle') { throw 'Paper snapshot was not released.' }
     Invoke-Control (Wait-Control $window 'PreviousChapter')
-    Start-Sleep -Milliseconds 700
+    Start-Sleep -Milliseconds 1300
     Wait-Text (Wait-Control $window 'VerseList') $firstVerse | Out-Null
     Write-Host 'WinUI: native diagonal corner curl and completion cleanup passed.'
 
@@ -287,6 +290,19 @@ try {
     if ((Wait-Control $window 'SavedNextPage').Current.IsEnabled) { throw 'Single annotation unexpectedly has another page.' }
     Select-Page 'ReadNavigation'
     Wait-Text $window 'Chapter 1 of 50' | Out-Null
+    $toggle.Toggle()
+    Start-Sleep -Milliseconds 650
+    $pageLabel = Wait-Control $window 'BookPageLabel'
+    if ($pageLabel.Current.Name -notmatch '/ (\d+)' -or [int]$Matches[1] -lt 2) { throw 'Native book mode did not paginate Genesis.' }
+    Invoke-Control (Wait-Control $window 'NextChapter')
+    Start-Sleep -Milliseconds 350
+    Wait-Text $window 'Chapter 1 of 50' | Out-Null
+    if ($pageLabel.Current.Name -notmatch '^2') { throw 'Next page did not stay in the same chapter.' }
+    Invoke-Control (Wait-Control $window 'PreviousChapter')
+    Start-Sleep -Milliseconds 1300
+    Save-WindowImage 'windows-book.png'
+    $toggle.Toggle()
+    Start-Sleep -Milliseconds 200
     $errorBarControl = Find-Control $window 'ErrorBar'
     if ($null -ne $errorBarControl -and -not $errorBarControl.Current.IsOffscreen) { throw "An application error was shown: $($errorBarControl.Current.Name)" }
     Write-Host 'WinUI: CEI, extended collection, animated navigation, text resizing, matching caption/surface colors, Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'

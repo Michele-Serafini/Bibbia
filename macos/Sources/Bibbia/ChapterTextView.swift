@@ -12,18 +12,7 @@ struct ChapterTextView: NSViewRepresentable {
         let surface = BookSurface(frame: .zero)
         let scroll = surface.scroll
         let view = ReadingTextView(frame: .zero)
-        view.isEditable = false; view.isSelectable = true; view.isRichText = true
-        view.importsGraphics = false; view.allowsUndo = false
-        view.isAutomaticLinkDetectionEnabled = false
-        view.isAutomaticSpellingCorrectionEnabled = false
-        view.isContinuousSpellCheckingEnabled = false
-        view.drawsBackground = false; view.textContainerInset = NSSize(width: 28, height: 12)
-        view.isVerticallyResizable = true; view.isHorizontallyResizable = false
-        view.autoresizingMask = [.width]
-        view.minSize = NSSize(width: 0, height: 0)
-        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        view.textContainer?.widthTracksTextView = true
-        view.textContainer?.containerSize = NSSize(width: 760, height: CGFloat.greatestFiniteMagnitude)
+        view.configureForReading()
         view.setAccessibilityIdentifier("bibleText")
         view.setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
         scroll.documentView = view
@@ -43,6 +32,7 @@ struct ChapterTextView: NSViewRepresentable {
         surface.position = targetPosition
         view.model = model
         view.render(revision: model.revision, size: model.preferences.fontSize, dark: colorScheme == .dark)
+        surface.pager.configure(surface, view, model, target: model.scrollTarget)
         if let target = model.scrollTarget, view.readingLayout.spans.indices.contains(target) {
             let position = model.position
             // SwiftUI must finish sizing the scroll view before TextKit can
@@ -52,7 +42,8 @@ struct ChapterTextView: NSViewRepresentable {
                       view.readingLayout.spans.indices.contains(target) else { return }
                 view.layoutSubtreeIfNeeded()
                 if let container = view.textContainer { view.layoutManager?.ensureLayout(for: container) }
-                view.scrollRangeToVisible(view.readingLayout.spans[target])
+                if model.bookMode { surface.pager.configure(surface, view, model, target: surface.pager.lastPage ? model.verses.count-1 : target); surface.pager.lastPage = false }
+                else { view.scrollRangeToVisible(view.readingLayout.spans[target]) }
                 model.scrollTarget = nil
                 if changed && surface.generation == captureGeneration && surface.bounds.size == captureSize {
                     let forward = old?.edition != position.edition || (old!.book, old!.chapter) < (position.book, position.chapter)
@@ -81,6 +72,30 @@ final class ReadingTextView: NSTextView {
     private(set) var annotationPopover: NSPopover?
     private(set) var capturedSelection: [SelectedSpan] = []
     private var capturedPosition = Position()
+
+    func configureForReading() {
+        isEditable = false; isSelectable = true; isRichText = true
+        importsGraphics = false; allowsUndo = false
+        isAutomaticLinkDetectionEnabled = false
+        isAutomaticSpellingCorrectionEnabled = false
+        isContinuousSpellCheckingEnabled = false
+        drawsBackground = false; textContainerInset = NSSize(width: 28, height: 12)
+        isVerticallyResizable = true; isHorizontallyResizable = false
+        autoresizingMask = [.width]
+        minSize = NSSize(width: 0, height: 0)
+        maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textContainer?.widthTracksTextView = true
+        textContainer?.containerSize = NSSize(width: 760, height: CGFloat.greatestFiniteMagnitude)
+    }
+    func adoptContext(_ source: ReadingTextView) {
+        model = source.model; readingLayout = source.readingLayout; renderedPosition = source.renderedPosition
+        size = source.size; dark = source.dark; revision = source.revision
+    }
+    override func scrollWheel(with event: NSEvent) {
+        if let model, model.bookMode {
+            (enclosingScrollView?.superview as? BookSurface)?.pageWheel(event.scrollingDeltaY)
+        } else { super.scrollWheel(with: event) }
+    }
 
     static func readingFont(_ size: CGFloat) -> NSFont {
         let descriptor = NSFont.systemFont(ofSize: size).fontDescriptor.withDesign(.serif)
@@ -171,6 +186,9 @@ final class ReadingTextView: NSTextView {
     }
 
     override func keyDown(with event: NSEvent) {
+        if model?.bookMode == true, event.keyCode == 116 || event.keyCode == 121 {
+            model?.step(event.keyCode == 121 ? 1 : -1); return
+        }
         super.keyDown(with: event)
         if event.modifierFlags.contains(.shift) { showSelection() }
         else if event.keyCode == 53 { closePopover() }

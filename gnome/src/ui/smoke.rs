@@ -113,6 +113,7 @@ fn toolbar_button(ui: &Ui, index: u32) -> gtk::Button {
 }
 
 pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
+    ui.set_book_mode(false);
     glib::timeout_future(Duration::from_millis(400)).await;
     check(
         ui.state.borrow().verses[0].text == "Al principio creò Dio il cielo e la terra.",
@@ -162,6 +163,30 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         settings.set_gtk_enable_animations(true);
         println!("Book motion: curved turn, rapid navigation, reduced motion and cleanup passed");
     }
+    ui.set_book_mode(true);
+    until(
+        || ui.pager.borrow().pages.len() > 1,
+        "Book pagination did not complete",
+    )
+    .await?;
+    check(
+        ui.pager.borrow().pages.len() > 1,
+        "Native book has no chapter pages",
+    )?;
+    let chapter = ui.position().chapter;
+    ui.next.emit_clicked();
+    check(
+        ui.position().chapter == chapter && ui.pager.borrow().index > 0,
+        "Next page skipped the chapter",
+    )?;
+    ui.previous.emit_clicked();
+    check(
+        ui.pager.borrow().index == 0,
+        "Previous page did not restore first spread",
+    )?;
+    screenshot(&ui, "gnome-book.png").await?;
+    ui.set_book_mode(false);
+    glib::timeout_future(Duration::from_millis(100)).await;
     screenshot(&ui, "gnome-light.png").await?;
     // Real pointer events exercise capture, GTK selection, and the automatic popup.
     let id = command(&[

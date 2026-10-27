@@ -6,7 +6,7 @@ internal static class PageTurnMath
 {
     public const int Strips = 64;
     public const int Samples = 60;
-    public const int Milliseconds = 620;
+    public const int Milliseconds = 1100;
     public const double Angle = -0.42;
     internal readonly record struct Layout(double NX,double NY,double MinU,double SpanU,double MinV,double SpanV)
     {
@@ -43,7 +43,7 @@ internal static class PageTurnMath
             var middle=Bend(u+l.Step/2,fold,radius);
             var x=l.NX*a.Q-l.NY*l.MinV;
             strips[i]=new(u,forward?x:width-x,l.NY*a.Q+l.NX*l.MinV,
-                (b.Q-a.Q)/l.Step,forward?1:-1,middle.Cos>=0?1:0.06,a.Shade,b.Shade);
+                (b.Q-a.Q)/l.Step,forward?1:-1,middle.Cos>=0?1:0,a.Shade,b.Shade);
         }
         var shadowU=fold-radius*0.12;
         var shadowX=l.NX*shadowU-l.NY*l.MinV;

@@ -16,6 +16,7 @@ use std::{
 mod annotations;
 mod book;
 mod book_math;
+mod paging;
 mod preferences;
 pub mod smoke;
 
@@ -64,6 +65,15 @@ pub struct Ui {
     previous: gtk::Button,
     next: gtk::Button,
     reader: gtk::TextView,
+    reader_right: gtk::TextView,
+    read_scroll: gtk::ScrolledWindow,
+    right_scroll: gtk::ScrolledWindow,
+    read_panes: gtk::Fixed,
+    book_mode: gtk::ToggleButton,
+    page_counter: gtk::Label,
+    pager: RefCell<paging::Pager>,
+    book_seek: Cell<bool>,
+    active_right: Cell<bool>,
     book_surface: book::BookSurface,
     body_tag: gtk::TextTag,
     number_tag: gtk::TextTag,
@@ -239,7 +249,7 @@ impl Ui {
         controls.append(&book);
         controls.append(&chapter);
         let top_clamp = adw::Clamp::builder()
-            .maximum_size(820)
+            .maximum_size(1640)
             .child(&controls)
             .build();
         read.append(&top_clamp);
@@ -301,11 +311,42 @@ impl Ui {
             );
         }
         let scrolled = scroll(&reader);
-        let book_surface = book::BookSurface::new(&scrolled);
+        let reader_right = gtk::TextView::builder()
+            .buffer(&reader.buffer())
+            .editable(false)
+            .cursor_visible(false)
+            .wrap_mode(gtk::WrapMode::WordChar)
+            .left_margin(24)
+            .right_margin(24)
+            .top_margin(8)
+            .bottom_margin(24)
+            .pixels_below_lines(12)
+            .build();
+        reader_right.add_css_class("bible-text");
+        let right_scroll = scroll(&reader_right);
+        let read_panes = gtk::Fixed::new();
+        read_panes.set_hexpand(true);
+        read_panes.set_vexpand(true);
+        read_panes.put(&scrolled, 0.0, 0.0);
+        read_panes.put(&right_scroll, 0.0, 0.0);
+        let book_mode = gtk::ToggleButton::with_label("Libro / Book");
+        book_mode.set_tooltip_text(Some("Libro impaginato / Paged book"));
+        let page_counter = gtk::Label::new(None);
+        let mut pager = paging::Pager {
+            directory: directory.clone(),
+            ..Default::default()
+        };
+        if let Ok(data) = std::fs::read(directory.join("reader.json"))
+            && let Ok(place) = serde_json::from_slice(&data)
+        {
+            pager.place = place;
+        }
+        book_mode.set_active(pager.place.book_mode);
+        let book_surface = book::BookSurface::new(&read_panes);
         paper.append(&book_surface);
         paper.set_vexpand(true);
         let clamp = adw::Clamp::builder()
-            .maximum_size(820)
+            .maximum_size(1640)
             .tightening_threshold(600)
             .child(&paper)
             .vexpand(true)
@@ -327,13 +368,15 @@ impl Ui {
             .icon_name("document-edit-symbolic")
             .tooltip_text("Annotazioni del versetto")
             .build();
+        footer.append(&book_mode);
+        footer.append(&page_counter);
         footer.append(&previous);
         footer.append(&edition);
         footer.append(&verse_menu);
         footer.append(&next);
         read.append(
             &adw::Clamp::builder()
-                .maximum_size(820)
+                .maximum_size(1640)
                 .child(&footer)
                 .build(),
         );
@@ -468,6 +511,15 @@ impl Ui {
             previous,
             next,
             reader,
+            reader_right,
+            read_scroll: scrolled,
+            right_scroll,
+            read_panes,
+            book_mode,
+            page_counter,
+            pager: RefCell::new(pager),
+            book_seek: Cell::new(false),
+            active_right: Cell::new(false),
             book_surface,
             body_tag,
             number_tag,
@@ -490,6 +542,55 @@ impl Ui {
             saved_next,
             prefs: RefCell::new(glib::WeakRef::new()),
         });
+        let weak = ui.weak();
+        ui.book_surface.on_resize(move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.schedule_book();
+            }
+        });
+        let weak = ui.weak();
+        ui.book_mode.connect_toggled(move |_| {
+            if let Some(ui) = weak.upgrade() {
+                ui.book_surface.cancel();
+                ui.schedule_book();
+                ui.save_book();
+            }
+        });
+        let wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+        wheel.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let last = Rc::new(Cell::new(None::<std::time::Instant>));
+        let weak = ui.weak();
+        wheel.connect_scroll(move |_, _, dy| {
+            if let Some(ui) = weak.upgrade()
+                && ui.book_mode.is_active()
+            {
+                if last
+                    .get()
+                    .is_none_or(|t| t.elapsed() > Duration::from_millis(350))
+                    && dy.abs() > 0.01
+                {
+                    last.set(Some(std::time::Instant::now()));
+                    ui.step(if dy > 0.0 { 1 } else { -1 });
+                }
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        ui.book_surface.add_controller(wheel);
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = ui.weak();
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if let Some(ui) = weak.upgrade()
+                && ui.book_mode.is_active()
+                && (key == gdk::Key::Page_Down || key == gdk::Key::Page_Up)
+            {
+                ui.step(if key == gdk::Key::Page_Down { 1 } else { -1 });
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        ui.book_surface.add_controller(keys);
         ui.connect(app, &verse_menu);
         ui.relabel();
         ui.window.set_sensitive(false);
@@ -848,6 +949,7 @@ impl Ui {
         }
         self.changing.set(false);
         self.refresh_editions();
+        self.book_seek.set(true);
         self.render();
         if changed {
             let surface = self.book_surface.clone();
@@ -867,6 +969,9 @@ impl Ui {
         Ok(())
     }
     fn step(self: &Rc<Self>, direction: i32) {
+        if self.turn_book(direction) {
+            return;
+        }
         if !self.ready.get() {
             return;
         }
@@ -923,8 +1028,11 @@ impl Ui {
         buffer.place_cursor(&iter);
         let mark = buffer.create_mark(None, &iter, true);
         let reader = self.reader.clone();
+        let paged = self.book_mode.is_active();
         glib::idle_add_local_once(move || {
-            reader.scroll_to_mark(&mark, 0.08, true, 0.0, 0.12);
+            if !paged {
+                reader.scroll_to_mark(&mark, 0.08, true, 0.0, 0.12);
+            }
             reader.buffer().delete_mark(&mark);
         });
         self.attribution
@@ -937,6 +1045,7 @@ impl Ui {
             .set_visible(s.position.edition == "CEI 2008");
         drop(s);
         self.changing.set(false);
+        self.schedule_book();
     }
     fn update_gutter(&self) {
         let s = self.state.borrow();
@@ -958,6 +1067,8 @@ impl Ui {
         tabs.set_tab(0, pango::TabAlign::Left, width);
         self.reader.set_tabs(&tabs);
         self.reader.set_indent(-width);
+        self.reader_right.set_tabs(&tabs);
+        self.reader_right.set_indent(-width);
     }
     fn style_verse(&self, index: usize) {
         let s = self.state.borrow();

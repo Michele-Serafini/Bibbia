@@ -54,6 +54,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         InitializeBookMotion();
+        InitializeBookPagination();
         ConfigureWindowCaption();
         Navigation.IsEnabled = false;
         var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
@@ -73,6 +74,7 @@ public sealed partial class MainWindow : Window
             CancelBookTurn();
             selectionTimer?.Stop();
             fontTimer?.Stop();
+            bookLayoutTimer?.Stop();
             try {
                 BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});
                 BibleEngine.Call(new { op = "close" });
@@ -177,6 +179,7 @@ public sealed partial class MainWindow : Window
         var forward=displayedChapter==null || displayedChapter.Value.Edition!=edition ||
             (displayedChapter.Value.Book,displayedChapter.Value.Chapter).CompareTo((book,chapter))<0;
         VerseList.ItemsSource = rows;
+        VerseRight.ItemsSource = rows;
         displayedChapter=target;
         VerseList.IsHitTestVisible=true;
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
@@ -188,7 +191,8 @@ public sealed partial class MainWindow : Window
         NextButton.IsEnabled = book < books.Count - 1 || chapter < books[book].Chapters - 1;
         SavePosition();
         ScrollToCurrentVerse();
-        if (animate && section == "read") DispatcherQueue.TryEnqueue(() => {
+        if(animate && section=="read" && bookMode){chapterSnapshot=snapshot;chapterForward=forward;ScheduleBookLayout();}
+        if (animate && section == "read" && !bookMode) DispatcherQueue.TryEnqueue(() => {
             if (!closed && generation==chapterRenderGeneration) Guard(() => {
                 try { TurnBookPage(snapshot,forward); }
                 catch { CancelBookTurn(); throw; }
@@ -210,6 +214,7 @@ public sealed partial class MainWindow : Window
 
     private void ScrollToCurrentVerse()
     {
+        if(bookMode){ScheduleBookLayout(true);return;}
         if (VerseList.ItemsSource is not List<VerseRow> rows) return;
         var target = currentVerse;
         // Ignore callbacks queued for a chapter that has since been replaced.
@@ -233,12 +238,14 @@ public sealed partial class MainWindow : Window
     private void PreviousClick(object sender, RoutedEventArgs e) => Guard(() =>
     {
         if (!ready) return;
+        if(TryTurnBookPage(-1))return;
         if (chapter > 0) chapter--; else if (book > 0) { book--; chapter = books[book].Chapters - 1; }
         LoadBooks(); LoadChapter();
     });
     private void NextClick(object sender, RoutedEventArgs e) => Guard(() =>
     {
         if (!ready) return;
+        if(TryTurnBookPage(1))return;
         if (chapter + 1 < books[book].Chapters) chapter++; else if (book + 1 < books.Count) { book++; chapter = 0; }
         LoadBooks(); LoadChapter();
     });
@@ -358,6 +365,7 @@ public sealed partial class MainWindow : Window
             fontTimer.Tick += (_,_) => Guard(() => {
                 if (closed) return;
                 if (VerseList.ItemsSource is List<VerseRow> rows) foreach (var row in rows) row.TextSize=fontSize;
+                ScheduleBookLayout();
                 BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});
             });
         }

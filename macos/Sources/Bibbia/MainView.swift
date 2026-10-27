@@ -142,12 +142,16 @@ struct MainView: View {
             }.padding(.horizontal, 32).padding(.top, 26).padding(.bottom, 16)
                 .frame(maxWidth: 820)
             ChapterTextView(model: model)
-                .frame(maxWidth: 820, maxHeight: .infinity)
+                .frame(maxWidth: 1600, maxHeight: .infinity)
                 .accessibilityIdentifier("chapterText")
             Divider()
             HStack {
                 Text(model.t("Capitolo \(model.position.chapter + 1) di \(model.chapterCount)", "Chapter \(model.position.chapter + 1) of \(model.chapterCount)"))
                 Spacer()
+                Text(model.pageInfo).monospacedDigit().accessibilityIdentifier("pageCounter")
+                Toggle(model.t("Libro", "Book"), isOn: $model.bookMode)
+                    .toggleStyle(.switch).controlSize(.small).accessibilityIdentifier("bookMode")
+                    .onChange(of: model.bookMode) { _ in model.bookModeChanged() }
                 Text(model.t("Seleziona una frase per annotarla", "Select a phrase to annotate it"))
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24).padding(.vertical, 10)
             if model.position.edition == "CEI 2008" {
@@ -156,7 +160,7 @@ struct MainView: View {
                         .font(.system(size: 10)).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }.buttonStyle(.plain).padding(.horizontal, 16).padding(.bottom, 8)
             }
-        }.frame(maxWidth: 860, maxHeight: .infinity)
+        }.frame(maxWidth: 1640, maxHeight: .infinity)
             .background(Color(nsColor: BookSurface.paperColor))
             .clipShape(RoundedRectangle(cornerRadius: 7))
             .overlay(alignment: .leading) {

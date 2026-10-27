@@ -23,6 +23,12 @@ final class AppModel: ObservableObject {
     @Published var revision = 0
     @Published var scrollTarget: Int?
     @Published var showNotices = false
+    @Published var bookMode = true
+    @Published var pageInfo = ""
+    weak var readingSurface: BookSurface?
+    func bookModeChanged() {
+        readingSurface?.cancelTurn(); readingSurface?.pager.reflow(); readingSurface?.pager.save()
+    }
     private(set) var store: BibleStore?
     private var generation = 0
     private var pendingPosition: Position?
@@ -39,6 +45,8 @@ final class AppModel: ObservableObject {
             directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("Bibbia", isDirectory: true)
         }
+        if let data = try? Data(contentsOf: directory.appendingPathComponent("reader.json")),
+           let place = try? JSONDecoder().decode(ReaderPlace.self, from: data) { bookMode = place.bookMode }
     }
 
     func t(_ it: String, _ en: String) -> String { preferences.language == "en" ? en : it }
@@ -104,6 +112,8 @@ final class AppModel: ObservableObject {
     }
 
     func step(_ delta: Int) {
+        if bookMode && loading { return }
+        if bookMode, readingSurface?.pager.turn(delta) == true { return }
         var target = pendingPosition ?? position; target.verse = 0
         guard target.edition == position.edition, books.indices.contains(target.book) else { return }
         target.chapter += delta
@@ -207,6 +217,7 @@ final class AppModel: ObservableObject {
     }
 
     func flush() async {
+        readingSurface?.pager.save()
         positionTask?.cancel(); preferencesTask?.cancel(); searchTask?.cancel()
         do {
             try await store?.savePosition(position)

@@ -6,7 +6,7 @@ import Foundation
 public enum PageTurn {
     public static let strips = 64
     public static let samples = 60
-    public static let duration = 0.62
+    public static let duration = 1.1
     public static let angle = -0.42
 
     public struct Layout: Sendable {
@@ -59,7 +59,7 @@ public enum PageTurn {
             let x = l.nx * a.q - l.ny * l.minV
             return Strip(source: u, x: forward ? x : width - x, y: l.ny * a.q + l.nx * l.minV,
                          scaleX: (b.q - a.q) / l.step, scaleY: forward ? 1 : -1,
-                         front: middle.cosine >= 0 ? 1 : 0.06, shadeStart: a.shade, shadeEnd: b.shade)
+                         front: middle.cosine >= 0 ? 1 : 0, shadeStart: a.shade, shadeEnd: b.shade)
         }
         let shadowU = fold - radius * 0.12
         let shadowX = l.nx * shadowU - l.ny * l.minV

@@ -84,6 +84,7 @@ impl Ui {
             self.window.add_action(&action);
         }
         self.reader.set_extra_menu(Some(&menu));
+        self.reader_right.set_extra_menu(Some(&menu));
         verse_menu.set_menu_model(Some(&menu));
         let events = gtk::EventControllerLegacy::new();
         events.set_propagation_phase(gtk::PropagationPhase::Capture);
@@ -122,6 +123,32 @@ impl Ui {
             glib::Propagation::Proceed
         });
         self.reader.add_controller(events);
+        let events = gtk::GestureClick::new();
+        let weak = self.weak();
+        events.connect_pressed(move |_, _, _, _| {
+            if let Some(ui) = weak.upgrade() {
+                ui.active_right.set(true);
+                ui.mouse_down.set(true);
+            }
+        });
+        let weak = self.weak();
+        events.connect_released(move |_, _, _, _| {
+            if let Some(ui) = weak.upgrade() {
+                ui.mouse_down.set(false);
+                ui.selection_finished();
+            }
+        });
+        events.set_propagation_phase(gtk::PropagationPhase::Capture);
+        self.reader_right.add_controller(events);
+        let left = gtk::GestureClick::new();
+        let weak = self.weak();
+        left.connect_pressed(move |_, _, _, _| {
+            if let Some(ui) = weak.upgrade() {
+                ui.active_right.set(false);
+            }
+        });
+        left.set_propagation_phase(gtk::PropagationPhase::Capture);
+        self.reader.add_controller(left);
         let w = self.weak();
         self.reader.buffer().connect_mark_set(move |_, _, mark| {
             if let Some(ui) = w.upgrade()
@@ -162,6 +189,7 @@ impl Ui {
             menu.append(Some(&self.t(it, en)), Some(&format!("win.{name}")));
         }
         self.reader.set_extra_menu(Some(&menu));
+        self.reader_right.set_extra_menu(Some(&menu));
         self.verse_menu.set_menu_model(Some(&menu));
         if let Some(bar) = self.popup.child() {
             for (index, it, en) in [
@@ -240,6 +268,15 @@ impl Ui {
         self.popup.popup();
     }
     fn point_popup(&self, popup: &gtk::Popover) {
+        let reader = if self.active_right.get() {
+            &self.reader_right
+        } else {
+            &self.reader
+        };
+        if popup.parent().as_ref() != Some(reader.upcast_ref()) {
+            popup.unparent();
+            popup.set_parent(reader);
+        }
         let s = self.state.borrow();
         let index = s
             .selection
@@ -248,13 +285,12 @@ impl Ui {
             .unwrap_or(s.position.verse);
         let span = &s.spans[index];
         let iter = self.reader.buffer().iter_at_offset(span.start);
-        let rect = self.reader.iter_location(&iter);
+        let rect = reader.iter_location(&iter);
         let (x, y) =
-            self.reader
-                .buffer_to_window_coords(gtk::TextWindowType::Widget, rect.x(), rect.y());
+            reader.buffer_to_window_coords(gtk::TextWindowType::Widget, rect.x(), rect.y());
         popup.set_pointing_to(Some(&gdk::Rectangle::new(
-            x.clamp(0, self.reader.width().max(1)),
-            y.clamp(0, self.reader.height().max(1)),
+            x.clamp(0, reader.width().max(1)),
+            y.clamp(0, reader.height().max(1)),
             1,
             rect.height().max(1),
         )));

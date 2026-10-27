@@ -7,6 +7,17 @@ import BibleKit
 @MainActor
 final class BookSurface: NSView {
     let scroll = NSScrollView()
+    let pager = BookPager()
+    private var wheelDistance: CGFloat = 0
+    private var wheelTime: TimeInterval = 0
+    func pageWheel(_ delta: CGFloat) {
+        wheelDistance += delta
+        if abs(wheelDistance) > 35, ProcessInfo.processInfo.systemUptime-wheelTime > 0.35 {
+            pager.model?.step(wheelDistance < 0 ? 1 : -1)
+            wheelDistance = 0; wheelTime = ProcessInfo.processInfo.systemUptime
+        }
+    }
+    private var allocatedSize = CGSize.zero
     private var image: CGImage?
     private var overlay: CALayer?
     private var restingCornerX: CGFloat = 0
@@ -52,8 +63,8 @@ final class BookSurface: NSView {
 
     override func layout() {
         super.layout()
-        if scroll.frame.size != bounds.size { cancelTurn() }
-        scroll.frame = bounds
+        if allocatedSize != bounds.size { cancelTurn(); allocatedSize = bounds.size }
+        if pager.model != nil { pager.reflow() } else { scroll.frame = bounds }
     }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -83,7 +94,7 @@ final class BookSurface: NSView {
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
         bitmap.size = bounds.size
-        scroll.cacheDisplay(in: scroll.bounds, to: bitmap)
+        cacheDisplay(in: bounds, to: bitmap)
         return bitmap.cgImage
     }
 
@@ -178,7 +189,7 @@ final class BookSurface: NSView {
         animation.values = values
         // The disposable UI fixture slows the same compositor keyframes so
         // WindowServer capture can show the early fold on loaded CI machines.
-        // Ordinary launches always use the shared 620 ms duration.
+        // Ordinary launches always use the shared 1100 ms duration.
         let recording = ProcessInfo.processInfo.arguments.contains("--ui-smoke") &&
             ProcessInfo.processInfo.environment["BIBBIA_UI_TEST_MOTION"] == "1"
         animation.duration = recording ? 1.8 : PageTurn.duration

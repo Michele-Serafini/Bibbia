@@ -8,6 +8,7 @@ mod imp {
     #[derive(Default)]
     pub struct BookSurface {
         pub child: OnceCell<gtk::Widget>,
+        pub resized: RefCell<Option<Box<dyn Fn()>>>,
         pub texture: RefCell<Option<gdk::Texture>>,
         pub tick: RefCell<Option<gtk::TickCallbackId>>,
         pub progress: Cell<f64>,
@@ -41,6 +42,9 @@ mod imp {
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
             if self.allocated.replace((width, height)) != (width, height) {
                 self.obj().cancel();
+                if let Some(callback) = self.resized.borrow().as_ref() {
+                    callback();
+                }
             }
             if let Some(child) = self.child.get() {
                 child.allocate(width, height, baseline, None);
@@ -169,6 +173,10 @@ glib::wrapper! {
 }
 
 impl BookSurface {
+    pub fn on_resize(&self, callback: impl Fn() + 'static) {
+        self.imp().resized.replace(Some(Box::new(callback)));
+    }
+
     pub fn new(child: &impl IsA<gtk::Widget>) -> Self {
         let obj: Self = glib::Object::new();
         let child = child.clone().upcast::<gtk::Widget>();

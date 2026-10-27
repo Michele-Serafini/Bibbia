@@ -38,6 +38,7 @@ extension AppModel {
             try check(window.frame.width >= 760, "Native window allocated")
             try check(text.string.contains(verses[0].text), "Chapter rendered in NSTextView")
             guard let book = text.enclosingScrollView?.superview as? BookSurface else { throw BibleError.invalid("Book surface missing") }
+            bookMode = false; book.pager.reflow()
             if book.motionAllowed {
                 step(1)
                 try await waitUntil { book.isTurning && self.position.chapter == 1 }
@@ -59,6 +60,16 @@ extension AppModel {
                 book.allowsMotion = true
             }
             try screenshot(window, name: "macos-initial.png")
+            bookMode = true; book.pager.reflow()
+            try await Task.sleep(for: .milliseconds(120))
+            try check(book.pager.pageCount > 1, "Book mode paginates the chapter using native line fragments")
+            let chapterBeforePage = position.chapter
+            step(1)
+            try check(position.chapter == chapterBeforePage && book.pager.index > 0, "Next page stays within the chapter")
+            step(-1)
+            try check(book.pager.index == 0, "Previous page restores the first spread")
+            bookMode = false; book.pager.reflow(); book.pager.save()
+            text.scrollRangeToVisible(NSRange(location: 0, length: 1))
             let font = text.textStorage?.attribute(.font, at: text.readingLayout.spans[0].location, effectiveRange: nil) as? NSFont
             try check(font != nil && font?.fontName != NSFont.systemFont(ofSize: 22).fontName, "Native serif reading font")
             FileHandle.standardOutput.write(Data("Reading font: \(font?.fontName ?? "missing")\n".utf8))

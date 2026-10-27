@@ -127,7 +127,11 @@ public sealed partial class MainWindow
         try { document.BatchDisplayUpdates(); batched=true; document.UndoLimit=0; update(); }
         finally { try { if (batched) document.ApplyDisplayUpdates(); } finally { editor.IsReadOnly=readOnly; } }
     }
-    private void ApplyTextStyles(RichEditBox editor, VerseRow row) => UpdateDocument(editor,() => ApplyTextStylesCore(editor,row));
+    private void ApplyTextStyles(RichEditBox editor, VerseRow row) {
+        foreach(var view in Descendants<RichEditBox>(BookColumns)) if(view.DataContext is VerseRow value && value.Index==row.Index) {
+            value.Annotation=row.Annotation;UpdateDocument(view,()=>ApplyTextStylesCore(view,value));
+        }
+    }
     private void ApplyTextStylesCore(RichEditBox editor, VerseRow row)
     {
         var whole = editor.Document.GetRange(0,row.Text.Length);
@@ -209,7 +213,7 @@ public sealed partial class MainWindow
     }
     private void VerseMenuClick(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button button || !liveEditors.TryGetValue((int)button.Tag,out var editor) || editor.DataContext is not VerseRow row) return;
+        if (sender is not Button button || button.Parent is not Grid parent || parent.Children.OfType<RichEditBox>().FirstOrDefault() is not { } editor || editor.DataContext is not VerseRow row) return;
         AnnotationToolbar(editor,row,false).ShowAt(button);
     }
     private void ShowNote(RichEditBox editor, VerseRow row)

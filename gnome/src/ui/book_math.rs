@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 pub const STRIPS: usize = 64;
-pub const DURATION_US: f64 = 620_000.0;
+pub const DURATION_US: f64 = 1_100_000.0;
 pub const ANGLE: f64 = -0.42;
 
 pub struct Layout {
@@ -99,7 +99,7 @@ pub fn frame(width: f64, height: f64, progress: f64, forward: bool) -> Sheet {
                 x: if forward { x } else { width - x },
                 y: l.ny * a.0 + l.nx * l.min_v,
                 scale_x: (b.0 - a.0) / l.step(),
-                front: if middle.2 >= 0.0 { 1.0 } else { 0.06 },
+                front: if middle.2 >= 0.0 { 1.0 } else { 0.0 },
                 shade_start: a.3,
                 shade_end: b.3,
             }
