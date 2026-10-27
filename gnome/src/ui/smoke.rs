@@ -54,6 +54,23 @@ async fn screenshot(ui: &Ui, name: &str) -> Result<(), String> {
         .save_to_png(directory.join(name))
         .map_err(|e| e.to_string());
     renderer.unrealize();
+    if name == "gnome-page-turn.png" {
+        // Cairo paints unsupported transforms hot pink. A completed tick alone
+        // cannot prove that the user actually saw paper instead of that block.
+        let stride = texture.width() as usize * 4;
+        let mut pixels = vec![0; stride * texture.height() as usize];
+        texture.download(&mut pixels, stride);
+        let unsupported = pixels
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .filter(|p| p[0] > 140 && p[2] > 140 && (p[0].min(p[2]) as i16 - p[1] as i16) > 40)
+            .count();
+        check(
+            unsupported < pixels.len() / 4 / 20,
+            "Page curl contains an unsupported renderer transform",
+        )?;
+    }
     result
 }
 fn find_scale(widget: &gtk::Widget) -> Option<gtk::Scale> {

@@ -74,18 +74,18 @@ mod imp {
             let frame = book_math::frame(width as f64, height as f64, self.progress.get(), forward);
             let l = &frame.layout;
             let sign = if forward { 1.0 } else { -1.0 };
-            let matrix = |sx: f64, sy: f64, x: f64, y: f64| {
-                graphene::Matrix::from_2d(
-                    sign * l.nx * sx,
-                    l.ny * sx,
-                    -sign * l.ny * sy,
-                    l.nx * sy,
-                    x,
-                    y,
-                )
+            let rotation = if forward {
+                book_math::ANGLE
+            } else {
+                std::f64::consts::PI - book_math::ANGLE
             };
             snapshot.save();
-            snapshot.transform_matrix(&matrix(1.0, 1.0, frame.shadow.x, frame.shadow.y));
+            snapshot.translate(&graphene::Point::new(
+                frame.shadow.x as f32,
+                frame.shadow.y as f32,
+            ));
+            snapshot.rotate(rotation.to_degrees() as f32);
+            snapshot.scale(1.0, sign as f32);
             snapshot.append_linear_gradient(
                 &graphene::Rect::new(0.0, 0.0, width * 0.30, l.span_v as f32),
                 &graphene::Point::new(0.0, 0.0),
@@ -111,21 +111,21 @@ mod imp {
                     continue;
                 }
                 snapshot.save();
-                snapshot.transform_matrix(&matrix(band.scale_x, 1.0, band.x, band.y));
+                snapshot.translate(&graphene::Point::new(band.x as f32, band.y as f32));
+                snapshot.rotate(rotation.to_degrees() as f32);
+                snapshot.scale(band.scale_x as f32, sign as f32);
                 snapshot.push_clip(&graphene::Rect::new(
                     0.0,
                     0.0,
                     (l.step() + 0.65) as f32,
                     l.span_v as f32,
                 ));
-                snapshot.transform_matrix(&graphene::Matrix::from_2d(
-                    sign * l.nx,
-                    -sign * l.ny,
-                    l.ny,
-                    l.nx,
-                    (if forward { 0.0 } else { l.nx * width as f64 }) - band.source,
-                    (if forward { 0.0 } else { -l.ny * width as f64 }) - l.min_v,
+                snapshot.translate(&graphene::Point::new(
+                    ((if forward { 0.0 } else { l.nx * width as f64 }) - band.source) as f32,
+                    ((if forward { 0.0 } else { -l.ny * width as f64 }) - l.min_v) as f32,
                 ));
+                snapshot.rotate((-book_math::ANGLE).to_degrees() as f32);
+                snapshot.scale(sign as f32, 1.0);
                 snapshot.append_color(&paper, &full);
                 snapshot.push_opacity(band.front);
                 snapshot.append_texture(texture, &full);
