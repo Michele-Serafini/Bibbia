@@ -9,15 +9,27 @@ var directory = Path.Combine(Path.GetTempPath(), "bibbia-interop-" + Guid.NewGui
 void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 try
 {
-    foreach (var forward in new[]{false,true}) {
-        foreach (var strip in PageTurnMath.Frame(800,600,0,forward))
-            Check(Math.Abs(strip.X-strip.Source)<0.001 && Math.Abs(strip.ScaleX-1)<0.001 && strip.Front==1,"Flat page geometry is incorrect.");
-        for (var k=0;k<=100;k++) {
-            var frame=PageTurnMath.Frame(800,600,k/100.0,forward);
-            Check(frame.All(s=>double.IsFinite(s.X) && double.IsFinite(s.ScaleY) && s.ScaleY>0),"Nonfinite page projection.");
-            for (var i=0;i<frame.Length-1;i++) {
-                var gap=forward?frame[i].X+25*frame[i].ScaleX-frame[i+1].X:frame[i+1].X+25*frame[i+1].ScaleX-frame[i].X;
-                Check(Math.Abs(gap)<0.001,"A gap opened between adjacent paper strips.");
+    var top=PageTurnMath.Project(800,600,800,0,0.22,true);
+    var bottom=PageTurnMath.Project(800,600,800,600,0.22,true);
+    Check(top.Z>30 && top.X<790 && top.Y>0,"The upper corner must lift first.");
+    Check(Math.Abs(bottom.X-800)<0.001 && Math.Abs(bottom.Y-600)<0.001 && bottom.Z==0,"The bottom must follow the upper corner.");
+    foreach (var (w,h) in new[]{(800d,600d),(420d,900d),(1400d,400d)}) {
+        foreach (var forward in new[]{false,true}) {
+            var sign=forward?1d:-1d;
+            for (var k=0;k<=100;k++) {
+                var f=PageTurnMath.Frame(w,h,k/100d,forward); var l=f.Layout;
+                Check(f.Strips.Length==PageTurnMath.Strips,"Incomplete page.");
+                for (var i=0;i<f.Strips.Length-1;i++) {
+                    var a=f.Strips[i];var b=f.Strips[i+1];
+                    Check(double.IsFinite(a.X) && double.IsFinite(a.Y) && double.IsFinite(a.ScaleX),"Nonfinite curl.");
+                    Check(Math.Abs(a.X+sign*l.NX*l.Step*a.ScaleX-b.X)<0.001 && Math.Abs(a.Y+l.NY*l.Step*a.ScaleX-b.Y)<0.001,"A gap opened in the fold.");
+                }
+            }
+            foreach (var x in new[]{0d,w/2,w}) foreach (var y in new[]{0d,h/2,h}) {
+                var flat=PageTurnMath.Project(w,h,x,y,0,forward);
+                Check(Math.Abs(flat.X-x)<0.001 && Math.Abs(flat.Y-y)<0.001,"Flat page was distorted.");
+                var end=PageTurnMath.Project(w,h,x,y,1,forward);
+                Check(end.X<0 || end.X>w || end.Y<0 || end.Y>h,"Turned page did not leave the viewport.");
             }
         }
     }

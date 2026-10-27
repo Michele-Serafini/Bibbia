@@ -71,43 +71,90 @@ mod imp {
             let full = graphene::Rect::new(0.0, 0.0, width, height);
             snapshot.push_clip(&full);
             let forward = self.forward.get();
-            let shadow_width = width * 0.36;
-            let shadow_x = if forward { 0.0 } else { width - shadow_width };
-            let opacity = (0.18 * (std::f64::consts::PI * self.progress.get()).sin()) as f32;
+            let frame = book_math::frame(width as f64, height as f64, self.progress.get(), forward);
+            let l = &frame.layout;
+            let sign = if forward { 1.0 } else { -1.0 };
+            let matrix = |sx: f64, sy: f64, x: f64, y: f64| {
+                graphene::Matrix::from_2d(
+                    sign * l.nx * sx,
+                    l.ny * sx,
+                    -sign * l.ny * sy,
+                    l.nx * sy,
+                    x,
+                    y,
+                )
+            };
+            snapshot.save();
+            snapshot.transform_matrix(&matrix(1.0, 1.0, frame.shadow.x, frame.shadow.y));
             snapshot.append_linear_gradient(
-                &graphene::Rect::new(shadow_x, 0.0, shadow_width, height),
-                &graphene::Point::new(if forward { shadow_x } else { width }, 0.0),
-                &graphene::Point::new(if forward { shadow_width } else { shadow_x }, 0.0),
+                &graphene::Rect::new(0.0, 0.0, width * 0.30, l.span_v as f32),
+                &graphene::Point::new(0.0, 0.0),
+                &graphene::Point::new(width * 0.30, 0.0),
                 &[
-                    gsk::ColorStop::new(0.0, gdk::RGBA::new(0.0, 0.0, 0.0, opacity)),
+                    gsk::ColorStop::new(0.0, gdk::RGBA::new(0.0, 0.0, 0.0, 0.0)),
+                    gsk::ColorStop::new(
+                        0.40,
+                        gdk::RGBA::new(0.0, 0.0, 0.0, 0.10 * frame.shadow.opacity as f32),
+                    ),
+                    gsk::ColorStop::new(
+                        0.68,
+                        gdk::RGBA::new(0.0, 0.0, 0.0, 0.22 * frame.shadow.opacity as f32),
+                    ),
                     gsk::ColorStop::new(1.0, gdk::RGBA::new(0.0, 0.0, 0.0, 0.0)),
                 ],
             );
-            // One cached texture, sampled through narrow affine projections.
-            // This path works with GSK GL/Vulkan and the Cairo renderer.
-            for strip in book_math::frame(
-                width as f64,
-                height as f64,
-                self.progress.get(),
-                self.forward.get(),
-            ) {
-                if strip.scale_x.abs() < 0.0001 {
+            snapshot.restore();
+            // Diagonal cylindrical bands. Texture, physical paper bounds and
+            // lighting share the same source transform; no 3D-only GSK nodes.
+            for band in &frame.strips {
+                if band.scale_x.abs() < 0.00001 {
                     continue;
                 }
                 snapshot.save();
-                snapshot.translate(&graphene::Point::new(strip.x, strip.y));
-                snapshot.scale(strip.scale_x, strip.scale_y);
-                let clip =
-                    graphene::Rect::new(0.0, 0.0, width / book_math::STRIPS as f32 + 0.7, height);
-                snapshot.push_clip(&clip);
-                snapshot.append_color(&paper, &clip);
-                if strip.front {
-                    snapshot.append_texture(
-                        texture,
-                        &graphene::Rect::new(-strip.source, 0.0, width, height),
-                    );
-                }
-                snapshot.append_color(&gdk::RGBA::new(0.0, 0.0, 0.0, strip.shade), &clip);
+                snapshot.transform_matrix(&matrix(band.scale_x, 1.0, band.x, band.y));
+                snapshot.push_clip(&graphene::Rect::new(
+                    0.0,
+                    0.0,
+                    (l.step() + 0.65) as f32,
+                    l.span_v as f32,
+                ));
+                snapshot.transform_matrix(&graphene::Matrix::from_2d(
+                    sign * l.nx,
+                    -sign * l.ny,
+                    l.ny,
+                    l.nx,
+                    (if forward { 0.0 } else { l.nx * width as f64 }) - band.source,
+                    (if forward { 0.0 } else { -l.ny * width as f64 }) - l.min_v,
+                ));
+                snapshot.append_color(&paper, &full);
+                snapshot.push_opacity(band.front);
+                snapshot.append_texture(texture, &full);
+                snapshot.pop();
+                let sx = l.nx * band.source - l.ny * l.min_v;
+                let sy = l.ny * band.source + l.nx * l.min_v;
+                let ex = sx + l.nx * l.step();
+                let ey = sy + l.ny * l.step();
+                snapshot.append_linear_gradient(
+                    &full,
+                    &graphene::Point::new(
+                        (if forward { sx } else { width as f64 - sx }) as f32,
+                        sy as f32,
+                    ),
+                    &graphene::Point::new(
+                        (if forward { ex } else { width as f64 - ex }) as f32,
+                        ey as f32,
+                    ),
+                    &[
+                        gsk::ColorStop::new(
+                            0.0,
+                            gdk::RGBA::new(0.0, 0.0, 0.0, band.shade_start as f32),
+                        ),
+                        gsk::ColorStop::new(
+                            1.0,
+                            gdk::RGBA::new(0.0, 0.0, 0.0, band.shade_end as f32),
+                        ),
+                    ],
+                );
                 snapshot.pop();
                 snapshot.restore();
             }

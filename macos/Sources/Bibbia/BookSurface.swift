@@ -92,9 +92,14 @@ final class BookSurface: NSView {
         root.addSublayer(canvas); overlay = canvas
         isTurning = true; turnsStarted += 1
         let width = bounds.width, height = bounds.height
-        let samples = (0...32).map { PageTurn.frame(width: width, height: height,
-                                                 progress: Double($0) / 32, forward: forward) }
-        let flat = samples[0]
+        let samples = (0...PageTurn.samples).map { PageTurn.frame(width: width, height: height,
+            progress: Double($0) / Double(PageTurn.samples), forward: forward) }
+        let l = samples[0].layout
+        let sign = forward ? 1.0 : -1.0
+        func transform(_ sx: Double, _ sy: Double) -> CATransform3D {
+            CATransform3DMakeAffineTransform(CGAffineTransform(
+                a: sign*l.nx*sx, b: l.ny*sx, c: -sign*l.ny*sy, d: l.nx*sy, tx: 0, ty: 0))
+        }
         let paper = paperCGColor
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -102,37 +107,56 @@ final class BookSurface: NSView {
             MainActor.assumeIsolated { if self?.token == epoch { self?.cancelTurn() } }
         }
         let shadow = CAGradientLayer()
-        shadow.frame = CGRect(x: forward ? 0 : width * 0.64, y: 0, width: width * 0.36, height: height)
-        shadow.colors = [NSColor.black.withAlphaComponent(0.18).cgColor, NSColor.clear.cgColor]
-        shadow.startPoint = CGPoint(x: forward ? 0 : 1, y: 0.5)
-        shadow.endPoint = CGPoint(x: forward ? 1 : 0, y: 0.5)
+        shadow.bounds = CGRect(x: 0, y: 0, width: width*0.30, height: l.spanV)
+        shadow.anchorPoint = .zero
+        shadow.position = CGPoint(x: samples[0].shadow.x, y: samples[0].shadow.y)
+        shadow.transform = transform(1, 1)
+        shadow.colors = [NSColor.clear.cgColor, NSColor.black.withAlphaComponent(0.10).cgColor,
+                         NSColor.black.withAlphaComponent(0.22).cgColor, NSColor.clear.cgColor]
+        shadow.locations = [0, 0.40, 0.68, 1]
+        shadow.startPoint = CGPoint(x: 0, y: 0.5); shadow.endPoint = CGPoint(x: 1, y: 0.5)
         shadow.opacity = 0; canvas.addSublayer(shadow)
-        animate(shadow, key: "opacity", values: (0...32).map { NSNumber(value: sin(.pi * Double($0) / 32)) })
+        animate(shadow, key: "position", values: samples.map { NSValue(point: NSPoint(x: $0.shadow.x, y: $0.shadow.y)) })
+        animate(shadow, key: "opacity", values: samples.map { NSNumber(value: $0.shadow.opacity) })
         for i in 0..<PageTurn.strips {
-            let s = flat[i]
+            let s = samples[0].strips[i]
             let slice = CALayer()
-            slice.bounds = CGRect(x: 0, y: 0, width: width / Double(PageTurn.strips) + 0.7, height: height)
+            slice.bounds = CGRect(x: 0, y: 0, width: l.step+0.65, height: l.spanV)
             slice.anchorPoint = .zero
             slice.position = CGPoint(x: s.x, y: s.y)
-            slice.backgroundColor = paper
+            slice.transform = transform(s.scaleX, 1)
             slice.masksToBounds = true
             canvas.addSublayer(slice)
+            let source = CALayer()
+            source.bounds = CGRect(x: 0, y: 0, width: width, height: height)
+            source.anchorPoint = .zero
+            source.position = CGPoint(x: (forward ? 0 : l.nx*width)-s.source,
+                                      y: (forward ? 0 : -l.ny*width)-l.minV)
+            source.setAffineTransform(CGAffineTransform(a: sign*l.nx, b: -sign*l.ny, c: l.ny, d: l.nx, tx: 0, ty: 0))
+            source.backgroundColor = paper; source.masksToBounds = true
+            slice.addSublayer(source)
             let front = CALayer()
-            front.frame = slice.bounds
-            front.contents = snapshot
-            front.contentsRect = CGRect(x: s.source / width, y: 0, width: slice.bounds.width / width, height: 1)
-            front.contentsGravity = .resize
+            front.frame = source.bounds; front.contents = snapshot; front.contentsGravity = .resize
             front.magnificationFilter = .linear
-            slice.addSublayer(front)
-            let shade = CALayer()
-            shade.frame = slice.bounds; shade.backgroundColor = NSColor.black.cgColor; shade.opacity = 0
-            slice.addSublayer(shade)
-            animate(slice, key: "position", values: samples.map { NSValue(point: NSPoint(x: $0[i].x, y: $0[i].y)) })
-            animate(slice, key: "transform", values: samples.map {
-                NSValue(caTransform3D: CATransform3DMakeScale($0[i].scaleX, $0[i].scaleY, 1))
-            })
-            animate(front, key: "opacity", values: samples.map { NSNumber(value: $0[i].front) })
-            animate(shade, key: "opacity", values: samples.map { NSNumber(value: $0[i].shade) })
+            source.addSublayer(front)
+            let sx = l.nx*s.source-l.ny*l.minV, sy = l.ny*s.source+l.nx*l.minV
+            let ex = sx+l.nx*l.step, ey = sy+l.ny*l.step
+            func shade(_ reverse: Bool) -> CAGradientLayer {
+                let gradient = CAGradientLayer()
+                gradient.frame = source.bounds
+                gradient.startPoint = CGPoint(x: (forward ? sx : width-sx)/width, y: sy/height)
+                gradient.endPoint = CGPoint(x: (forward ? ex : width-ex)/width, y: ey/height)
+                gradient.colors = reverse ? [NSColor.clear.cgColor, NSColor.black.cgColor]
+                                          : [NSColor.black.cgColor, NSColor.clear.cgColor]
+                gradient.opacity = 0; source.addSublayer(gradient)
+                return gradient
+            }
+            let shadeStart = shade(false), shadeEnd = shade(true)
+            animate(slice, key: "position", values: samples.map { NSValue(point: NSPoint(x: $0.strips[i].x, y: $0.strips[i].y)) })
+            animate(slice, key: "transform", values: samples.map { NSValue(caTransform3D: transform($0.strips[i].scaleX, 1)) })
+            animate(front, key: "opacity", values: samples.map { NSNumber(value: $0.strips[i].front) })
+            animate(shadeStart, key: "opacity", values: samples.map { NSNumber(value: $0.strips[i].shadeStart) })
+            animate(shadeEnd, key: "opacity", values: samples.map { NSNumber(value: $0.strips[i].shadeEnd) })
         }
         CATransaction.commit()
     }
@@ -153,7 +177,25 @@ final class BookSurface: NSView {
     }
 
     func saveMotionFrame(to url: URL) throws {
-        guard let live = overlay?.presentation(), isTurning else { throw BibleError.invalid("No active paper animation") }
+        guard let overlay, let corner = overlay.sublayers?.last?.presentation(), isTurning else {
+            throw BibleError.invalid("No active paper animation")
+        }
+        // Verify the compositor is actually deforming the corner, rather than
+        // merely waiting for the completion callback with a static bitmap.
+        let resting = PageTurn.frame(width: bounds.width, height: bounds.height, progress: 0, forward: true).layout.nx
+        guard abs(abs(corner.transform.m11)-resting) > 0.02 || corner.transform.m11 < 0 else {
+            throw BibleError.invalid("Corner presentation has not curled")
+        }
+        // Freeze each presentation layer separately. Rendering only the parent
+        // presentation layer can otherwise capture its children's model poses.
+        func freeze(_ model: CALayer) -> CALayer {
+            let live = model.presentation() ?? model
+            let copy = model is CAGradientLayer ? CAGradientLayer(layer: live) : CALayer(layer: live)
+            copy.removeAllAnimations()
+            copy.sublayers = model.sublayers?.map { freeze($0) }
+            return copy
+        }
+        let live = freeze(overlay)
         let width = max(1, Int(bounds.width)), height = max(1, Int(bounds.height))
         guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,

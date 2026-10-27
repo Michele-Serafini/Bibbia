@@ -18,6 +18,7 @@
   <categories><category>Education</category><category>Literature</category></categories>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.7.0" date="2026-10-27"><description><p>A progressive top-corner page curl with a diagonal fold, moving shadow and translucent paper back.</p></description></release>
     <release version="0.6.0" date="2026-10-26">
       <description><p>Book-style reading with a curved chapter turn, paper shading and native animations that respect reduced motion.</p></description>
     </release>
