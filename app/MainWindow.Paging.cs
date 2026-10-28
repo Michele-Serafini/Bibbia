@@ -82,18 +82,12 @@ public sealed partial class MainWindow
             measurementHost=new Canvas {Opacity=0,IsHitTestVisible=false};
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(measurementHost,Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
             BookStage.Children.Add(measurementHost);
-            var grid=new Grid {ColumnSpacing=10};
-            foreach(var column in new[]{new GridLength(28),new GridLength(1,GridUnitType.Star),new GridLength(32)})grid.ColumnDefinitions.Add(new ColumnDefinition {Width=column});
-            measurementNumber=new TextBlock {FontSize=12,Margin=new Thickness(0,8,0,0)};
-            measurementEditor=new RichEditBox {IsReadOnly=true,IsSpellCheckEnabled=false,IsTabStop=false,MinHeight=0,Padding=new Thickness(0),BorderThickness=new Thickness(0),TextWrapping=TextWrapping.Wrap,FontFamily=(FontFamily)Application.Current.Resources["ReadingFontFamily"]};
+            // Use the actual XAML data template, so font resolution, native
+            // RichEdit initialization and styling match the displayed pages.
+            measurementRow=(Border)VerseList.ItemTemplate.LoadContent();
+            measurementEditor=Descendants<RichEditBox>(measurementRow).Single();
+            measurementNumber=Descendants<TextBlock>(measurementRow).First();
             measurementEditor.Loaded+=(_,_)=>{measuredKey="";ScheduleBookLayout();};
-            ScrollViewer.SetVerticalScrollBarVisibility(measurementEditor,ScrollBarVisibility.Disabled);
-            ScrollViewer.SetHorizontalScrollBarVisibility(measurementEditor,ScrollBarVisibility.Disabled);
-            ScrollViewer.SetVerticalScrollMode(measurementEditor,ScrollMode.Disabled);
-            var menu=new Button {Content="⋯",Padding=new Thickness(6),MinWidth=28,BorderThickness=new Thickness(0),VerticalAlignment=VerticalAlignment.Top};
-            Grid.SetColumn(measurementEditor,1);Grid.SetColumn(menu,2);
-            grid.Children.Add(measurementNumber);grid.Children.Add(measurementEditor);grid.Children.Add(menu);
-            measurementRow=new Border {Padding=new Thickness(12,8,12,8),Margin=new Thickness(0,3,0,3),Child=grid};
             measurementHost.Children.Add(measurementRow);
             BookStage.UpdateLayout();
         }
@@ -103,12 +97,12 @@ public sealed partial class MainWindow
         measuredRows.Clear();measuredLines.Clear();double y=0;
         measurementEditor!.FontSize=fontSize;
         foreach(var row in readerRows){
+            measurementRow.DataContext=row;
             measurementNumber!.Text=row.Number;
+            measurementEditor.FontSize=fontSize;
             UpdateDocument(measurementEditor,()=>{
                 measurementEditor.Document.SetText(TextSetOptions.None,row.Text);
-                var whole=measurementEditor.Document.GetRange(0,row.Text.Length);
-                whole.CharacterFormat.Size=(float)(fontSize*0.75);
-                whole.ParagraphFormat.SetLineSpacing(LineSpacingRule.Multiple,1.2f);
+                ApplyTextStylesCore(measurementEditor,row);
             });
             measurementRow.Width=width;measurementRow.InvalidateMeasure();measurementRow.Measure(new Size(width,double.PositiveInfinity));
             var h=measurementRow.DesiredSize.Height;
@@ -191,7 +185,7 @@ public sealed partial class MainWindow
                         editor.Document.GetRange(line.Offset,line.Offset).GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var actual,out _);
                         var expected=line.Y-measuredRows[first].Y;
                         if(Math.Abs(origin+actual.Y-expected)>2 || Math.Abs(actual.Height-line.Height)>2)
-                            throw new InvalidOperationException($"Native page layout differs at verse {row.Index}, offset {line.Offset}: expected {expected}/{line.Height}, actual {origin+actual.Y}/{actual.Height}");
+                            throw new InvalidOperationException($"Native page layout differs at verse {row.Index}, offset {line.Offset}: expected {expected}/{line.Height}, actual {origin+actual.Y}/{actual.Height}; measure font {measurementEditor!.Document.GetRange(0,1).CharacterFormat.Name}/{measurementEditor.Document.GetRange(0,1).CharacterFormat.Size}, actual font {editor.Document.GetRange(0,1).CharacterFormat.Name}/{editor.Document.GetRange(0,1).CharacterFormat.Size}");
                     }
                 }
             }
