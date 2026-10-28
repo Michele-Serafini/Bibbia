@@ -65,7 +65,7 @@ struct NoteOrganizationSheet: View {
                 Button(model.t("Salva", "Save")) {
                     saving = true
                     Task { do { try await model.saveOrganization(hit, folder: folder, tags: tags); dismiss() }
-                        catch { error = error.localizedDescription; saving = false } }
+                        catch { self.error = error.localizedDescription; saving = false } }
                 }.keyboardShortcut(.defaultAction).disabled(saving).accessibilityIdentifier("saveOrganization")
             }
         }.padding(24).frame(width: 400)
@@ -87,7 +87,7 @@ struct NoteCollectionsSheet: View {
             do {
                 try await model.changeCollection(kind: kind, action: action, name: action == "create" ? name : selected, newName: name)
                 selected = ""; name = ""; error = ""
-            } catch { error = error.localizedDescription }
+            } catch { self.error = error.localizedDescription }
             saving = false
         }
     }
