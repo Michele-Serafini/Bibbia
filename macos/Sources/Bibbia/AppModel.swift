@@ -15,6 +15,12 @@ final class AppModel: ObservableObject {
     @Published var query = ""
     @Published var hits: [Hit] = []
     @Published var saved: [Hit] = []
+    @Published var noteFilter = NoteFilter()
+    @Published var noteCollections = NoteCollections()
+    @Published var organizingNote: Hit?
+    @Published var showCollections = false
+    private var savedTask: Task<Void,Never>?
+    private var savedGeneration = 0
     @Published var savedPage = 0
     @Published var truncated = false
     @Published var loading = true
@@ -171,14 +177,31 @@ final class AppModel: ObservableObject {
     func loadSaved(reset: Bool = false) {
         if reset { savedPage = 0 }
         guard let store else { return }
-        let edition = position.edition, page = savedPage
-        Task {
+        savedGeneration += 1; let token = savedGeneration
+        let edition = position.edition, page = savedPage, filter = noteFilter
+        savedTask?.cancel()
+        savedTask = Task {
             do {
-                let result = try await store.saved(edition: edition, offset: page * 200)
-                guard self.position.edition == edition, self.savedPage == page else { return }
-                saved = result
-            } catch { self.error = error.localizedDescription }
+                try await Task.sleep(for: .milliseconds(180))
+                let groups = try await store.collections()
+                let result = try await store.saved(edition: edition, offset: page * 200, filter: filter)
+                try Task.checkCancellation()
+                guard self.position.edition == edition, self.savedPage == page, self.noteFilter == filter, self.savedGeneration == token else { return }
+                noteCollections = groups; saved = result
+            } catch is CancellationError {} catch { self.error = error.localizedDescription }
         }
+    }
+    func saveOrganization(_ hit: Hit, folder: String, tags: String) async throws {
+        guard let store else { return }
+        try await store.organize(hit.position, folder: folder, tags: tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+        organizingNote = nil; loadSaved()
+    }
+    func changeCollection(kind: String, action: String, name: String, newName: String) async throws {
+        guard let store else { return }
+        noteCollections = try await store.collection(kind: kind, action: action, name: name, newName: newName)
+        if let folder=noteFilter.folder,!folder.isEmpty,!noteCollections.folders.contains(folder) { noteFilter.folder=nil }
+        if let tag=noteFilter.tag,!noteCollections.tags.contains(tag) { noteFilter.tag=nil }
+        loadSaved(reset: true)
     }
 
     func mark(_ selection: [SelectedSpan], action: String, at target: Position) {
@@ -231,6 +254,7 @@ final class AppModel: ObservableObject {
     func flush() async {
         if !comparing { readingSurface?.pager.save() }
         comparisonTask?.cancel()
+        savedTask?.cancel()
         positionTask?.cancel(); preferencesTask?.cancel(); searchTask?.cancel()
         do {
             try await store?.savePosition(position)

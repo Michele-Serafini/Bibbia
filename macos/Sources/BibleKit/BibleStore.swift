@@ -3,7 +3,7 @@ import Foundation
 /// All disk work and search run on the actor executor, away from the UI thread.
 /// A single edition is mapped/cached. There are no timers or background polling.
 public actor BibleStore {
-    private let database: Database
+    let database: Database
     let resources: URL
     private var catalog: [Edition]
     private var cached: (String, Corpus)?
@@ -42,6 +42,7 @@ public actor BibleStore {
                 try database.transaction {
                     _ = try database.rows("UPDATE editions SET id=? WHERE id=?", [.text(id), .text(original)])
                     _ = try database.rows("UPDATE annotations SET edition=? WHERE edition=?", [.text(id), .text(original)])
+                    _ = try database.rows("UPDATE note_organization SET edition=? WHERE edition=?", [.text(id), .text(original)])
                     _ = try database.rows("UPDATE settings SET payload=json_set(payload,'$.edition',?) WHERE key='position' AND json_extract(payload,'$.edition')=?", [.text(id), .text(original)])
                 }
             }
@@ -130,6 +131,7 @@ public actor BibleStore {
     private func save(_ annotation: Annotation, at position: Position) throws {
         let keys: [SQLValue] = [.text(position.edition), .integer(position.book), .integer(position.chapter), .integer(position.verse)]
         if annotation.isEmpty {
+            _ = try database.rows("DELETE FROM note_organization WHERE edition=? AND book=? AND chapter=? AND verse=?", keys)
             _ = try database.rows("DELETE FROM annotations WHERE edition=? AND book=? AND chapter=? AND verse=?", keys)
         } else {
             let json = String(decoding: try JSONEncoder().encode(annotation), as: UTF8.self)
@@ -175,22 +177,6 @@ public actor BibleStore {
         }
         try Task.checkCancellation()
         return try corpus(edition).search(edition: edition, query: query)
-    }
-
-    public func saved(edition: String, limit: Int = 200, offset: Int = 0) throws -> [Hit] {
-        guard (1...200).contains(limit), offset >= 0 else { throw BibleError.invalid("Pagina non valida / Invalid page") }
-        let source = try corpus(edition)
-        let rows = try database.rows("SELECT book,chapter,verse,payload FROM annotations WHERE edition=? ORDER BY book,chapter,verse LIMIT ? OFFSET ?",
-                                    [.text(edition), .integer(limit), .integer(offset)])
-        return try rows.map { row in
-            guard let bi = row[0].integer, let ci = row[1].integer, let vi = row[2].integer, let json = row[3].string else {
-                throw BibleError.invalid("Appunto non valido / Invalid annotation")
-            }
-            let span = try source.chapter(bi, ci)
-            return Hit(position: Position(edition: edition, book: bi, chapter: ci, verse: vi),
-                       name: source.books[bi].name, label: span.label(vi), text: try source.verse(bi, ci, vi),
-                       annotation: try JSONDecoder().decode(Annotation.self, from: Data(json.utf8)))
-        }
     }
 
     public func importEdition(file: URL, name: String) throws -> [Edition] {

@@ -139,6 +139,7 @@ public sealed partial class MainWindow
         ImportButton.Content = T("Importa traduzione JSON…"); OpenDataButton.Content = T("Apri cartella dati");
         PrivacyTitle.Text = T("I tuoi appunti restano sul dispositivo");
         PrivacyDescription.Text = T("Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento.");
+        RelabelOrganization();
         AboutLabel.Text = T("Bibbia · {0}\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.",typeof(App).Assembly.GetName().Version?.ToString(3)??"0.10.0");
         UpdatePageTitle();
         if (books.Count > book) ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);

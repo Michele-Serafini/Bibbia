@@ -33,6 +33,10 @@ public sealed class SearchRow
     public required string Reference { get; init; }
     public required string Text { get; init; }
     public required string Detail { get; init; }
+    public string Folder {get;init;}="";
+    public string[] Tags {get;init;}=[];
+    public string OrganizeLabel {get;init;}="";
+    public Visibility OrganizationVisibility {get;init;}=Visibility.Collapsed;
 }
 
 public sealed partial class MainWindow : Window
@@ -52,6 +56,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         InitializeBookMotion();
+        InitializeOrganization();
         InitializeBookPagination();
         ConfigureWindowCaption();
         Navigation.IsEnabled = false;
@@ -76,6 +81,7 @@ public sealed partial class MainWindow : Window
             selectionTimer?.Stop();
             fontTimer?.Stop();
             bookLayoutTimer?.Stop();
+            notesTimer?.Stop();notesGeneration++;
             try {
                 BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});
                 BibleEngine.Call(new { op = "close" });
@@ -278,6 +284,7 @@ public sealed partial class MainWindow : Window
             ResultStatus.Text = T("Cerca in {0}. Fino a 200 risultati per ricerca.", edition);
             SearchBox.Focus(FocusState.Programmatic);
         }
+        notesBar.Visibility=tag=="saved"?Visibility.Visible:Visibility.Collapsed;
         SavedPreviousPage.Visibility = SavedNextPage.Visibility = tag == "saved" ? Visibility.Visible : Visibility.Collapsed;
         if (tag == "saved" && ready) { savedOffset=0; LoadSaved(); }
         if (tag == "read" && ready) ScrollToCurrentVerse();
@@ -299,16 +306,12 @@ public sealed partial class MainWindow : Window
             if (a.GetProperty("note").GetString() is { Length: > 0 } note) labels.Add(note);
             detail = string.Join(" · ", labels);
         }
-        return new SearchRow { Book = b, Chapter = c, Verse = v, Reference = $"{x.GetProperty("name").GetString()} {c + 1}:{x.GetProperty("label").GetString()}", Text = x.GetProperty("text").GetString()!, Detail = detail };
+        var folder=annotated && x.TryGetProperty("organization",out var org)?org.GetProperty("folder").GetString()!:"";
+        var tags=annotated && x.TryGetProperty("organization",out org)?org.GetProperty("tags").EnumerateArray().Select(v=>v.GetString()!).ToArray():[];
+        if(annotated)detail=string.Join(" · ",new[]{detail,folder,string.Join(" ",tags.Select(t=>"#"+t))}.Where(s=>s.Length>0));
+        return new SearchRow { Folder=folder,Tags=tags,OrganizeLabel=N("Organizza…","Organize…"),OrganizationVisibility=annotated?Visibility.Visible:Visibility.Collapsed,Book = b, Chapter = c, Verse = v, Reference = $"{x.GetProperty("name").GetString()} {c + 1}:{x.GetProperty("label").GetString()}", Text = x.GetProperty("text").GetString()!, Detail = detail };
     }
-    private void LoadSaved()
-    {
-        var rows = BibleEngine.Call(new { op = "saved", edition, limit=200, offset=savedOffset }).EnumerateArray().Select(x => ToSearchRow(x, true)).ToList();
-        ResultList.ItemsSource = rows;
-        ResultStatus.Text = rows.Count == 0 ? T("Nessun appunto in {0}. Seleziona parole o frasi durante la lettura per iniziare.", edition) : T("Appunti {0}–{1} · {2}", savedOffset+1,savedOffset+rows.Count,edition);
-        SavedPreviousPage.IsEnabled = savedOffset>0;
-        SavedNextPage.IsEnabled = rows.Count==200;
-    }
+    private void LoadSaved()=>_ = GuardAsync(LoadSavedNotes);
     private void SavedPreviousClick(object sender,RoutedEventArgs e) => Guard(() => { savedOffset=Math.Max(0,savedOffset-200); LoadSaved(); });
     private void SavedNextClick(object sender,RoutedEventArgs e) => Guard(() => { savedOffset+=200; LoadSaved(); });
     private async void SearchClick(object sender, RoutedEventArgs e) => await GuardAsync(Search);

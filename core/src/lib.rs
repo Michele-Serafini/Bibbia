@@ -12,6 +12,7 @@ use std::{
 type Result<T> = std::result::Result<T, String>;
 mod comparison;
 mod corpus;
+mod organization;
 mod selection;
 use corpus::{BookRef, Chapter, Edition};
 use selection::TextMark;
@@ -67,7 +68,7 @@ impl Engine {
         std::fs::create_dir_all(directory).map_err(error)?;
         let db = Connection::open(directory.join("bible.sqlite3")).map_err(error)?;
         db.execute_batch(
-            "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
+            "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-1024;
             CREATE TABLE IF NOT EXISTS annotations (
                 edition TEXT NOT NULL, book INTEGER NOT NULL, chapter INTEGER NOT NULL,
                 verse INTEGER NOT NULL, payload TEXT NOT NULL,
@@ -76,6 +77,7 @@ impl Engine {
             CREATE TABLE IF NOT EXISTS editions (id TEXT PRIMARY KEY, payload TEXT NOT NULL, book_count INTEGER);",
         )
         .map_err(error)?;
+        db.execute_batch(organization::SCHEMA).map_err(error)?;
         // Upgrade old installations once, without parsing imported corpora on
         // subsequent launches. Personal annotations and source text are untouched.
         let has_count = db
@@ -145,6 +147,11 @@ impl Engine {
                         params![id, original],
                     )
                     .map_err(error)?;
+                    tx.execute(
+                        "UPDATE note_organization SET edition=?1 WHERE edition=?2",
+                        params![id, original],
+                    )
+                    .map_err(error)?;
                     tx.execute("UPDATE settings SET payload=json_set(payload,'$.edition',?1) WHERE key='position' AND json_extract(payload,'$.edition')=?2",params![id,original]).map_err(error)?;
                     tx.commit().map_err(error)?;
                 }
@@ -163,6 +170,7 @@ impl Engine {
         a: &Annotation,
     ) -> Result<()> {
         if *a == Annotation::default() {
+            self.db.execute("DELETE FROM note_organization WHERE edition=? AND book=? AND chapter=? AND verse=?",params![edition,book as i64,chapter as i64,verse as i64]).map_err(error)?;
             self.db
                 .execute(
                     "DELETE FROM annotations WHERE edition=? AND book=? AND chapter=? AND verse=?",
@@ -435,45 +443,10 @@ impl Engine {
                 self.save_annotation(edition, book, chapter, verse, &annotation)?;
                 Ok(json!(annotation))
             }
-            "saved" => {
-                let books = self.books(edition)?;
-                let limit = match request.get("limit") {
-                    None => -1,
-                    Some(v) => v.as_i64().filter(|v|(1..=200).contains(v)).ok_or("Limite non valido")?,
-                };
-                let offset = match request.get("offset") {
-                    None => 0,
-                    Some(v) => v.as_i64().filter(|v|*v>=0).ok_or("Indice non valido: offset")?,
-                };
-                let mut stmt = self.db.prepare_cached("SELECT book, chapter, verse, payload FROM annotations WHERE edition=? ORDER BY book,chapter,verse LIMIT ? OFFSET ?").map_err(error)?;
-                let rows = stmt
-                    .query_map(params![edition,limit,offset], |r| {
-                        Ok((
-                            r.get::<_, u32>(0)?,
-                            r.get::<_, u32>(1)?,
-                            r.get::<_, u32>(2)?,
-                            r.get::<_, String>(3)?,
-                        ))
-                    })
-                    .map_err(error)?;
-                let mut result = Vec::new();
-                for row in rows {
-                    let (b, c, v, a) = row.map_err(error)?;
-                    let (b, c, v) = (b as usize, c as usize, v as usize);
-                    let annotation: Annotation = serde_json::from_str(&a).map_err(error)?;
-                    let name = books
-                        .get(b)
-                        .ok_or("Libro salvato non valido")?
-                        .name;
-                    let text = self
-                        .chapter(edition, b, c)?
-                        .get(v)
-                        .ok_or("Versetto salvato non valido")?;
-                    result.push(json!({"book":b,"chapter":c,"verse":v,"name":name,
-                        "text":text,"label":self.chapter(edition,b,c)?.label(v),"annotation":annotation}));
-                }
-                Ok(json!(result))
-            }
+            "saved" => self.saved_notes(&request,edition),
+            "collections" => self.collections(),
+            "collection" => self.collection(&request),
+            "organize" => self.organize(&request,edition),
             "search" => {
                 let query = field(&request, "query")?.trim().to_lowercase();
                 if query.chars().count() < 2 {

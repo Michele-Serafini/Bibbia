@@ -49,6 +49,11 @@ try
     Check(BibleEngine.Call(new {op="chapter",edition=catholic,book=0,chapter=0})[0].GetProperty("annotation").GetProperty("ranges")[0].GetProperty("underline").GetBoolean(), "Sottolineatura parziale persa alla riapertura.");
     var saved = BibleEngine.Call(new { op = "saved", edition = "Diodati 1649" });
     Check(saved[0].GetProperty("annotation").GetProperty("note").GetString() == annotation.note, "Nota persa dopo riapertura.");
+    BibleEngine.Call(new {op="organize",edition="Diodati 1649",book=0,chapter=0,verse=0,folder="Studio",tags=new[]{"carità","lettura"}});
+    var organized=BibleEngine.Call(new {op="saved",edition="Diodati 1649",query="CARITÀ",folder="Studio",tag="lettura",limit=200,offset=0});
+    Check(organized.GetArrayLength()==1 && organized[0].GetProperty("annotation").GetProperty("note").GetString()==annotation.note,"Organizzazione o ricerca Unicode non corretta.");
+    BibleEngine.Call(new {op="collection",kind="folder",action="delete",name="Studio"});
+    Check(BibleEngine.Call(new {op="saved",edition="Diodati 1649"}).GetArrayLength()==1,"Eliminare una cartella non deve eliminare gli appunti.");
     var source = Path.Combine(directory, "traduzione.json");
     File.WriteAllText(source, """[{"abbrev":"gen","name":"Genesi","chapters":[["Una parola di speranza."]]}]""");
     var imported = BibleEngine.Call(new { op = "import", id = "  Italiano locale  ", path = source });

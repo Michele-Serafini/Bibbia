@@ -89,12 +89,25 @@ public struct Verse: Sendable, Identifiable {
     public var annotation: Annotation
 }
 
+public struct NoteOrganization: Codable, Sendable, Equatable {
+    public var folder = ""
+    public var tags: [String] = []
+    public init(folder: String = "", tags: [String] = []) { self.folder = folder; self.tags = tags }
+    public var summary: String { ([folder].filter { !$0.isEmpty } + tags.map { "#"+$0 }).joined(separator: " · ") }
+}
+public struct NoteCollections: Codable, Sendable {
+    public var folders: [String] = []
+    public var tags: [String] = []
+    public init() {}
+}
+
 public struct Hit: Sendable, Identifiable {
     public let position: Position
     public let name: String
     public let label: String
     public let text: String
     public let annotation: Annotation
+    public var organization = NoteOrganization()
     public var id: Position { position }
     public var reference: String { "\(name) \(position.chapter + 1):\(label)" }
 }

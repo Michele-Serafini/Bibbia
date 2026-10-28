@@ -746,3 +746,84 @@ fn saved_pages_have_stable_order_and_keep_the_legacy_full_collection() {
         assert!(e.request(req).is_err());
     }
 }
+
+#[test]
+fn organized_notes_filter_search_rename_and_delete_without_losing_annotations() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    for verse in 0..4 {
+        e.request(json!({"op":"annotate","edition":"KJV","book":0,"chapter":0,"verse":verse,"annotation":{"note":if verse%2==0{"PERCHÉ 🌅 gioia"}else{"Pace"},"bookmark":verse==3,"highlight":null,"underline":verse==1}})).unwrap();
+    }
+    e.request(json!({"op":"collection","kind":"folder","action":"create","name":"Vuota"}))
+        .unwrap();
+    for verse in [0, 2] {
+        e.request(json!({"op":"organize","edition":"KJV","book":0,"chapter":0,"verse":verse,"folder":"Studio","tags":["speranza","amore","amore"]})).unwrap();
+    }
+    let result=e.request(json!({"op":"saved","edition":"KJV","query":"perché 🌅","folder":"Studio","tag":"amore","kind":"note","limit":1,"offset":1})).unwrap();
+    assert_eq!(result[0]["verse"], 2);
+    assert_eq!(
+        result[0]["organization"]["tags"],
+        json!(["amore", "speranza"])
+    );
+    assert_eq!(
+        e.request(json!({"op":"saved","edition":"KJV","query":"created","kind":"all"}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        e.request(json!({"op":"saved","edition":"KJV","kind":"marked"}))
+            .unwrap()[0]["verse"],
+        1
+    );
+    assert_eq!(
+        e.request(json!({"op":"saved","edition":"KJV","folder":""}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(
+        e.request(json!({"op":"saved","edition":"KJV","query":"%' OR 1=1 --"}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert!(e.request(json!({"op":"collection","kind":"folder","action":"rename","name":"Studio","newName":"Vuota"})).is_err());
+    e.request(json!({"op":"collection","kind":"folder","action":"rename","name":"Studio","newName":"Vangelo"})).unwrap();
+    e.request(
+        json!({"op":"collection","kind":"tag","action":"rename","name":"amore","newName":"carità"}),
+    )
+    .unwrap();
+    e.request(json!({"op":"mark","edition":"KJV","book":0,"chapter":0,"verse":0,"start":0,"length":2,"action":"yellow"})).unwrap();
+    drop(e);
+    let mut e = Engine::open(dir.path()).unwrap();
+    let rows = e
+        .request(json!({"op":"saved","edition":"KJV","folder":"Vangelo","tag":"carità"}))
+        .unwrap();
+    assert_eq!(rows.as_array().unwrap().len(), 2);
+    assert_eq!(rows[0]["annotation"]["note"], "PERCHÉ 🌅 gioia");
+    e.request(json!({"op":"collection","kind":"folder","action":"delete","name":"Vangelo"}))
+        .unwrap();
+    e.request(json!({"op":"collection","kind":"tag","action":"delete","name":"carità"}))
+        .unwrap();
+    let rows = e.request(json!({"op":"saved","edition":"KJV"})).unwrap();
+    assert_eq!(rows.as_array().unwrap().len(), 4);
+    assert_eq!(rows[0]["organization"]["folder"], "");
+    assert_eq!(rows[0]["organization"]["tags"], json!(["speranza"]));
+    e.request(json!({"op":"annotate","edition":"KJV","book":0,"chapter":0,"verse":0,"annotation":Annotation::default()})).unwrap();
+    assert_eq!(
+        e.db.query_row(
+            "SELECT count(*) FROM note_organization WHERE verse=0",
+            [],
+            |r| r.get::<_, i64>(0)
+        )
+        .unwrap(),
+        0
+    );
+    assert!(e.request(json!({"op":"organize","edition":"KJV","book":0,"chapter":0,"verse":99,"folder":"Invalid","tags":[]})).is_err());
+}

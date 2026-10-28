@@ -36,6 +36,22 @@ Disattivare **Libro** per tornare allo scorrimento continuo. Il file locale
 `reader.json`, accanto al database, conserva modalità e punto di lettura.
 Testo, selezioni e annotazioni continuano a usare i controlli del sistema.
 
+## Appunti organizzati
+
+Aprire **La mia raccolta / Appunti** e usare **Organizza…** accanto al versetto
+per assegnargli una cartella e fino a 16 etichette. Scrivere un nome nuovo lo
+crea automaticamente; una cartella vuota rimuove l'assegnazione. **Gestisci…**
+permette anche di creare cartelle vuote, rinominare ed eliminare cartelle o
+etichette: gli appunti e le evidenziazioni vengono conservati.
+
+La ricerca trova parole nel testo biblico salvato, nelle note, nei riferimenti,
+nelle cartelle e nelle etichette. I filtri per cartella, etichetta e tipo di
+appunto si combinano con la ricerca e operano sulla traduzione indicata nella
+raccolta. I risultati sono paginati a 200; la ricerca scorre i dati nel database
+su un thread dedicato, senza caricare l'intera raccolta in RAM. Accenti ed emoji
+restano intatti. L'organizzazione usa tabelle SQLite separate, compatibili tra
+le tre piattaforme, senza modificare il formato delle annotazioni precedenti.
+
 ## Aspetto
 
 macOS, tema chiaro:

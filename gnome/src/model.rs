@@ -43,6 +43,10 @@ pub struct Hit {
     pub text: String,
     #[serde(default)]
     pub annotation: Option<Annotation>,
+    #[serde(default)]
+    pub organization: serde_json::Value,
+    #[serde(skip)]
+    pub organize_label: String,
 }
 #[derive(Clone, Debug)]
 pub struct Span {

@@ -98,6 +98,19 @@ fn find_scale(widget: &gtk::Widget) -> Option<gtk::Scale> {
     }
     None
 }
+fn find_named(widget: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
+    if widget.widget_name() == name {
+        return Some(widget.clone());
+    }
+    let mut child = widget.first_child();
+    while let Some(widget) = child {
+        if let Some(found) = find_named(&widget, name) {
+            return Some(found);
+        }
+        child = widget.next_sibling();
+    }
+    None
+}
 fn find_language(widget: &gtk::Widget) -> Option<adw::ComboRow> {
     if let Ok(row) = widget.clone().downcast::<adw::ComboRow>()
         && row.title() == "Lingua dell’app"
@@ -495,6 +508,55 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         "Saved collection did not show the annotated verse",
     )
     .await?;
+    ui.window
+        .lookup_action("organize-note")
+        .ok_or("Missing organization action")?
+        .activate(Some(&(0_u32, 0_u32, 0_u32).to_variant()));
+    glib::timeout_future(Duration::from_millis(100)).await;
+    let organization_popup = ui
+        .notes_popup
+        .borrow()
+        .upgrade()
+        .ok_or("Organization popup did not open")?;
+    find_named(organization_popup.upcast_ref(), "organize-folder")
+        .ok_or("Folder field missing")?
+        .downcast::<gtk::Entry>()
+        .unwrap()
+        .set_text("Studio");
+    find_named(organization_popup.upcast_ref(), "organize-tags")
+        .ok_or("Tag field missing")?
+        .downcast::<gtk::Entry>()
+        .unwrap()
+        .set_text("speranza, lettura");
+    find_named(organization_popup.upcast_ref(), "save-organization")
+        .ok_or("Save organization missing")?
+        .downcast::<gtk::Button>()
+        .unwrap()
+        .emit_clicked();
+    until(
+        || {
+            ui.saved_store
+                .item(0)
+                .and_downcast::<glib::BoxedAnyObject>()
+                .is_some_and(|o| o.borrow::<Hit>().organization["folder"] == "Studio")
+        },
+        "Organization did not persist",
+    )
+    .await?;
+    ui.saved_query.set_text("unmatched-annotation-fixture");
+    until(
+        || ui.saved_store.n_items() == 0,
+        "Annotation search did not filter results",
+    )
+    .await?;
+    ui.saved_query.set_text("SPERANZA");
+    until(
+        || ui.saved_store.n_items() == 1,
+        "Tag search did not find saved annotation",
+    )
+    .await?;
+    screenshot(&ui, "gnome-notes.png").await?;
+    ui.saved_query.set_text("");
     ui.saved_view.emit_by_name::<()>("activate", &[&0_u32]);
     until(
         || ui.stack.visible_child_name().as_deref() == Some("read"),

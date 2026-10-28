@@ -287,6 +287,22 @@ try {
     }
     Select-Page 'SavedNavigation'
     Wait-Text (Wait-Control $window 'ResultList') 'Genesi 1:1' | Out-Null
+    Invoke-Control (Wait-Control $window 'OrganizeSaved')
+    $folderCombo = Wait-Control $window 'OrganizeFolder' -Popup
+    $editCondition = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Edit)
+    $folderEdit = $folderCombo.FindFirst([Windows.Automation.TreeScope]::Descendants,$editCondition)
+    if ($null -eq $folderEdit) { throw 'Editable organization folder missing.' }
+    $folderEdit.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue('Studio')
+    (Wait-Control $window 'OrganizeTags' -Popup).GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue('speranza, lettura')
+    Invoke-Control (Wait-Control $window 'SaveOrganization' -Popup)
+    $notesQuery = (Wait-Control $window 'NotesQuery').GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
+    $notesQuery.SetValue('unmatched-annotation-fixture')
+    Start-Sleep -Milliseconds 800
+    if ($null -ne (Find-Control (Wait-Control $window 'ResultList') 'OrganizeSaved')) { throw 'Annotation search failed to filter the collection.' }
+    $notesQuery.SetValue('SPERANZA')
+    Wait-Text (Wait-Control $window 'ResultList') 'Genesi 1:1' | Out-Null
+    Save-WindowImage 'windows-notes.png'
+    $notesQuery.SetValue('')
     if ((Wait-Control $window 'SavedPreviousPage').Current.IsEnabled) { throw 'First saved page has an enabled previous button.' }
     if ((Wait-Control $window 'SavedNextPage').Current.IsEnabled) { throw 'Single annotation unexpectedly has another page.' }
     Select-Page 'ReadNavigation'

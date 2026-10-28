@@ -17,6 +17,7 @@ mod annotations;
 mod book;
 mod book_math;
 mod comparison;
+mod organization;
 mod paging;
 pub mod performance;
 mod preferences;
@@ -49,6 +50,15 @@ pub struct Ui {
     pending_position: RefCell<Option<Position>>,
     search_generation: Cell<u64>,
     saved_offset: Cell<usize>,
+    saved_generation: Cell<u64>,
+    notes_changing: Cell<bool>,
+    note_groups: RefCell<Value>,
+    notes_popup: RefCell<glib::WeakRef<gtk::Popover>>,
+    saved_query: gtk::SearchEntry,
+    saved_folder: gtk::DropDown,
+    saved_tag: gtk::DropDown,
+    saved_kind: gtk::DropDown,
+    saved_manage: gtk::Button,
     mouse_down: Cell<bool>,
     context_click: Cell<bool>,
     selection_source: RefCell<Option<glib::SourceId>>,
@@ -160,6 +170,10 @@ fn results() -> (gio::ListStore, gtk::ListView) {
         row.append(&title);
         row.append(&text);
         row.append(&note);
+        let organize = icon_button("folder-open-symbolic", "Organizza…");
+        organize.set_halign(gtk::Align::Start);
+        organize.set_action_name(Some("win.organize-note"));
+        row.append(&organize);
         item.set_child(Some(&row));
     });
     factory.connect_bind(|_, item| {
@@ -189,8 +203,32 @@ fn results() -> (gio::ListStore, gtk::ListView) {
             .as_ref()
             .map(|a| a.note.as_str())
             .unwrap_or("");
-        note.set_text(message);
-        note.set_visible(!message.is_empty());
+        let folder = hit.organization["folder"].as_str().unwrap_or("");
+        let tags = hit.organization["tags"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(|s| format!("#{s}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let detail = [message, folder, &tags]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join(" · ");
+        note.set_text(&detail);
+        note.set_visible(!detail.is_empty());
+        let button = note
+            .next_sibling()
+            .unwrap()
+            .downcast::<gtk::Button>()
+            .unwrap();
+        button.set_visible(hit.annotation.is_some());
+        button.set_tooltip_text(Some(&hit.organize_label));
+        button.set_action_target_value(Some(
+            &(hit.book as u32, hit.chapter as u32, hit.verse as u32).to_variant(),
+        ));
     });
     let view = gtk::ListView::new(Some(selection), Some(factory));
     view.set_single_click_activate(true);
@@ -459,6 +497,25 @@ impl Ui {
         stack.add_titled_with_icon(&search, Some("search"), "Cerca", "system-search-symbolic");
         let saved = gtk::Box::new(gtk::Orientation::Vertical, 12);
         margin(&saved, 16);
+        let saved_query = gtk::SearchEntry::new();
+        saved_query.set_max_width_chars(50);
+        saved.append(&saved_query);
+        let filters = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let saved_folder = gtk::DropDown::from_strings(&["Tutte le cartelle", "Senza cartella"]);
+        let saved_tag = gtk::DropDown::from_strings(&["Tutte le etichette"]);
+        let saved_kind = gtk::DropDown::from_strings(&[
+            "Tutti gli appunti",
+            "Note",
+            "Evidenziazioni e segni",
+            "Segnalibri",
+        ]);
+        let saved_manage = icon_button("folder-new-symbolic", "Gestisci cartelle ed etichette");
+        for view in [&saved_folder, &saved_tag, &saved_kind] {
+            view.set_hexpand(true);
+            filters.append(view);
+        }
+        filters.append(&saved_manage);
+        saved.append(&filters);
         let saved_status = gtk::Label::builder()
             .xalign(0.0)
             .wrap(true)
@@ -534,6 +591,15 @@ impl Ui {
             pending_position: RefCell::new(None),
             search_generation: Cell::new(0),
             saved_offset: Cell::new(0),
+            saved_generation: Cell::new(0),
+            notes_changing: Cell::new(false),
+            note_groups: RefCell::new(json!({"folders":[],"tags":[]})),
+            notes_popup: RefCell::new(glib::WeakRef::new()),
+            saved_query,
+            saved_folder,
+            saved_tag,
+            saved_kind,
+            saved_manage,
             mouse_down: Cell::new(false),
             context_click: Cell::new(false),
             selection_source: RefCell::new(None),
@@ -712,6 +778,7 @@ impl Ui {
         });
     }
     fn connect(self: &Rc<Self>, app: &adw::Application, verse_menu: &gtk::MenuButton) {
+        self.connect_notes();
         let w = self.weak();
         self.window.connect_close_request(move |_| {
             if let Some(ui) = w.upgrade() {
@@ -1199,6 +1266,7 @@ impl Ui {
         }
     }
     fn relabel(&self) {
+        self.relabel_notes();
         self.relabel_annotations();
         self.relabel_book();
         self.comparison.set_label(&self.t("Confronta", "Compare"));
@@ -1312,26 +1380,35 @@ impl Ui {
     async fn load_saved(self: &Rc<Self>) -> Result<(), String> {
         let p = self.position();
         let offset = self.saved_offset.get();
-        let value = self
-            .core
-            .call(json!({"op":"saved","edition":p.edition,"limit":200,"offset":offset}))
-            .await?;
+        let request = self.note_request();
+        let generation = self.saved_generation.get() + 1;
+        self.saved_generation.set(generation);
+        let groups = self.core.call(json!({"op":"collections"})).await?;
+        let value = self.core.call(request.clone()).await?;
         if self.closed.get()
-            || self.position().edition != p.edition
-            || offset != self.saved_offset.get()
+            || self.saved_generation.get() != generation
+            || self.note_request() != request
         {
             return Ok(());
         }
-        let hits: Vec<Hit> = serde_json::from_value(value).map_err(|e| e.to_string())?;
+        if *self.note_groups.borrow() != groups {
+            self.note_groups.replace(groups);
+            self.relabel_notes();
+        }
+        let mut hits: Vec<Hit> = serde_json::from_value(value).map_err(|e| e.to_string())?;
+        for hit in &mut hits {
+            hit.organize_label = self.t("Organizza…", "Organize…");
+        }
         let count = hits.len();
         self.saved_store.remove_all();
         for hit in hits {
             self.saved_store.append(&glib::BoxedAnyObject::new(hit));
         }
         self.saved_status.set_text(&if count == 0 {
-            self.t(
-                "Nessun appunto in questa pagina.",
-                "No annotations on this page.",
+            format!(
+                "{} · {}",
+                self.t("Nessun appunto corrispondente.", "No matching annotations."),
+                p.edition
             )
         } else {
             format!("{}–{} · {}", offset + 1, offset + count, p.edition)

@@ -53,6 +53,9 @@ struct MainView: View {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
         .sheet(isPresented: $model.showNotices) { NoticesView(model: model) }
+        .sheet(item: $model.organizingNote) { hit in NoteOrganizationSheet(model: model, hit: hit) }
+        .sheet(isPresented: $model.showCollections) { NoteCollectionsSheet(model: model) }
+        .onChange(of: model.noteFilter) { _ in model.loadSaved(reset: true) }
         .onChange(of: model.panel) { panel in
             if panel == .search { searchFocused = true }
             if panel == .saved { model.loadSaved(reset: true) }
@@ -93,6 +96,7 @@ struct MainView: View {
                 results(model.hits, empty: model.t("Cerca nella traduzione aperta. Almeno due caratteri.", "Search the current edition. At least two characters."))
                 if model.truncated { Text(model.t("Primi 200 risultati: affina la ricerca.", "First 200 results: refine your search.")).font(.caption).foregroundStyle(.secondary).padding(10) }
             case .saved:
+                NoteFiltersView(model: model)
                 results(model.saved, empty: model.t("Le tue note, sottolineature e segnalibri appariranno qui.", "Your notes, highlights and bookmarks will appear here."))
                 HStack {
                     Button { model.savedPage -= 1; model.loadSaved() } label: { Image(systemName: "chevron.left") }.disabled(model.savedPage == 0)
@@ -124,13 +128,21 @@ struct MainView: View {
                 }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(hits) { hit in
+                    HStack(alignment: .top) {
                     Button { model.navigate(hit.position) } label: {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(hit.reference).font(.headline).foregroundStyle(.primary)
                             Text(hit.text).font(.callout).foregroundStyle(.secondary).lineLimit(3)
                             if !hit.annotation.note.isEmpty { Label(hit.annotation.note, systemImage: "note.text").font(.caption).lineLimit(2) }
+                            if !hit.organization.summary.isEmpty { Text(hit.organization.summary).font(.caption2).foregroundStyle(.secondary).lineLimit(2) }
                         }.padding(.vertical, 5).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }.buttonStyle(.plain)
+                        .contextMenu { if model.panel == .saved { Button(model.t("Organizza…", "Organize…")) { model.organizingNote = hit } } }
+                    if model.panel == .saved {
+                        Button { model.organizingNote = hit } label: { Image(systemName: "folder") }
+                            .buttonStyle(.borderless).help(model.t("Organizza…", "Organize…")).accessibilityLabel(model.t("Organizza…", "Organize…")).accessibilityIdentifier("organizeNote")
+                    }
+                    }
                 }.listStyle(.sidebar)
             }
         }

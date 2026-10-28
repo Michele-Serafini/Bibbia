@@ -33,6 +33,9 @@ final class Database {
             CREATE TABLE IF NOT EXISTS annotations (
               edition TEXT NOT NULL, book INTEGER NOT NULL, chapter INTEGER NOT NULL,
               verse INTEGER NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(edition,book,chapter,verse));
+            CREATE TABLE IF NOT EXISTS note_groups(kind TEXT NOT NULL CHECK(kind IN ('folder','tag')),name TEXT NOT NULL,PRIMARY KEY(kind,name));
+            CREATE TABLE IF NOT EXISTS note_organization(edition TEXT NOT NULL,book INTEGER NOT NULL,chapter INTEGER NOT NULL,verse INTEGER NOT NULL,folder TEXT NOT NULL DEFAULT '',tags TEXT NOT NULL DEFAULT '[]',PRIMARY KEY(edition,book,chapter,verse));
+            CREATE INDEX IF NOT EXISTS note_organization_folder ON note_organization(edition,folder,book,chapter,verse);
             CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS editions (id TEXT PRIMARY KEY, payload TEXT NOT NULL, book_count INTEGER);
             """)
@@ -54,6 +57,12 @@ final class Database {
     }
 
     func rows(_ sql: String, _ bindings: [SQLValue] = []) throws -> [[SQLValue]] {
+        var result = [[SQLValue]]()
+        try scan(sql, bindings) { row in result.append(row); return true }
+        return result
+    }
+
+    func scan(_ sql: String, _ bindings: [SQLValue] = [], _ visit: ([SQLValue]) throws -> Bool) throws {
         let statement: OpaquePointer
         if let cached = statements[sql] { statement = cached }
         else {
@@ -72,19 +81,19 @@ final class Database {
             }
             guard status == SQLITE_OK else { throw fail() }
         }
-        var result: [[SQLValue]] = []
         while true {
             let status = sqlite3_step(statement)
-            if status == SQLITE_DONE { return result }
+            if status == SQLITE_DONE { return }
             guard status == SQLITE_ROW else { throw fail() }
-            result.append((0..<sqlite3_column_count(statement)).map { column in
+            let row: [SQLValue] = (0..<sqlite3_column_count(statement)).map { column in
                 switch sqlite3_column_type(statement, column) {
                 case SQLITE_INTEGER: return .integer(Int(sqlite3_column_int64(statement, column)))
                 case SQLITE_TEXT:
                     return .text(String(cString: sqlite3_column_text(statement, column)))
                 default: return .null
                 }
-            })
+            }
+            if try !visit(row) { return }
         }
     }
 

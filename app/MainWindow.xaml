@@ -146,6 +146,7 @@
                                         <TextBlock Text="{x:Bind Reference}" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                         <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" FontSize="17" />
                                         <TextBlock Text="{x:Bind Detail}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <Button Content="{x:Bind OrganizeLabel}" Visibility="{x:Bind OrganizationVisibility}" Click="OrganizeSavedClick" AutomationProperties.AutomationId="OrganizeSaved" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ListView.ItemTemplate>

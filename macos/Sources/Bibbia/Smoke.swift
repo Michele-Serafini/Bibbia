@@ -166,6 +166,27 @@ extension AppModel {
             try check(snapshot.position == position && snapshot.preferences.fontSize == 28 && snapshot.preferences.theme == "Dark", "Position/theme/font survive reopen")
             let notes = try await reopened.saved(edition: Position().edition)
             try check(notes.first?.annotation.note == "Nota macOS 😀", "Notes survive reopen")
+            let returnTo = position
+            navigate(Position())
+            try await waitUntil { !self.loading && self.position.edition == Position().edition }
+            panel = .saved; loadSaved(reset: true)
+            try await waitUntil { self.saved.count == 1 }
+            let savedHit = saved[0]
+            organizingNote = savedHit
+            try await Task.sleep(for: .milliseconds(250))
+            try await saveOrganization(savedHit,folder:"Studio",tags:"speranza, lettura")
+            try await waitUntil { self.saved.first?.organization.folder == "Studio" }
+            noteFilter.query = "unmatched-annotation-fixture"
+            loadSaved(reset: true)
+            try await waitUntil { self.saved.isEmpty }
+            noteFilter.query = "SPERANZA"
+            noteFilter.folder = "Studio"; noteFilter.tag = "lettura"; noteFilter.kind = "note"
+            loadSaved(reset: true)
+            try await waitUntil { self.saved.count == 1 }
+            try check(saved[0].annotation.note == "Nota macOS 😀", "Organized note search combines folder, tag and note type without changing its content")
+            try screenshot(window,name:"macos-notes.png")
+            noteFilter = NoteFilter(); panel = .books; navigate(returnTo)
+            try await waitUntil { !self.loading && self.position == returnTo }
             let ext = try await reopened.books(edition: "Raccolta estesa (83 sezioni)")
             try check(ext.count == 83 && ext.contains(where: { $0.chapters.count == 108 && $0.name.contains("Enoch") }), "Extended collection available")
             let beforeComparison = position
