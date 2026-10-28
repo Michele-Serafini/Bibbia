@@ -15,7 +15,7 @@ public sealed partial class MainWindow {
     private readonly ConditionalWeakTable<RichTextBlock,List<ReaderRun>> readerRuns=new();
     private (int Start,int End) ReaderSelection(RichTextBlock editor) {
         if(!readerRuns.TryGetValue(editor,out var spans) || editor.SelectedText.Length==0)return(0,0);
-        var nativeStart=editor.SelectionStart.Offset;var nativeEnd=editor.SelectionEnd.Offset;
+        var nativeStart=Math.Min(editor.SelectionStart.Offset,editor.SelectionEnd.Offset);var nativeEnd=Math.Max(editor.SelectionStart.Offset,editor.SelectionEnd.Offset);
         var first=int.MaxValue;var last=0;
         foreach(var span in spans){
             var a=Math.Max(nativeStart,span.Run.ContentStart.Offset);var b=Math.Min(nativeEnd,span.Run.ContentEnd.Offset);

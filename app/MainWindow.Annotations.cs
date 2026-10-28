@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         liveEditors[row.Index] = editor;
         if (ReferenceEquals(editor.Tag,row)) return;
         editor.Tag = row;
-        editor.FontSize=row.TextSize;
+        editor.FontSize=row.TextSize;editor.IsTabStop=true;
         ApplyTextStylesCore(editor,row);
         AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
         AutomationProperties.SetName(editor,row.Text);
@@ -82,7 +82,7 @@ public sealed partial class MainWindow
         if (sender is not RichTextBlock editor) return;
         TraceSelection("pointer released",editor);
         var point = e.GetCurrentPoint(editor).Position;
-        // RichEdit updates its selection while handling the mouse release.
+        // Native text selection finishes while handling the mouse release.
         DispatcherQueue.TryEnqueue(() => ShowSelectionToolbar(editor,point));
     }
     private void VerseSelectionChanged(object sender, RoutedEventArgs e)
@@ -91,7 +91,7 @@ public sealed partial class MainWindow
         TraceSelection("selection changed",editor);
         if ((GetAsyncKeyState(1) & 0x8000) == 0) return;
         selectionEditor = editor;
-        // RichEdit can consume routed pointer releases. Observe the document
+        // Text selection can consume routed pointer releases. Observe the native
         // selection too, and wait for the drag to finish before opening a menu.
         if (selectionTimer == null) {
             selectionTimer = DispatcherQueue.CreateTimer();
