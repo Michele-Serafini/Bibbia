@@ -14,7 +14,7 @@ namespace Bibbia.Windows;
 
 public sealed partial class MainWindow
 {
-    private readonly Dictionary<int,RichTextBlock> liveEditors = [];
+    private readonly HashSet<RichTextBlock> liveEditors = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? selectionTimer;
     private RichTextBlock? selectionEditor;
     private CommandBarFlyout? activeSelectionFlyout;
@@ -51,7 +51,7 @@ public sealed partial class MainWindow
     private void VerseEditorUnloaded(object sender,RoutedEventArgs e)
     {
         if (sender is not RichTextBlock editor) return;
-        if (editor.Tag is VerseRow row && liveEditors.TryGetValue(row.Index,out var mapped) && ReferenceEquals(mapped,editor)) liveEditors.Remove(row.Index);
+        liveEditors.Remove(editor);
         if (ReferenceEquals(selectionEditor,editor)) { selectionTimer?.Stop(); selectionEditor=null; }
         editor.ContextFlyout=null; editor.Tag=null;readerRuns.Remove(editor);
     }
@@ -59,8 +59,7 @@ public sealed partial class MainWindow
     private void BindVerseEditor(object sender)
     {
         if (sender is not RichTextBlock editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
-        if (editor.Tag is VerseRow previous && liveEditors.TryGetValue(previous.Index,out var mapped) && ReferenceEquals(mapped,editor)) liveEditors.Remove(previous.Index);
-        liveEditors[row.Index] = editor;
+        liveEditors.Add(editor);
         if (ReferenceEquals(editor.Tag,row)) return;
         editor.Tag = row;
         editor.FontSize=row.TextSize;editor.IsTabStop=true;

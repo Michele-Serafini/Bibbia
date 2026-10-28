@@ -33,7 +33,17 @@ public sealed partial class MainWindow {
         if(local==span.Length)return span.Run.ContentEnd;
         return span.Run.ContentStart.GetPositionAtOffset(local,LogicalDirection.Forward)??span.Run.ContentEnd;
     }
-    private Rect ReaderRect(RichTextBlock editor,int offset)=>ReaderPointer(editor,offset).GetCharacterRect(LogicalDirection.Forward);
+    private Rect ReaderRect(RichTextBlock editor,int offset) {
+        var rect=ReaderPointer(editor,offset).GetCharacterRect(LogicalDirection.Forward);
+        if(rect.Height>0)return rect;
+        // Element boundaries are not necessarily insertion positions. Asking
+        // from just after the character also works across styled run starts.
+        if(editor.DataContext is VerseRow row && offset<row.Text.Length){
+            var step=char.IsHighSurrogate(row.Text[offset]) && offset+1<row.Text.Length && char.IsLowSurrogate(row.Text[offset+1])?2:1;
+            return ReaderPointer(editor,offset+step).GetCharacterRect(LogicalDirection.Backward);
+        }
+        return rect;
+    }
     private void ApplyTextStylesCore(RichTextBlock editor,VerseRow row) {
         var selected=ReaderSelection(editor);
         var wasStyling=readerStyling;readerStyling=true;
@@ -76,7 +86,10 @@ public sealed partial class MainWindow {
         } finally {readerStyling=wasStyling;}
     }
     private IEnumerable<PageLine> ReaderLines(RichTextBlock editor,VerseRow row,double top) {
-        if(!readerRuns.TryGetValue(editor,out var pieces) || pieces.Count==0)yield break;
+        if(!readerRuns.TryGetValue(editor,out var pieces) || pieces.Count==0){
+            ApplyTextStylesCore(editor,row);
+            if(!readerRuns.TryGetValue(editor,out pieces) || pieces.Count==0)yield break;
+        }
         var offset=0;
         while(offset<row.Text.Length){
             var rect=ReaderRect(editor,offset);

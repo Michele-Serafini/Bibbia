@@ -97,6 +97,10 @@ public sealed partial class MainWindow
                 var top=editor.TransformToVisual(VerseList).TransformPoint(new Point(0,0)).Y+scroll.VerticalOffset;
                 lines.AddRange(ReaderLines(editor,row,top));
             }
+            if(selectionDiagnostics){
+                var first=Descendants<RichTextBlock>(VerseList).FirstOrDefault();
+                TraceBook($"layout readers={Descendants<RichTextBlock>(VerseList).Count()} lines={lines.Count} viewport={height} first={(first==null?default(Rect):ReaderRect(first,0))} map={(first!=null && readerRuns.TryGetValue(first,out var map)?map.Count:0)}");
+            }
             var key=$"{edition}/{book}/{chapter}";
             var anchorVerse=bookPages.Count>bookPage?bookPages[bookPage].Verse:currentVerse;
             var anchorOffset=bookPages.Count>bookPage?bookPages[bookPage].Offset:0;
