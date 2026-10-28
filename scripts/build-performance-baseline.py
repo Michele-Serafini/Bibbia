@@ -19,8 +19,8 @@ revision=(ROOT/'scripts/performance-baseline.txt').read_text().strip()
 assert re.fullmatch(r'[0-9a-f]{40}',revision),'Use the full reviewed baseline commit'
 source=out/'source'
 if not source.exists():
-    run('git','fetch','--no-tags','--depth=1','origin',revision,cwd=ROOT)
-    run('git','worktree','add','--detach',source,revision,cwd=ROOT)
+    run('git','-c',f'safe.directory={ROOT}','fetch','--no-tags','--depth=1','origin',revision,cwd=ROOT)
+    run('git','-c',f'safe.directory={ROOT}','worktree','add','--detach',source,revision,cwd=ROOT)
 assert subprocess.check_output(['git','-c',f'safe.directory={source}','rev-parse','HEAD'],cwd=source,text=True).strip()==revision
 native=out/'native';native.mkdir(exist_ok=True)
 kind=platform.system()
