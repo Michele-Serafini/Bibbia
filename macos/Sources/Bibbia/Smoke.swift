@@ -66,6 +66,11 @@ extension AppModel {
             let chapterBeforePage = position.chapter
             step(1)
             try check(position.chapter == chapterBeforePage && book.pager.index > 0, "Next page stays within the chapter")
+            let savedPage = book.pager.index
+            book.pager.lastChapter = ""; book.pager.restored = false
+            book.pager.configure(book, text, self, target: position.verse)
+            book.pager.configure(book, text, self, target: position.verse)
+            try check(book.pager.index == savedPage, "Precise book resume survives deferred native layout")
             step(-1)
             try check(book.pager.index == 0, "Previous page restores the first spread")
             let originalFrame = window.frame

@@ -329,8 +329,7 @@ impl Ui {
         read_panes.set_vexpand(true);
         read_panes.put(&scrolled, 0.0, 0.0);
         read_panes.put(&right_scroll, 0.0, 0.0);
-        let book_mode = gtk::ToggleButton::with_label("Libro / Book");
-        book_mode.set_tooltip_text(Some("Libro impaginato / Paged book"));
+        let book_mode = gtk::ToggleButton::with_label("Libro");
         let page_counter = gtk::Label::new(None);
         let mut pager = paging::Pager {
             directory: directory.clone(),
@@ -554,6 +553,7 @@ impl Ui {
                 ui.book_surface.cancel();
                 ui.schedule_book();
                 ui.save_book();
+                ui.relabel_book();
             }
         });
         let wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
@@ -1106,6 +1106,7 @@ impl Ui {
     }
     fn relabel(&self) {
         self.relabel_annotations();
+        self.relabel_book();
         self.header_title.set_subtitle(&self.position().edition);
         let en = self.state.borrow().language == "en";
         for (name, it, english) in [
@@ -1135,16 +1136,6 @@ impl Ui {
         }));
         self.search_button
             .set_label(if en { "Search" } else { "Cerca" });
-        self.previous.set_tooltip_text(Some(if en {
-            "Previous chapter"
-        } else {
-            "Capitolo precedente"
-        }));
-        self.next.set_tooltip_text(Some(if en {
-            "Next chapter"
-        } else {
-            "Capitolo successivo"
-        }));
         self.underline
             .set_tooltip_text(Some(if en { "Underline" } else { "Sottolinea" }));
         self.note_save
@@ -1163,6 +1154,24 @@ impl Ui {
             menu.append(Some(if en { english } else { it }), Some(action));
         }
         self.menu.set_menu_model(Some(&menu));
+    }
+    fn relabel_book(&self) {
+        self.book_mode.set_label(&self.t("Libro", "Book"));
+        self.book_mode
+            .set_tooltip_text(Some(&self.t("Libro impaginato", "Paged book")));
+        let (previous, next) = if self.book_mode.is_active() {
+            (
+                self.t("Pagina precedente", "Previous page"),
+                self.t("Pagina successiva", "Next page"),
+            )
+        } else {
+            (
+                self.t("Capitolo precedente", "Previous chapter"),
+                self.t("Capitolo successivo", "Next chapter"),
+            )
+        };
+        self.previous.set_tooltip_text(Some(&previous));
+        self.next.set_tooltip_text(Some(&next));
     }
     async fn search(self: &Rc<Self>) -> Result<(), String> {
         let query = self.query.text().to_string();

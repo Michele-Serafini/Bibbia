@@ -235,6 +235,15 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         ui.position().chapter == chapter && ui.pager.borrow().index > 0,
         "Next page skipped the chapter",
     )?;
+    let saved_page = ui.pager.borrow().index;
+    ui.pager.borrow_mut().chapter.clear();
+    ui.book_seek.set(true);
+    ui.reflow_book();
+    ui.reflow_book();
+    check(
+        ui.pager.borrow().index == saved_page,
+        "Precise book resume lost its page after deferred layout",
+    )?;
     ui.previous.emit_clicked();
     check(
         ui.pager.borrow().index == 0,

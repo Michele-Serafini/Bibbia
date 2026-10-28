@@ -121,6 +121,7 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(SavedNextPage,T("Pagina successiva di appunti"));
         FontSlider.Header = T("Dimensione del testo"); EditionPicker.Header = T("Traduzione");
         PreviousButton.Content = T("← Precedente"); NextButton.Content = T("Successivo →");
+        BookModeToggle.Content = T("Libro");
         SearchBox.PlaceholderText = T("Una parola o una frase…"); SearchButton.Content = T("Cerca");
         CatalogDescription.Text = T("CEI 2008 e Martini: Bibbie cattoliche italiane complete, 73 libri. Diodati e KJV: 66 libri. Raccolta estesa in inglese: 83 libri/sezioni, compresi apocrifi, 1 Enoc e Giubilei. La lingua dell’app è indipendente dal testo.");
         ImportButton.Content = T("Importa traduzione JSON…"); OpenDataButton.Content = T("Apri cartella dati");

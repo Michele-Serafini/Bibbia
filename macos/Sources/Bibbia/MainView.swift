@@ -17,11 +17,13 @@ struct MainView: View {
             ToolbarItemGroup(placement: .navigation) {
                 Button { model.step(-1) } label: { Image(systemName: "chevron.left") }
                     .buttonStyle(BookButtonStyle())
-                    .help(model.t("Capitolo precedente (⌥⌘←)", "Previous chapter (⌥⌘←)"))
+                    .help(model.bookMode ? model.t("Pagina precedente (⌥⌘←)", "Previous page (⌥⌘←)")
+                          : model.t("Capitolo precedente (⌥⌘←)", "Previous chapter (⌥⌘←)"))
                     .accessibilityIdentifier("previousChapter")
                 Button { model.step(1) } label: { Image(systemName: "chevron.right") }
                     .buttonStyle(BookButtonStyle())
-                    .help(model.t("Capitolo successivo (⌥⌘→)", "Next chapter (⌥⌘→)"))
+                    .help(model.bookMode ? model.t("Pagina successiva (⌥⌘→)", "Next page (⌥⌘→)")
+                          : model.t("Capitolo successivo (⌥⌘→)", "Next chapter (⌥⌘→)"))
                     .accessibilityIdentifier("nextChapter")
             }
             ToolbarItem(placement: .principal) {

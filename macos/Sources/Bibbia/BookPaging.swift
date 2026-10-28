@@ -17,6 +17,7 @@ final class BookPager {
     var pages = [Page(y: 0, character: 0)]
     var index = 0, columns = 1
     var lastChapter: String = ""
+    private var seekTarget: Int?
     var anchor = 0
     var place = ReaderPlace()
     var loaded = false, restored = false, updating = false, lastPage = false
@@ -40,7 +41,7 @@ final class BookPager {
         }
         second?.adoptContext(primary)
         let key = "\(model.position.edition)/\(model.position.book)/\(model.position.chapter)"
-        if lastChapter != key || target != nil {
+        if lastChapter != key || (target != nil && target != seekTarget) {
             let verse = min(target ?? model.position.verse, max(0, primary.readingLayout.spans.count-1))
             anchor = primary.readingLayout.spans.indices.contains(verse) ? primary.readingLayout.spans[verse].location : 0
             if !restored, !primary.readingLayout.spans.isEmpty, place.edition == model.position.edition, place.book == model.position.book,
@@ -51,6 +52,7 @@ final class BookPager {
             if !primary.readingLayout.spans.isEmpty { restored = true }
             lastChapter = key
         }
+        seekTarget = target
         reflow()
     }
 
@@ -125,7 +127,8 @@ final class BookPager {
     }
     func save() {
         guard let model, let view = surface?.scroll.documentView as? ReadingTextView else { return }
-        let verse = view.readingLayout.spans.lastIndex { $0.location <= anchor } ?? 0
+        let verse = view.readingLayout.spans.firstIndex { NSMaxRange($0) > anchor }
+            ?? max(0, view.readingLayout.spans.count-1)
         place = ReaderPlace(bookMode: model.bookMode, edition: model.position.edition, book: model.position.book,
                             chapter: model.position.chapter, verse: verse,
                             offset: max(0,anchor-(view.readingLayout.spans.indices.contains(verse) ? view.readingLayout.spans[verse].location : 0)))

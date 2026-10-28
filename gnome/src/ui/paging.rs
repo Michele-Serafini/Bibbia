@@ -134,7 +134,8 @@ impl Ui {
         );
         let s = self.state.borrow();
         let mut pager = self.pager.borrow_mut();
-        if pager.chapter != key || self.book_seek.replace(false) {
+        let seek = self.book_seek.replace(false);
+        if pager.chapter != key || seek {
             pager.anchor = s.spans.get(position.verse).map_or(0, |v| v.start);
             if pager.chapter.is_empty()
                 && pager.place.edition == position.edition
@@ -233,8 +234,8 @@ impl Ui {
         let verse = s
             .spans
             .iter()
-            .rposition(|span| span.start <= p.anchor)
-            .unwrap_or(0);
+            .position(|span| span.end > p.anchor)
+            .unwrap_or_else(|| s.spans.len().saturating_sub(1));
         let offset = s
             .spans
             .get(verse)
