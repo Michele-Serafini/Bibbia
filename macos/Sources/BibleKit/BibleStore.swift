@@ -52,6 +52,11 @@ public actor BibleStore {
 
     public func editions() -> [Edition] { catalog }
 
+    /// Release inactive corpus mappings without loading another translation.
+    public func releaseInactiveCorpus(keeping edition: String) {
+        if cached?.0 != edition { cached = nil }
+    }
+
     func corpus(_ id: String) throws -> Corpus {
         if let cached, cached.0 == id { return cached.1 }
         guard let edition = catalog.first(where: { $0.id == id }) else { throw BibleError.invalid("Traduzione non disponibile / Edition unavailable") }

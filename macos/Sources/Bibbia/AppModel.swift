@@ -266,7 +266,14 @@ final class AppModel: ObservableObject {
         readingSurface?.cancelTurn()
         comparisonTask?.cancel()
         if comparing { refreshComparison() }
-        else { comparison = nil; comparisonLoading = false; scrollTarget = position.verse }
+        else {
+            comparison = nil; comparisonLoading = false; scrollTarget = position.verse
+            let edition = position.edition
+            Task {
+                guard !self.comparing else { return }
+                await store?.releaseInactiveCorpus(keeping: edition)
+            }
+        }
     }
     func refreshComparison() {
         guard comparing, let store else { return }
