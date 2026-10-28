@@ -23,31 +23,8 @@ struct ComparisonView: View {
             Text(notice).font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity,alignment: .leading).padding(.horizontal,24)
             if model.comparisonLoading { ProgressView().frame(maxWidth: .infinity,maxHeight: .infinity) }
             else if let comparison = model.comparison {
-                ScrollViewReader { proxy in
-                    List(comparison.rows) { row in
-                        HStack(alignment: .top,spacing: 24) {
-                            column(row.left).frame(maxWidth: .infinity,alignment: .leading)
-                            column(row.right).frame(maxWidth: .infinity,alignment: .leading)
-                        }.padding(.vertical,12).listRowBackground(Color.clear)
-                    }.listStyle(.plain).scrollContentBackground(.hidden).accessibilityIdentifier("comparisonList")
-                        .onAppear { if let row = comparison.rows.first(where: { $0.left.contains { $0.verse == model.position.verse } }) { proxy.scrollTo(row.id,anchor: .top) } }
-                }
+                ComparisonDocuments(model: model, comparison: comparison)
             }
         }.padding(.top,8)
-    }
-    private func column(_ verses: [ComparedVerse]) -> some View {
-        VStack(alignment: .leading,spacing: 8) {
-            if verses.isEmpty { Text(model.t("Nessun versetto corrispondente verificato.","No verified matching verse.")).foregroundStyle(.secondary).font(.callout) }
-            ForEach(Array(verses.enumerated()),id: \.offset) { _, verse in
-                Text(verse.reference).font(.caption).foregroundStyle(.secondary)
-                Text(verse.text).font(Font(ReadingTextView.readingFont(CGFloat(model.preferences.fontSize))))
-                    .textSelection(.enabled).fixedSize(horizontal: false,vertical: true)
-                    .contextMenu { Button(model.t("Apri e annota","Open and annotate")) { model.openComparedVerse(verse) } }
-            }
-            if let first = verses.first {
-                Button { model.openComparedVerse(first) } label: { Image(systemName: "arrow.up.right") }
-                    .buttonStyle(.borderless).help(model.t("Apri e annota","Open and annotate"))
-            }
-        }
     }
 }

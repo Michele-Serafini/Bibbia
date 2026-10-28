@@ -175,8 +175,16 @@ extension AppModel {
                       && comparison?.rows[15].right.first?.text.contains("God so loved") == true,
                       "Comparison aligns CEI and KJV John 3:16 across canonical book indices")
             try await Task.sleep(for: .milliseconds(300))
+            guard let compared = findComparisonView(window.contentView!) else { throw BibleError.invalid("Native comparison documents missing") }
+            let offsets = compared.alignedRowOffsets()
+            try check(offsets[0].count == 36 && zip(offsets[0], offsets[1]).allSatisfy { abs($0-$1)<1 }, "Every compared row uses aligned native text layout")
+            let phrase = (compared.readers[1].string as NSString).range(of: "For God so loved")
+            try check(phrase.location != NSNotFound, "KJV comparison text is selectable")
+            try nativeDrag(compared.readers[1], range: phrase)
+            try check(compared.readers[1].selectedRange().length > 0, "Real mouse selection in comparison")
+            try check(abs(compared.scrolls[0].contentView.bounds.minY-compared.scrolls[1].contentView.bounds.minY)<1, "Native comparison scroll synchronization")
             try screenshot(window,name: "macos-comparison.png")
-            if let verse = comparison?.rows[15].right.first { openComparedVerse(verse) }
+            compared.open(1)
             try await waitUntil { !self.comparing && !self.loading && self.position.edition == "KJV" }
             try check(position.book == 42 && position.chapter == 2 && position.verse == 15,
                       "Compared verse opens at the original annotatable position")
@@ -216,7 +224,13 @@ extension AppModel {
         return nil
     }
 
-    private func nativeDrag(_ view: ReadingTextView, range: NSRange) throws {
+    private func findComparisonView(_ view: NSView) -> ComparisonDocumentView? {
+        if let compared = view as? ComparisonDocumentView { return compared }
+        for child in view.subviews { if let compared = findComparisonView(child) { return compared } }
+        return nil
+    }
+
+    private func nativeDrag(_ view: NSTextView, range: NSRange) throws {
         guard let window = view.window else { throw BibleError.invalid("Reader has no window") }
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(view)

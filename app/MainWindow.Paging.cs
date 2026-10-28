@@ -75,9 +75,9 @@ public sealed partial class MainWindow
         bookLayoutTimer.Tick-=BookLayoutTick;bookLayoutTimer.Tick+=BookLayoutTick;bookLayoutTimer.Start();
     }
     private void BookLayoutTick(Microsoft.UI.Dispatching.DispatcherQueueTimer sender,object args)=>Guard(ReflowBook);
-    private void MeasureChapter(double width) {
+    private bool MeasureChapter(double width) {
         var key=$"{edition}/{book}/{chapter}/{fontSize:R}/{width:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
-        if(key==measuredKey)return;
+        if(key==measuredKey)return true;
         if(measurementRow==null){
             measurementHost=new Canvas {Opacity=0,IsHitTestVisible=false};
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(measurementHost,Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
@@ -86,6 +86,7 @@ public sealed partial class MainWindow
             foreach(var column in new[]{new GridLength(28),new GridLength(1,GridUnitType.Star),new GridLength(32)})grid.ColumnDefinitions.Add(new ColumnDefinition {Width=column});
             measurementNumber=new TextBlock {FontSize=12,Margin=new Thickness(0,8,0,0)};
             measurementEditor=new RichEditBox {IsReadOnly=true,IsSpellCheckEnabled=false,IsTabStop=false,MinHeight=0,Padding=new Thickness(0),BorderThickness=new Thickness(0),TextWrapping=TextWrapping.Wrap,FontFamily=(FontFamily)Application.Current.Resources["ReadingFontFamily"]};
+            measurementEditor.Loaded+=(_,_)=>{measuredKey="";ScheduleBookLayout();};
             ScrollViewer.SetVerticalScrollBarVisibility(measurementEditor,ScrollBarVisibility.Disabled);
             ScrollViewer.SetHorizontalScrollBarVisibility(measurementEditor,ScrollBarVisibility.Disabled);
             ScrollViewer.SetVerticalScrollMode(measurementEditor,ScrollMode.Disabled);
@@ -96,13 +97,18 @@ public sealed partial class MainWindow
             measurementHost.Children.Add(measurementRow);
             BookStage.UpdateLayout();
         }
+        // WinUI initializes the native RichEdit font and custom font face on
+        // Loaded. Measuring its pre-load document would use the system default.
+        if(!measurementEditor!.IsLoaded)return false;
         measuredRows.Clear();measuredLines.Clear();double y=0;
         measurementEditor!.FontSize=fontSize;
         foreach(var row in readerRows){
             measurementNumber!.Text=row.Number;
             UpdateDocument(measurementEditor,()=>{
                 measurementEditor.Document.SetText(TextSetOptions.None,row.Text);
-                measurementEditor.Document.GetRange(0,row.Text.Length).ParagraphFormat.SetLineSpacing(LineSpacingRule.Multiple,1.2f);
+                var whole=measurementEditor.Document.GetRange(0,row.Text.Length);
+                whole.CharacterFormat.Size=(float)(fontSize*0.75);
+                whole.ParagraphFormat.SetLineSpacing(LineSpacingRule.Multiple,1.2f);
             });
             measurementRow.Width=width;measurementRow.InvalidateMeasure();measurementRow.Measure(new Size(width,double.PositiveInfinity));
             var h=measurementRow.DesiredSize.Height;
@@ -117,6 +123,7 @@ public sealed partial class MainWindow
             measuredRows.Add((y,h));y+=h;
         }
         measuredKey=key;
+        return true;
     }
     private void ReflowBook() {
         if(comparing || bookReflowing || !ready || closed || BookViewport.ActualHeight<80)return;
@@ -138,7 +145,7 @@ public sealed partial class MainWindow
             BookColumns.UpdateLayout();
             var scroll=Descendants<ScrollViewer>(VerseList).FirstOrDefault();if(scroll==null)return;
             height=Math.Max(40,scroll.ViewportHeight-6);
-            MeasureChapter(VerseList.ActualWidth);
+            if(!MeasureChapter(VerseList.ActualWidth))return;
             var key=$"{edition}/{book}/{chapter}";
             var anchorVerse=bookPages.Count>bookPage?bookPages[bookPage].Verse:currentVerse;
             var anchorOffset=bookPages.Count>bookPage?bookPages[bookPage].Offset:0;

@@ -62,6 +62,9 @@ attribuzione visibile durante la lettura e condizioni nel menu
   annotazioni vengono aggiornati soltanto i versetti interessati.
 - Nessun polling, rete o timer ricorrente nell’uso normale. Le modifiche rapide
   di font, preferenze, posizione e query sono accorpate con task cancellabili.
+- Il confronto usa due documenti TextKit selezionabili, con righe allineate e
+  scorrimento sincronizzato. Nessun controllo aggiuntivo per ogni versetto;
+  i documenti vengono rilasciati quando si torna alla lettura normale.
 - Lo sfogliamento usa Core Animation, senza timer a ogni frame sul thread
   principale. Una sola immagine temporanea, limitata a due milioni di pixel,
   viene condivisa dalle 64 parti diagonali del foglio e liberata dopo la transizione.
