@@ -30,7 +30,7 @@ jobs:
       - run: dotnet run --project tests/Bibbia.InteropSmoke -- target/release/libbible_core.so
   windows:
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -67,6 +67,11 @@ jobs:
           $installer = @(Get-ChildItem artifacts/installer/Bibbia-Setup-*-x64.exe)
           if ($installer.Count -ne 1) { throw 'Atteso un solo installer.' }
           ./scripts/test-installer.ps1 -Installer $installer[0].FullName
+      - name: Compare native app memory and responsiveness with v0.9
+        shell: pwsh
+        run: |
+          python scripts/build-performance-baseline.py
+          python scripts/compare-performance.py --baseline artifacts/performance-baseline/native/Bibbia.Windows.exe --candidate artifacts/Bibbia/Bibbia.Windows.exe --output artifacts/diagnostics/windows-performance-comparison.json
       - uses: actions/upload-artifact@v4
         with:
           name: Bibbia-Installer-x64
@@ -117,6 +122,10 @@ jobs:
         run: |
           dpkg-deb --extract artifacts/linux/bibbia_*_amd64.deb /tmp/bibbia-benchmark
           xvfb-run -a -s '-screen 0 1280x960x24' dbus-run-session -- python3 scripts/benchmark-linux.py --binary /tmp/bibbia-benchmark/usr/bin/bibbia
+      - name: Compare native app memory and responsiveness with v0.9
+        run: |
+          python3 scripts/build-performance-baseline.py
+          BIBBIA_ASSETS_DIR="$GITHUB_WORKSPACE/assets" xvfb-run -a -s '-screen 0 1600x1000x24' dbus-run-session -- python3 scripts/compare-performance.py --baseline artifacts/performance-baseline/native/bibbia --candidate /tmp/bibbia-benchmark/usr/bin/bibbia --output artifacts/diagnostics/linux-performance-comparison.json
       - uses: actions/upload-artifact@v4
         with:
           name: Bibbia-Linux-x64

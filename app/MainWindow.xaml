@@ -63,6 +63,7 @@
                             HorizontalContentAlignment="Stretch" MaxWidth="1600" HorizontalAlignment="Stretch"
                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Versetti del capitolo" AutomationProperties.AutomationId="VerseList">
                             <ListView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel CacheLength="0.5" /></ItemsPanelTemplate></ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" /><Setter Property="MinHeight" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="BorderThickness" Value="0" /></Style></ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:VerseRow">
                                     <Border Padding="12,8" Margin="0,3" CornerRadius="6">
@@ -70,7 +71,7 @@
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             <RichEditBox Grid.Column="1" Background="Transparent" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
-                                                FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize, Mode=OneWay}" TextWrapping="Wrap" Padding="0" BorderThickness="0"
+                                                FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" BorderThickness="0" MinHeight="0"
                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                 ScrollViewer.VerticalScrollMode="Disabled" UseSystemFocusVisuals="True">
                                                 <RichEditBox.Resources>

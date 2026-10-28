@@ -1,6 +1,42 @@
 use super::*;
 
 #[test]
+fn compact_psalm_groups_preserve_every_verified_reference() {
+    let data: Value = serde_json::from_str(include_str!("../data/comparison.json")).unwrap();
+    for (file, edition) in [
+        ("cei2008", "CEI 2008"),
+        ("martini", "Martini 1781 (cattolica)"),
+        ("diodati", "Diodati 1649"),
+        ("kjv", "KJV"),
+        ("extended", "Raccolta estesa (83 sezioni)"),
+    ] {
+        for (c, chapter) in data["psalms"][file].as_array().unwrap().iter().enumerate() {
+            for (v, key) in chapter.as_array().unwrap().iter().enumerate() {
+                let key = key.as_str().unwrap();
+                let expected = if key.starts_with("unmapped:") {
+                    None
+                } else {
+                    let parts: Vec<_> = key.split(':').collect();
+                    Some(
+                        parts[1].parse::<u16>().unwrap() * 256
+                            + if parts[2] == "Title" {
+                                0
+                            } else {
+                                parts[2].parse::<u16>().unwrap()
+                            },
+                    )
+                };
+                assert_eq!(
+                    comparison::psalm_group(edition, c, v + 1),
+                    expected,
+                    "{edition} {c}:{v}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn comparisons_use_book_identity_and_original_verse_references() {
     let dir = tempfile::tempdir().unwrap();
     let mut engine = Engine::open(dir.path()).unwrap();

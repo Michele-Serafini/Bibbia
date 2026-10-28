@@ -28,6 +28,13 @@ public sealed partial class MainWindow
     private bool chapterForward;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? bookLayoutTimer;
     private ItemsPanelTemplate? scrollingPanel,fullChapterPanel;
+    private readonly List<(double Y,double Height)> measuredRows=[];
+    private readonly List<PageLine> measuredLines=[];
+    private string measuredKey="";
+    private Canvas? measurementHost;
+    private Border? measurementRow;
+    private RichEditBox? measurementEditor;
+    private TextBlock? measurementNumber;
     private static IEnumerable<T> Descendants<T>(DependencyObject root) where T:DependencyObject {
         for(var i=0;i<VisualTreeHelper.GetChildrenCount(root);i++) {
             var child=VisualTreeHelper.GetChild(root,i);
@@ -40,6 +47,7 @@ public sealed partial class MainWindow
             new JsonSerializerOptions{PropertyNameCaseInsensitive=true})??new(); } catch(IOException){} catch(JsonException){}
         bookMode=readerPlace.BookMode; BookModeToggle.IsChecked=bookMode;
         VerseRight.ItemTemplate=VerseList.ItemTemplate;
+        VerseRight.ItemContainerStyle=VerseList.ItemContainerStyle;
         scrollingPanel=VerseList.ItemsPanel;
         fullChapterPanel=(ItemsPanelTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><StackPanel /></ItemsPanelTemplate>");
         BookStage.SizeChanged+=(_,_)=>ScheduleBookLayout();
@@ -67,6 +75,49 @@ public sealed partial class MainWindow
         bookLayoutTimer.Tick-=BookLayoutTick;bookLayoutTimer.Tick+=BookLayoutTick;bookLayoutTimer.Start();
     }
     private void BookLayoutTick(Microsoft.UI.Dispatching.DispatcherQueueTimer sender,object args)=>Guard(ReflowBook);
+    private void MeasureChapter(double width) {
+        var key=$"{edition}/{book}/{chapter}/{fontSize:R}/{width:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
+        if(key==measuredKey)return;
+        if(measurementRow==null){
+            measurementHost=new Canvas {Opacity=0,IsHitTestVisible=false};
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(measurementHost,Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
+            BookStage.Children.Add(measurementHost);
+            var grid=new Grid {ColumnSpacing=10};
+            foreach(var column in new[]{new GridLength(28),new GridLength(1,GridUnitType.Star),new GridLength(32)})grid.ColumnDefinitions.Add(new ColumnDefinition {Width=column});
+            measurementNumber=new TextBlock {FontSize=12,Margin=new Thickness(0,8,0,0)};
+            measurementEditor=new RichEditBox {IsReadOnly=true,IsSpellCheckEnabled=false,IsTabStop=false,MinHeight=0,Padding=new Thickness(0),BorderThickness=new Thickness(0),TextWrapping=TextWrapping.Wrap,FontFamily=(FontFamily)Application.Current.Resources["ReadingFontFamily"]};
+            ScrollViewer.SetVerticalScrollBarVisibility(measurementEditor,ScrollBarVisibility.Disabled);
+            ScrollViewer.SetHorizontalScrollBarVisibility(measurementEditor,ScrollBarVisibility.Disabled);
+            ScrollViewer.SetVerticalScrollMode(measurementEditor,ScrollMode.Disabled);
+            var menu=new Button {Content="⋯",Padding=new Thickness(6),MinWidth=28,BorderThickness=new Thickness(0),VerticalAlignment=VerticalAlignment.Top};
+            Grid.SetColumn(measurementEditor,1);Grid.SetColumn(menu,2);
+            grid.Children.Add(measurementNumber);grid.Children.Add(measurementEditor);grid.Children.Add(menu);
+            measurementRow=new Border {Padding=new Thickness(12,8,12,8),Margin=new Thickness(0,3,0,3),Child=grid};
+            measurementHost.Children.Add(measurementRow);
+            BookStage.UpdateLayout();
+        }
+        measuredRows.Clear();measuredLines.Clear();double y=0;
+        measurementEditor!.FontSize=fontSize;
+        foreach(var row in readerRows){
+            measurementNumber!.Text=row.Number;
+            UpdateDocument(measurementEditor,()=>{
+                measurementEditor.Document.SetText(TextSetOptions.None,row.Text);
+                measurementEditor.Document.GetRange(0,row.Text.Length).ParagraphFormat.SetLineSpacing(LineSpacingRule.Multiple,1.2f);
+            });
+            measurementRow.Width=width;measurementRow.InvalidateMeasure();measurementRow.Measure(new Size(width,double.PositiveInfinity));
+            var h=measurementRow.DesiredSize.Height;
+            measurementRow.Arrange(new Rect(0,0,width,h));measurementRow.UpdateLayout();
+            var top=measurementEditor.TransformToVisual(measurementHost!).TransformPoint(new Point(0,0)).Y;
+            var range=measurementEditor.Document.GetRange(0,0);
+            while(range.StartPosition<row.Text.Length){
+                range.GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var rect,out _);
+                if(rect.Height>0 && double.IsFinite(rect.Y))measuredLines.Add(new(y+top+rect.Y,rect.Height,row.Index,range.StartPosition));
+                var previous=range.StartPosition;if(range.Move(TextRangeUnit.Line,1)==0 || range.StartPosition<=previous)break;
+            }
+            measuredRows.Add((y,h));y+=h;
+        }
+        measuredKey=key;
+    }
     private void ReflowBook() {
         if(comparing || bookReflowing || !ready || closed || BookViewport.ActualHeight<80)return;
         bookReflowing=true;
@@ -83,21 +134,11 @@ public sealed partial class MainWindow
             ScrollViewer.SetVerticalScrollBarVisibility(VerseList,bookMode?ScrollBarVisibility.Hidden:ScrollBarVisibility.Auto);
             ScrollViewer.SetVerticalScrollBarVisibility(VerseRight,ScrollBarVisibility.Hidden);
             VerseList.Clip=null;VerseRight.Clip=null;
+            if(!bookMode){VerseList.ItemsSource=readerRows;VerseRight.ItemsSource=null;BookPageLabel.Text="";return;}
             BookColumns.UpdateLayout();
-            if(!bookMode){BookPageLabel.Text="";return;}
             var scroll=Descendants<ScrollViewer>(VerseList).FirstOrDefault();if(scroll==null)return;
             height=Math.Max(40,scroll.ViewportHeight-6);
-            var lines=new List<PageLine>();
-            foreach(var editor in Descendants<RichEditBox>(VerseList)) {
-                if(editor.DataContext is not VerseRow row)continue;
-                var top=editor.TransformToVisual(VerseList).TransformPoint(new Point(0,0)).Y+scroll.VerticalOffset;
-                var r=editor.Document.GetRange(0,0);
-                while(r.StartPosition<row.Text.Length) {
-                    r.GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var rect,out _);
-                    if(rect.Height>0 && double.IsFinite(rect.Y)) lines.Add(new(top+rect.Y,rect.Height,row.Index,r.StartPosition));
-                    var before=r.StartPosition;if(r.Move(TextRangeUnit.Line,1)==0 || r.StartPosition<=before)break;
-                }
-            }
+            MeasureChapter(VerseList.ActualWidth);
             var key=$"{edition}/{book}/{chapter}";
             var anchorVerse=bookPages.Count>bookPage?bookPages[bookPage].Verse:currentVerse;
             var anchorOffset=bookPages.Count>bookPage?bookPages[bookPage].Offset:0;
@@ -105,7 +146,7 @@ public sealed partial class MainWindow
                 if(bookChapter.Length==0 && readerPlace.Edition==edition && readerPlace.Book==book && readerPlace.Chapter==chapter && readerPlace.Verse==currentVerse)anchorOffset=readerPlace.Offset;
             }
             bookSeek=false;bookChapter=key;bookPages.Clear();bookPages.Add(new(0,0,0,0));double start=0;
-            foreach(var line in lines.OrderBy(l=>l.Y)) {
+            foreach(var line in measuredLines) {
                 if(line.Y+line.Height>start+height && line.Y>start+1){bookPages.Add(line);start=line.Y;}
             }
             var found=bookPages.FindLastIndex(p=>p.Verse<anchorVerse || p.Verse==anchorVerse && p.Offset<=anchorOffset);
@@ -122,11 +163,31 @@ public sealed partial class MainWindow
         for(var n=0;n<2;n++) {
             var index=bookPage+n;var list=lists[n];
             list.Visibility=n<bookColumns && index<bookPages.Count?Visibility.Visible:Visibility.Collapsed;
-            if(index>=bookPages.Count)continue;
+            if(n>=bookColumns || index>=bookPages.Count){list.ItemsSource=null;continue;}
+            var first=bookPages[index].Verse;
+            var last=index+1<bookPages.Count?bookPages[index+1].Verse-(bookPages[index+1].Offset==0?1:0):readerRows.Count-1;
+            last=Math.Max(first,last);
+            var subset=readerRows.GetRange(first,last-first+1);
+            list.ItemsSource=subset;list.UpdateLayout();
             var scroll=Descendants<ScrollViewer>(list).FirstOrDefault();if(scroll==null)continue;
             var h=index+1<bookPages.Count?Math.Min(scroll.ViewportHeight,bookPages[index+1].Y-bookPages[index].Y):scroll.ViewportHeight;
             list.Clip=new RectangleGeometry{Rect=new Rect(0,0,list.ActualWidth,Math.Max(1,h))};
-            scroll.ChangeView(null,bookPages[index].Y,null,true);
+            scroll.ChangeView(null,Math.Max(0,bookPages[index].Y-measuredRows[first].Y),null,true);
+            if(selectionDiagnostics || PerformanceProfile()!=null) {
+                // Verify the measuring template against the actual native
+                // editors, including wrapped lines, on the Windows runner.
+                list.UpdateLayout();
+                foreach(var editor in Descendants<RichEditBox>(list)) {
+                    if(editor.DataContext is not VerseRow row)continue;
+                    var origin=editor.TransformToVisual(list).TransformPoint(new Point(0,0)).Y+scroll.VerticalOffset;
+                    foreach(var line in measuredLines.Where(p=>p.Verse==row.Index)) {
+                        editor.Document.GetRange(line.Offset,line.Offset).GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var actual,out _);
+                        var expected=line.Y-measuredRows[first].Y;
+                        if(Math.Abs(origin+actual.Y-expected)>2 || Math.Abs(actual.Height-line.Height)>2)
+                            throw new InvalidOperationException($"Native page layout differs at verse {row.Index}, offset {line.Offset}: expected {expected}/{line.Height}, actual {origin+actual.Y}/{actual.Height}");
+                    }
+                }
+            }
         }
         BookPageLabel.Text=$"{bookPage+1}{(bookColumns==2 && bookPage+1<bookPages.Count?$"–{bookPage+2}":"")} / {bookPages.Count}";
         PreviousButton.IsEnabled=bookPage>0 || book>0 || chapter>0;

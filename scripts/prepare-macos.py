@@ -55,7 +55,9 @@ def prepare(destination):
     (corpora / 'editions.json').write_text(json.dumps(editions, ensure_ascii=False), encoding='utf-8')
     comparison = (ROOT / 'core/data/comparison.json').read_bytes()
     assert hashlib.sha256(comparison).hexdigest() == json.loads((ROOT / 'core/data/comparison-source.json').read_bytes())['converted_sha256']
-    (corpora / 'comparison.json').write_bytes(comparison)
+    for file in ['comparison-books.json','comparison-psalms.bin']:
+        shutil.copyfile(ROOT/'core/data'/file,corpora/file)
+    (corpora/'comparison.json').unlink(missing_ok=True)
     for pattern in ('LICENSE*', '*-source.json'):
         for source in (ROOT / 'core/data').glob(pattern):
             shutil.copyfile(source, notices / source.name)

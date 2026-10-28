@@ -2,6 +2,8 @@
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 root = Path(__file__).resolve().parents[1] / 'core/data'
 for name, count, chapters in [('kjv', 66, 1189), ('diodati', 66, 1189),
@@ -44,3 +46,4 @@ for name, psalms in mapping['psalms'].items():
     assert len(psalms) == len(book['chapters']) == 150
     assert all(len(refs) == len(verses) for refs, verses in zip(psalms, book['chapters'], strict=True))
 print('Comparison references: checksum and all five Psalm chapter/verse counts verified')
+subprocess.run([sys.executable,str(root.parents[1]/'scripts/pack-comparison.py'),'--check'],check=True)

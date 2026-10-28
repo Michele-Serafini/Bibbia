@@ -53,7 +53,6 @@ pub struct Edition {
     pub canon: String,
     pub book_count: usize,
     pub loaded: OnceLock<Vec<Book>>,
-    pub lowercase: OnceLock<Vec<Vec<Vec<String>>>>,
 }
 impl Edition {
     pub fn builtin(source: &'static Builtin) -> Self {
@@ -63,7 +62,6 @@ impl Edition {
             canon: source.canon.into(),
             book_count: source.book_count,
             loaded: OnceLock::new(),
-            lowercase: OnceLock::new(),
         }
     }
     pub fn imported(books: usize) -> Self {
@@ -73,7 +71,6 @@ impl Edition {
             canon: "custom".into(),
             book_count: books,
             loaded: OnceLock::new(),
-            lowercase: OnceLock::new(),
         }
     }
     pub fn books<'a>(&'a self, db: &Connection, id: &str) -> Result<&'a [Book]> {
@@ -90,7 +87,6 @@ impl Edition {
     }
     pub fn release(&mut self) {
         self.loaded.take();
-        self.lowercase.take();
     }
 }
 pub struct BookRef<'a> {

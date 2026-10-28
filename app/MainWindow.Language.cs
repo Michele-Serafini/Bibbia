@@ -139,7 +139,7 @@ public sealed partial class MainWindow
         ImportButton.Content = T("Importa traduzione JSON…"); OpenDataButton.Content = T("Apri cartella dati");
         PrivacyTitle.Text = T("I tuoi appunti restano sul dispositivo");
         PrivacyDescription.Text = T("Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento.");
-        AboutLabel.Text = T("Bibbia · {0}\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.",typeof(App).Assembly.GetName().Version?.ToString(3)??"0.9.0");
+        AboutLabel.Text = T("Bibbia · {0}\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.",typeof(App).Assembly.GetName().Version?.ToString(3)??"0.10.0");
         UpdatePageTitle();
         if (books.Count > book) ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BookPicker,T("Libro"));
@@ -148,7 +148,7 @@ public sealed partial class MainWindow
     private void AppLanguageChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!ready || changing || AppLanguagePicker.SelectedItem is not ComboBoxItem item) return;
-        Guard(() => { language = item.Tag.ToString()!; BibleEngine.Call(new {op="settings",key="language",value=language}); ApplyLanguage(); if (VerseList.ItemsSource is List<VerseRow> rows) UpdateReadingStatus(rows.Count); });
+        Guard(() => { language = item.Tag.ToString()!; BibleEngine.Call(new {op="settings",key="language",value=language}); ApplyLanguage(); UpdateReadingStatus(readerRows.Count); });
     }
     private void BibleLanguageChanged(object sender, SelectionChangedEventArgs e)
     {

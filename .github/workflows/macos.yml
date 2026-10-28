@@ -17,6 +17,10 @@ jobs:
         run: python3 scripts/package-macos.py
       - name: Test the installed app and measure idle resource use
         run: python3 scripts/test-macos.py --app artifacts/macos-staging/Bibbia.app
+      - name: Compare native app memory and responsiveness with v0.9
+        run: |
+          python3 scripts/build-performance-baseline.py
+          python3 scripts/compare-performance.py --baseline artifacts/performance-baseline/native/Bibbia.app/Contents/MacOS/Bibbia --candidate artifacts/macos-staging/Bibbia.app/Contents/MacOS/Bibbia --output artifacts/macos-diagnostics/performance-comparison.json
       - uses: actions/upload-artifact@v4
         with:
           name: Bibbia-macOS-Universal

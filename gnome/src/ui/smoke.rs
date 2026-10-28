@@ -538,21 +538,31 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         "Book paging was not suspended for comparison",
     )?;
     screenshot(&ui, "gnome-comparison.png").await?;
-    let row = ui.comparison_rows.first_child().unwrap();
-    let left = row.first_child().unwrap();
-    let right = left.next_sibling().unwrap();
-    let a = left.compute_bounds(&ui.comparison_rows).unwrap();
-    let b = right.compute_bounds(&ui.comparison_rows).unwrap();
+    let offsets = ui.comparison_row_offsets();
     check(
-        (a.y() - b.y()).abs() < 1.0,
-        "Compared verses do not share the same row",
+        offsets.len() == 36 && offsets.iter().all(|(a, b)| (a - b).abs() <= 1),
+        "Native comparison paragraphs are not aligned",
     )?;
-    let link = right
-        .last_child()
-        .unwrap()
-        .downcast::<gtk::Button>()
-        .unwrap();
-    link.emit_clicked();
+    let right = {
+        let all = ui.comparison_views.borrow();
+        let views = all.as_ref().unwrap();
+        check(
+            views.scrolls[0].vadjustment() == views.scrolls[1].vadjustment(),
+            "Comparison scroll adjustments diverged",
+        )?;
+        views.readers[1].clone()
+    };
+    let buffer = right.buffer();
+    let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+    let byte = text
+        .find("For God so loved")
+        .ok_or("Compared verse text missing")?;
+    native_drag(&right, &ui.window, text[..byte].chars().count() as i32).await?;
+    check(
+        buffer.selection_bounds().is_some(),
+        "Compared text is not natively selectable",
+    )?;
+    ui.open_comparison(1);
     until(
         || !ui.comparison.is_active() && ui.position().edition == "KJV",
         "Compared verse did not open in the annotatable reader",

@@ -1,13 +1,13 @@
 # Bibbia per macOS
 
-Versione 0.9.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
+Versione 0.10.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
 di terze parti. macOS 13 Ventura o successivi, Apple Silicon e Intel.
 
 ## Installazione
 
-La [release unificata 0.9.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.9.0)
-contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.9.0/Bibbia-0.9.0-universal.dmg)
-e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.9.0/Bibbia-0.9.0-universal.zip),
+La [release unificata 0.10.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.10.0)
+contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/Bibbia-0.10.0-universal.dmg)
+e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/Bibbia-0.10.0-universal.zip),
 ciascuno con checksum SHA-256. Aprire il DMG e trascinare Bibbia in **Applicazioni**.
 Non occorrono runtime, account, librerie aggiuntive o Internet.
 
@@ -53,9 +53,13 @@ attribuzione visibile durante la lettura e condizioni nel menu
 - Un `actor` Swift serializza SQLite e ricerca fuori dal thread grafico.
   Una query carica tutte le annotazioni del capitolo. Statement SQLite riusati,
   WAL, cache di 1 MiB e scrittura delle sole preferenze cambiate.
-- Una sola `NSTextView` per capitolo: TextKit gestisce selezione, layout,
+- Una `NSTextView` per capitolo, con un secondo layout manager soltanto quando
+  la modalità Libro mostra due pagine. Tornando a una colonna viene rilasciato.
+  Le misure delle righe vengono riusate finché testo, font e dimensioni non cambiano.
+  TextKit gestisce selezione, layout,
   scorrimento, copia e accessibilità. I cambi di font, tema e segni modificano
-  gli attributi conservando selezione e posizione di scorrimento.
+  gli attributi conservando selezione e posizione di scorrimento; per le
+  annotazioni vengono aggiornati soltanto i versetti interessati.
 - Nessun polling, rete o timer ricorrente nell’uso normale. Le modifiche rapide
   di font, preferenze, posizione e query sono accorpate con task cancellabili.
 - Lo sfogliamento usa Core Animation, senza timer a ogni frame sul thread
@@ -100,7 +104,7 @@ python3 scripts/prepare-macos.py
 swift test --package-path macos -c release
 swift run --package-path macos Bibbia
 python3 scripts/package-macos.py
-python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.9.0-universal.dmg
+python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.10.0-universal.dmg
 ```
 
 `swift run` serve allo sviluppo; per provare icona, menu, firma locale e risorse

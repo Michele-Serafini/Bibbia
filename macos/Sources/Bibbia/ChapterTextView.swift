@@ -66,6 +66,9 @@ final class ReadingTextView: NSTextView {
     private var revision = -1
     private var size = 0
     private var dark = false
+    private(set) var layoutRevision=0
+    private var annotations=[Annotation]()
+    private var baseAttributes=[NSAttributedString.Key:Any]()
     var readingSize: Int { size }
     var readingDark: Bool { dark }
     private var renderedPosition: Position?
@@ -90,6 +93,7 @@ final class ReadingTextView: NSTextView {
     func adoptContext(_ source: ReadingTextView) {
         model = source.model; readingLayout = source.readingLayout; renderedPosition = source.renderedPosition
         size = source.size; dark = source.dark; revision = source.revision
+        layoutRevision=source.layoutRevision
     }
     override func scrollWheel(with event: NSEvent) {
         if let model, model.bookMode {
@@ -109,6 +113,26 @@ final class ReadingTextView: NSTextView {
         let chapterChanged = renderedPosition?.edition != model.position.edition
             || renderedPosition?.book != model.position.book || renderedPosition?.chapter != model.position.chapter
         if chapterChanged { closePopover() }
+        let geometryChanged=chapterChanged || self.size != size || readingLayout.spans.count != model.verses.count
+        if geometryChanged{layoutRevision+=1}
+        if !chapterChanged,self.size==size,self.dark==dark,annotations.count==model.verses.count,!baseAttributes.isEmpty {
+            let changed=model.verses.indices.filter {annotations[$0] != model.verses[$0].annotation}
+            if !changed.isEmpty,let storage=textStorage {
+                storage.beginEditing()
+                for index in changed {
+                    let verse=model.verses[index],span=readingLayout.spans[index]
+                    storage.setAttributes(baseAttributes,range:span)
+                    applyAnnotation(verse.annotation,to:storage,range:span,text:verse.text,dark:dark)
+                    if annotations[index].bookmark != verse.annotation.bookmark {
+                        let prefix=index==0 ? 0:NSMaxRange(readingLayout.spans[index-1])+1
+                        storage.replaceCharacters(in:NSRange(location:prefix,length:1),with:verse.annotation.bookmark ? "★":" ")
+                    }
+                }
+                storage.endEditing()
+            }
+            annotations=model.verses.map(\.annotation);self.revision=revision
+            return
+        }
         self.revision = revision; self.size = size; self.dark = dark
         let selected = selectedRange()
         let scrollOrigin = enclosingScrollView?.contentView.bounds.origin
@@ -124,24 +148,17 @@ final class ReadingTextView: NSTextView {
         paragraph.tabStops = [NSTextTab(textAlignment: .left, location: gutter)]
         paragraph.defaultTabInterval = gutter
         paragraph.lineHeightMultiple = 1.22; paragraph.paragraphSpacing = 13
-        let content = NSMutableAttributedString(string: readingLayout.text, attributes: [
+        baseAttributes=[
             .font: Self.readingFont(CGFloat(size)), .foregroundColor: NSColor.textColor,
             .paragraphStyle: paragraph
-        ])
+        ]
+        let content = NSMutableAttributedString(string: readingLayout.text, attributes:baseAttributes)
         for (index, verse) in model.verses.enumerated() {
             let span = readingLayout.spans[index]
             let prefixStart = index == 0 ? 0 : NSMaxRange(readingLayout.spans[index - 1]) + 1
             content.addAttributes([.font: numberFont, .foregroundColor: NSColor.secondaryLabelColor],
                                   range: NSRange(location: prefixStart, length: span.location - prefixStart))
-            let annotation = verse.annotation
-            if annotation.underline { content.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: span) }
-            if let color = annotation.highlight { addHighlight(color, to: content, range: span) }
-            for mark in annotation.ranges {
-                guard (try? Marking.validate(text: verse.text, start: mark.start, length: mark.length)) != nil else { continue }
-                let range = NSRange(location: span.location + mark.start, length: mark.length)
-                if mark.underline { content.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range) }
-                if let color = mark.highlight { addHighlight(color, to: content, range: range) }
-            }
+            applyAnnotation(verse.annotation,to:content,range:span,text:verse.text,dark:dark)
         }
         textStorage?.beginEditing()
         if oldString == readingLayout.text {
@@ -151,6 +168,7 @@ final class ReadingTextView: NSTextView {
             }
         } else { textStorage?.setAttributedString(content) }
         textStorage?.endEditing()
+        annotations=model.verses.map(\.annotation)
         if let container = textContainer { layoutManager?.ensureLayout(for: container) }
         if !chapterChanged, NSMaxRange(selected) <= content.length {
             setSelectedRange(selected)
@@ -162,10 +180,16 @@ final class ReadingTextView: NSTextView {
         setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
     }
 
-    private func addHighlight(_ name: String, to content: NSMutableAttributedString, range: NSRange) {
-        guard let color = Self.highlightColor(name) else { return }
-        content.addAttributes([.backgroundColor: color.withAlphaComponent(dark ? 0.28 : 0.35),
-                               .foregroundColor: NSColor.textColor], range: range)
+    private func applyAnnotation(_ annotation:Annotation,to content:NSMutableAttributedString,range:NSRange,text:String,dark:Bool) {
+        func highlight(_ name:String,_ span:NSRange){if let color=Self.highlightColor(name){content.addAttributes([.backgroundColor:color.withAlphaComponent(dark ? 0.28:0.35),.foregroundColor:NSColor.textColor],range:span)}}
+        if annotation.underline{content.addAttribute(.underlineStyle,value:NSUnderlineStyle.single.rawValue,range:range)}
+        if let color=annotation.highlight{highlight(color,range)}
+        for mark in annotation.ranges {
+            guard (try? Marking.validate(text:text,start:mark.start,length:mark.length)) != nil else{continue}
+            let span=NSRange(location:range.location+mark.start,length:mark.length)
+            if mark.underline{content.addAttribute(.underlineStyle,value:NSUnderlineStyle.single.rawValue,range:span)}
+            if let color=mark.highlight{highlight(color,span)}
+        }
     }
 
     static func highlightColor(_ name: String) -> NSColor? {

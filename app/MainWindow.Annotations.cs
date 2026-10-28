@@ -61,6 +61,7 @@ public sealed partial class MainWindow
         liveEditors[row.Index] = editor;
         if (ReferenceEquals(editor.Tag,row)) return;
         editor.Tag = row;
+        editor.FontSize=row.TextSize;
         UpdateDocument(editor,() => { editor.Document.SetText(TextSetOptions.None,row.Text); ApplyTextStylesCore(editor,row); });
         AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
         AutomationProperties.SetName(editor,row.Text);

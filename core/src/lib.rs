@@ -275,21 +275,10 @@ impl Engine {
             }
         } else {
             let books = edition.books(&self.db, id)?;
-            let lower = edition.lowercase.get_or_init(|| {
-                books
-                    .iter()
-                    .map(|b| {
-                        b.chapters
-                            .iter()
-                            .map(|c| c.iter().map(|v| v.to_lowercase()).collect())
-                            .collect()
-                    })
-                    .collect()
-            });
             'outer: for (bi, b) in books.iter().enumerate() {
                 for (ci, c) in b.chapters.iter().enumerate() {
                     for (vi, text) in c.iter().enumerate() {
-                        if lower[bi][ci][vi].contains(query)
+                        if text.to_lowercase().contains(query)
                             && !add(
                                 bi,
                                 ci,

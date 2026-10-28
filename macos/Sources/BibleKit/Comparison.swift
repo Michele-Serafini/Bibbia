@@ -15,18 +15,36 @@ public struct Comparison: Codable, Sendable {
     public let rows: [ComparisonRow]
 }
 
-struct ComparisonIndex: Sendable, Decodable {
+struct ComparisonIndex: Sendable {
+    private struct Names:Decodable {let aliases:[String:String]}
     let aliases: [String: String]
-    let psalms: [String: [[String]]]
+    private let psalms:Data
+    init(resources:URL) throws {
+        aliases=try JSONDecoder().decode(Names.self,from:Data(contentsOf:resources.appendingPathComponent("comparison-books.json"))).aliases
+        psalms=try Data(contentsOf:resources.appendingPathComponent("comparison-psalms.bin"),options:.mappedIfSafe)
+        guard psalms.count>=1816,psalms.prefix(4)==Data("BPC1".utf8) else{throw BibleError.invalid("Damaged comparison index")}
+    }
+    func group(_ edition:String,_ chapter:Int,_ verse:Int)->UInt16? {
+        let profile:Int
+        switch edition {case "CEI 2008":profile=0;case "Martini 1781 (cattolica)":profile=1;case "Diodati 1649","KJV","Raccolta estesa (83 sezioni)":profile=2;default:return nil}
+        guard (0..<150).contains(chapter),verse>0 else{return nil}
+        return psalms.withUnsafeBytes { bytes in
+            let start=Int(UInt32(littleEndian:bytes.loadUnaligned(fromByteOffset:4+(profile*151+chapter)*4,as:UInt32.self)))
+            let end=Int(UInt32(littleEndian:bytes.loadUnaligned(fromByteOffset:4+(profile*151+chapter+1)*4,as:UInt32.self)))
+            guard verse<=end-start else{return nil}
+            let at=1816+(start+verse-1)*2
+            guard at+2<=bytes.count else{return nil}
+            let value=UInt16(littleEndian:bytes.loadUnaligned(fromByteOffset:at,as:UInt16.self))
+            return value==0 ? nil:value
+        }
+    }
     func identity(_ name: String) -> String {
         let key = name.lowercased().filter { $0.isLetter || $0.isNumber }
         return aliases[key] ?? "custom:\(key)"
     }
     func key(_ edition: String, _ code: String, _ chapters: Int, _ chapter: Int, _ label: String) -> String {
         if code == "Ps" {
-            let files = ["CEI 2008":"cei2008", "Martini 1781 (cattolica)":"martini", "Diodati 1649":"diodati", "KJV":"kjv", "Raccolta estesa (83 sezioni)":"extended"]
-            if let file = files[edition], let data = psalms[file], data.indices.contains(chapter),
-               let verse = Int(label), data[chapter].indices.contains(verse-1) { return data[chapter][verse-1] }
+            if let verse=Int(label),let id=group(edition,chapter,verse){return "Ps:\(id)"}
             return "unmapped:\(edition):\(chapter):\(label)"
         }
         var c = chapter+1, v = label
@@ -46,8 +64,7 @@ struct ComparisonIndex: Sendable, Decodable {
 extension BibleStore {
     public func compare(_ position: Position, other: String) throws -> Comparison {
         if comparisonIndex == nil {
-            comparisonIndex = try JSONDecoder().decode(ComparisonIndex.self,
-                from: Data(contentsOf: resources.appendingPathComponent("comparison.json")))
+            comparisonIndex = try ComparisonIndex(resources:resources)
         }
         let index = comparisonIndex!
         let primary = try corpus(position.edition)
@@ -63,7 +80,14 @@ extension BibleStore {
         var right = [String: [ComparedVerse]](), differing = false
         if let b = targetBook {
             let book = target.books[b]
-            for (c, candidate) in book.chapters.enumerated() {
+            let chapters:[Int]
+            if code=="Ps",position.edition != other {
+                let ids=Set((0..<left.count).compactMap {Int(left.label($0)).flatMap {index.group(position.edition,position.chapter,$0)}})
+                chapters=book.chapters.indices.filter {c in (1...book.chapters[c].count).contains {v in index.group(other,c,v).map {ids.contains($0)} ?? false}}
+            }else if ["Ps","Joel","Mal","Esth"].contains(code){chapters=Array(book.chapters.indices)}
+            else{chapters=book.chapters.indices.contains(position.chapter) ? [position.chapter]:[]}
+            for c in chapters {
+                let candidate=book.chapters[c]
                 guard (0..<candidate.count).contains(where: { wanted.contains(key(other,book,c,candidate.label($0))) }) else { continue }
                 if !["Ps","Joel","Mal","Esth"].contains(code), c == position.chapter,
                    candidate.label(candidate.count-1) != left.label(left.count-1) { differing = true; continue }

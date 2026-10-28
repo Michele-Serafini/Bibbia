@@ -3,7 +3,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Windowing;
 using System.Text.Json;
-using System.ComponentModel;
 using Windows.Storage.Pickers;
 using Windows.System;
 
@@ -16,15 +15,13 @@ public sealed class BookRow
     public required int[] ChapterNumbers { get; init; }
 }
 
-public sealed class VerseRow : INotifyPropertyChanged
+public sealed class VerseRow
 {
     public int Index { get; init; }
     public required string Number { get; init; }
     public string MenuId => $"VerseMenu_{Index}";
     public required string Text { get; init; }
-    private double textSize;
-    public double TextSize { get => textSize; set { if (textSize == value) return; textSize=value; PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(nameof(TextSize))); } }
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public double TextSize {get;set;}
     public required JsonElement Annotation { get; set; }
 }
 
@@ -42,6 +39,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly string dataDirectory = PerformanceProfile() is {} profile?Path.Combine(profile,"notes"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BibbiaRust");
     private List<BookRow> books = [];
+    private List<VerseRow> readerRows = [];
     private readonly Dictionary<string,List<BookRow>> bookCatalogs = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? fontTimer;
     private string edition = "KJV";
@@ -174,7 +172,7 @@ public sealed partial class MainWindow : Window
         activeSelectionFlyout?.Hide();
         activeSelectionFlyout = null;
         liveEditors.Clear();
-        var animate = displayedChapter!=null && displayedChapter!=target;
+        var animate = !comparing && section=="read" && displayedChapter!=null && displayedChapter!=target;
         var rows = BibleEngine.Call(new { op = "chapter", edition, book, chapter }).EnumerateArray().Select(x =>
             new VerseRow { Index = x.GetProperty("verse").GetInt32(), Number=x.GetProperty("label").GetString()!, Text = x.GetProperty("text").GetString()!,
                 TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
@@ -184,8 +182,9 @@ public sealed partial class MainWindow : Window
         if (closed || generation!=chapterRenderGeneration) return;
         var forward=displayedChapter==null || displayedChapter.Value.Edition!=edition ||
             (displayedChapter.Value.Book,displayedChapter.Value.Chapter).CompareTo((book,chapter))<0;
-        VerseList.ItemsSource = rows;
-        VerseRight.ItemsSource = rows;
+        readerRows=rows;
+        if(!comparing && !bookMode)VerseList.ItemsSource=rows;
+        VerseRight.ItemsSource=null;
         displayedChapter=target;
         VerseList.IsHitTestVisible=true;
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
@@ -222,12 +221,12 @@ public sealed partial class MainWindow : Window
     {
         if(comparing){LoadComparison();return;}
         if(bookMode){ScheduleBookLayout(true);return;}
-        if (VerseList.ItemsSource is not List<VerseRow> rows) return;
+        var rows=readerRows;if(rows.Count==0)return;
         var target = currentVerse;
         // Ignore callbacks queued for a chapter that has since been replaced.
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (!closed && section == "read" && ReferenceEquals(VerseList.ItemsSource, rows))
+            if (!closed && section == "read" && !comparing && ReferenceEquals(VerseList.ItemsSource, rows))
                 Guard(() => VerseList.ScrollIntoView(rows[target], ScrollIntoViewAlignment.Leading));
         });
     }
@@ -371,7 +370,8 @@ public sealed partial class MainWindow : Window
             fontTimer = DispatcherQueue.CreateTimer(); fontTimer.Interval = TimeSpan.FromMilliseconds(100); fontTimer.IsRepeating = false;
             fontTimer.Tick += (_,_) => Guard(() => {
                 if (closed) return;
-                if (VerseList.ItemsSource is List<VerseRow> rows) foreach (var row in rows) row.TextSize=fontSize;
+                foreach (var row in readerRows) row.TextSize=fontSize;
+                foreach(var editor in Descendants<RichEditBox>(BookColumns))editor.FontSize=fontSize;
                 ScheduleBookLayout();
                 if(comparing)RenderComparison();
                 BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});

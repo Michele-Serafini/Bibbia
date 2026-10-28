@@ -30,7 +30,12 @@ public sealed partial class MainWindow {
         BookStage.Visibility=comparing?Visibility.Collapsed:Visibility.Visible;
         ComparisonPanel.Visibility=comparing?Visibility.Visible:Visibility.Collapsed;
         BookModeToggle.IsEnabled=!comparing;
-        if(comparing){BookPageLabel.Text="";LoadComparison();}
+        if(comparing){
+            chapterSnapshot=null;chapterRenderGeneration++;
+            VerseList.ItemsSource=null;VerseRight.ItemsSource=null;
+            if(measurementEditor!=null)UpdateDocument(measurementEditor,()=>measurementEditor.Document.SetText(Microsoft.UI.Text.TextSetOptions.None,""));
+            BookPageLabel.Text="";LoadComparison();
+        }
         else {
             ComparisonList.ItemsSource=null;comparisonData=null;comparisonKey="";
             // Ordinary catalog reads release imported editions outside the

@@ -10,12 +10,11 @@ use std::{
 #[derive(Deserialize)]
 struct Index {
     aliases: BTreeMap<String, String>,
-    psalms: BTreeMap<String, Vec<Vec<String>>>,
 }
 fn data() -> &'static Index {
     static INDEX: OnceLock<Index> = OnceLock::new();
     INDEX.get_or_init(|| {
-        serde_json::from_str(include_str!("../data/comparison.json"))
+        serde_json::from_str(include_str!("../data/comparison-books.json"))
             .expect("validated comparison index")
     })
 }
@@ -31,29 +30,35 @@ fn identity(name: &str) -> String {
         .cloned()
         .unwrap_or_else(|| format!("custom:{key}"))
 }
-fn file(edition: &str) -> &str {
-    match edition {
-        "CEI 2008" => "cei2008",
-        "Martini 1781 (cattolica)" => "martini",
-        "Diodati 1649" => "diodati",
-        "KJV" => "kjv",
-        "Raccolta estesa (83 sezioni)" => "extended",
-        _ => "",
+pub(crate) fn psalm_group(edition: &str, chapter: usize, verse: usize) -> Option<u16> {
+    let profile = match edition {
+        "CEI 2008" => 0,
+        "Martini 1781 (cattolica)" => 1,
+        "Diodati 1649" | "KJV" | "Raccolta estesa (83 sezioni)" => 2,
+        _ => return None,
+    };
+    if chapter >= 150 || verse == 0 {
+        return None;
     }
+    let bytes = include_bytes!("../data/comparison-psalms.bin");
+    let at =
+        |index: usize| u32::from_le_bytes(bytes[index..index + 4].try_into().unwrap()) as usize;
+    let start = at(4 + (profile * 151 + chapter) * 4);
+    let end = at(4 + (profile * 151 + chapter + 1) * 4);
+    if verse > end - start {
+        return None;
+    }
+    let index = 4 + 3 * 151 * 4 + (start + verse - 1) * 2;
+    let value = u16::from_le_bytes(bytes[index..index + 2].try_into().unwrap());
+    (value != 0).then_some(value)
 }
 fn key(edition: &str, code: &str, chapters: usize, chapter: usize, label: &str) -> String {
     if code == "Ps" {
         return label
             .parse::<usize>()
             .ok()
-            .and_then(|v| {
-                data()
-                    .psalms
-                    .get(file(edition))?
-                    .get(chapter)?
-                    .get(v.checked_sub(1)?)
-            })
-            .cloned()
+            .and_then(|v| psalm_group(edition, chapter, v))
+            .map(|group| format!("Ps:{group}"))
             .unwrap_or_else(|| format!("unmapped:{edition}:{chapter}:{label}"));
     }
     let (mut c, mut v) = (chapter + 1, label.to_owned());
@@ -120,9 +125,34 @@ impl Engine {
             .collect();
         if let Some(b) = target {
             let t = &targets[b];
+            let chapters: Vec<_> = if code == "Ps" && edition != other {
+                let groups: BTreeSet<_> = (0..left.len())
+                    .filter_map(|v| {
+                        left.label(v)
+                            .parse()
+                            .ok()
+                            .and_then(|n| psalm_group(edition, chapter, n))
+                    })
+                    .collect();
+                (0..t.chapters)
+                    .filter(|&c| {
+                        self.chapter(other, b, c).is_ok_and(|part| {
+                            (1..=part.len()).any(|v| {
+                                psalm_group(other, c, v).is_some_and(|id| groups.contains(&id))
+                            })
+                        })
+                    })
+                    .collect()
+            } else if ["Ps", "Joel", "Mal", "Esth"].contains(&code.as_str()) {
+                (0..t.chapters).collect()
+            } else if chapter < t.chapters {
+                vec![chapter]
+            } else {
+                Vec::new()
+            };
             // Read only the chapters which contain a matching reference. The
             // catalog scan does not parse or copy a Bible's text.
-            for c in 0..t.chapters {
+            for c in chapters {
                 let candidate = self.chapter(other, b, c)?;
                 let relevant = (0..candidate.len()).any(|v| {
                     wanted.contains(&key(other, &code, t.chapters, c, &candidate.label(v)))

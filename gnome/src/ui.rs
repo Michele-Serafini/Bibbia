@@ -81,12 +81,14 @@ pub struct Ui {
     comparison_primary: gtk::Label,
     comparison_edition: gtk::DropDown,
     comparison_notice: gtk::Label,
-    comparison_scroll: gtk::ScrolledWindow,
     comparison_rows: gtk::Box,
+    comparison_views: RefCell<Option<comparison::Views>>,
+    comparison_pending: Cell<bool>,
+    comparison_reflowing: Cell<bool>,
     comparison_choice: RefCell<String>,
     comparison_options: RefCell<Vec<String>>,
     comparison_generation: Cell<u64>,
-    comparison_data: RefCell<Option<(String, Value)>>,
+    comparison_data: RefCell<Option<(String, Rc<Value>)>>,
     book_surface: book::BookSurface,
     body_tag: gtk::TextTag,
     number_tag: gtk::TextTag,
@@ -379,8 +381,8 @@ impl Ui {
             .build();
         comparison_panel.append(&comparison_notice);
         let comparison_rows = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        let comparison_scroll = scroll(&comparison_rows);
-        comparison_panel.append(&comparison_scroll);
+        comparison_rows.set_vexpand(true);
+        comparison_panel.append(&comparison_rows);
         paper.append(&comparison_panel);
         paper.set_vexpand(true);
         let clamp = adw::Clamp::builder()
@@ -564,8 +566,10 @@ impl Ui {
             comparison_primary,
             comparison_edition,
             comparison_notice,
-            comparison_scroll,
             comparison_rows,
+            comparison_views: RefCell::new(None),
+            comparison_pending: Cell::new(false),
+            comparison_reflowing: Cell::new(false),
             comparison_choice: RefCell::new("CEI 2008".into()),
             comparison_options: RefCell::new(Vec::new()),
             comparison_generation: Cell::new(0),
@@ -1092,6 +1096,10 @@ impl Ui {
         self.launch(async move { u.navigate(p).await });
     }
     fn render(self: &Rc<Self>) {
+        if self.comparison.is_active() {
+            self.refresh_comparison();
+            return;
+        }
         self.changing.set(true);
         let (text, spans) = model::layout(&self.state.borrow().verses);
         self.reader.buffer().set_text(&text);
