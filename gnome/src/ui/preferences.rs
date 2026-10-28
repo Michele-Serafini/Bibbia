@@ -177,6 +177,7 @@ impl Ui {
                 ui.core
                     .post(json!({"op":"settings","key":"language","value":value}));
                 ui.relabel();
+                if ui.comparison.is_active(){ui.refresh_comparison();}
                 changing.set(true);
                 let selected_theme=theme_row.selected();
                 theme_row.set_model(Some(&gtk::StringList::new(&[&ui.t("Come GNOME","Follow GNOME"),&ui.t("Chiaro","Light"),&ui.t("Scuro","Dark")])));

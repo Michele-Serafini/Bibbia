@@ -1,5 +1,6 @@
 .bibbia { font-family: 'Adwaita Sans', sans-serif; }
 .bible-text, .bible-text text { background: transparent; }
+.comparison-text { font-family: 'Source Serif 4', serif; }
 .book-paper {
   background-color: #fffdf7;
   border: 1px solid alpha(black, 0.10);

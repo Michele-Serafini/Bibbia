@@ -12,6 +12,7 @@ impl Ui {
         self.book_surface.set_visible(!active);
         self.comparison_panel.set_visible(active);
         self.book_mode.set_sensitive(!active);
+        self.verse_menu.set_sensitive(!active);
         self.relabel_book();
         if active {
             self.page_counter.set_text("");
@@ -136,6 +137,7 @@ impl Ui {
                     column.append(&reference);
                     let label = gtk::Label::builder()
                         .label(cell["text"].as_str().unwrap())
+                        .css_classes(["comparison-text"])
                         .wrap(true)
                         .wrap_mode(pango::WrapMode::WordChar)
                         .selectable(true)

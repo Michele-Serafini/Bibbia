@@ -243,13 +243,13 @@ final class AppModel: ObservableObject {
             preferences.comparisonEdition = position.edition == "CEI 2008" ? "Martini 1781 (cattolica)" : "CEI 2008"
         }
         comparisonTask?.cancel(); comparison = nil; comparisonLoading = true
-        let position = position, other = preferences.comparisonEdition
+        let target = position, other = preferences.comparisonEdition
         comparisonTask = Task {
             do {
-                let result = try await store.compare(position, other: other)
+                let result = try await store.compare(target, other: other)
                 try Task.checkCancellation()
-                guard self.comparing, self.position.edition == position.edition,
-                      self.position.book == position.book, self.position.chapter == position.chapter else { return }
+                guard self.comparing, self.position.edition == target.edition,
+                      self.position.book == target.book, self.position.chapter == target.chapter else { return }
                 comparison = result; comparisonLoading = false
             } catch is CancellationError {} catch { comparisonLoading = false; self.error = error.localizedDescription }
         }
