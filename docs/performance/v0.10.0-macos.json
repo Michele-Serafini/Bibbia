@@ -1,0 +1,481 @@
+{
+  "platform": "macOS-15.7.9-arm64-arm-64bit-Mach-O",
+  "architecture": "arm64",
+  "method": "Same runner, native release apps, fresh marked profiles, alternating order, 3 samples. Same fixture hooks in v0.9.0 baseline and candidate. 1000x720 narrow / 1500x900 wide, CEI Psalm 119, KJV comparison, 8 navigation/comparison cycles. First-ready includes a 120ms one-shot layout settle; ordinary idle benchmarks are separate. No forced GC, heap purge or working-set trimming. CPU is one core; excludes display server and GPU allocations. RSS/private/PSS are different metrics; do not compare totals between operating systems.",
+  "binaries": {
+    "baseline": {
+      "path": "artifacts/performance-baseline/native/Bibbia.app/Contents/MacOS/Bibbia",
+      "sha256": "2b460b60766f6b98473554019b76a41533c9d5e6a69dfb35b99f7b932e69ed2e"
+    },
+    "candidate": {
+      "path": "artifacts/macos-staging/Bibbia.app/Contents/MacOS/Bibbia",
+      "sha256": "6cf1252c8d689021c1206453ab0be3ff57863a19fbd74be772f4ba0f2db54c26"
+    }
+  },
+  "medians": {
+    "baseline": {
+      "initial": {
+        "layout_managers": 2,
+        "elapsed_ms": 308.846,
+        "startup_ready_ms": 982.976,
+        "rss_mib": 98.266,
+        "cpu_percent": 1.724
+      },
+      "long_chapter": {
+        "layout_managers": 2,
+        "elapsed_ms": 619.238,
+        "rss_mib": 139.398,
+        "cpu_percent": 1.715
+      },
+      "comparison": {
+        "elapsed_ms": 858.112,
+        "layout_managers": 0,
+        "rss_mib": 153.359,
+        "cpu_percent": 0.0
+      },
+      "returned": {
+        "elapsed_ms": 503.883,
+        "layout_managers": 2,
+        "rss_mib": 153.266,
+        "cpu_percent": 1.359
+      },
+      "wide": {
+        "layout_managers": 2,
+        "elapsed_ms": 203.49,
+        "rss_mib": 153.797,
+        "cpu_percent": 1.743
+      },
+      "narrow": {
+        "elapsed_ms": 182.051,
+        "layout_managers": 2,
+        "rss_mib": 154.25,
+        "cpu_percent": 0.0
+      },
+      "cycled": {
+        "elapsed_ms": 14828.887,
+        "layout_managers": 2,
+        "rss_mib": 160.672,
+        "cpu_percent": 1.688
+      },
+      "animation": {
+        "layout_managers": 2,
+        "elapsed_ms": 279.53,
+        "rss_mib": 163.734,
+        "cpu_percent": 0.0
+      },
+      "settled": {
+        "elapsed_ms": 1574.591,
+        "layout_managers": 2,
+        "rss_mib": 163.094,
+        "cpu_percent": 0.0
+      }
+    },
+    "candidate": {
+      "initial": {
+        "layout_managers": 1,
+        "elapsed_ms": 326.821,
+        "startup_ready_ms": 1108.799,
+        "rss_mib": 98.484,
+        "cpu_percent": 3.049
+      },
+      "long_chapter": {
+        "layout_managers": 1,
+        "elapsed_ms": 616.803,
+        "rss_mib": 137.852,
+        "cpu_percent": 0.0
+      },
+      "comparison": {
+        "elapsed_ms": 681.501,
+        "layout_managers": 0,
+        "rss_mib": 147.359,
+        "cpu_percent": 1.582
+      },
+      "returned": {
+        "layout_managers": 1,
+        "elapsed_ms": 461.263,
+        "rss_mib": 147.219,
+        "cpu_percent": 2.097
+      },
+      "wide": {
+        "layout_managers": 2,
+        "elapsed_ms": 336.379,
+        "rss_mib": 148.312,
+        "cpu_percent": 1.555
+      },
+      "narrow": {
+        "elapsed_ms": 188.814,
+        "layout_managers": 1,
+        "rss_mib": 148.297,
+        "cpu_percent": 1.447
+      },
+      "cycled": {
+        "layout_managers": 1,
+        "elapsed_ms": 15746.842,
+        "rss_mib": 154.469,
+        "cpu_percent": 0.0
+      },
+      "animation": {
+        "layout_managers": 1,
+        "elapsed_ms": 250.034,
+        "rss_mib": 157.758,
+        "cpu_percent": 9.975
+      },
+      "settled": {
+        "layout_managers": 1,
+        "elapsed_ms": 1549.234,
+        "rss_mib": 155.938,
+        "cpu_percent": 0.0
+      }
+    }
+  },
+  "samples": {
+    "baseline": [
+      {
+        "initial": {
+          "layout_managers": 2,
+          "elapsed_ms": 389.75799083709717,
+          "startup_ready_ms": 1091.112958999986,
+          "rss_mib": 100.8125,
+          "cpu_percent": 1.82018126082145
+        },
+        "long_chapter": {
+          "layout_managers": 2,
+          "elapsed_ms": 561.5010261535645,
+          "rss_mib": 139.53125,
+          "cpu_percent": 1.7145853993193652
+        },
+        "comparison": {
+          "elapsed_ms": 620.8760738372803,
+          "layout_managers": 0,
+          "rss_mib": 154.703125,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 446.43402099609375,
+          "layout_managers": 2,
+          "rss_mib": 154.8125,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "layout_managers": 2,
+          "elapsed_ms": 167.76299476623535,
+          "rss_mib": 155.46875,
+          "cpu_percent": 1.971707153819703
+        },
+        "narrow": {
+          "elapsed_ms": 150.42805671691895,
+          "layout_managers": 2,
+          "rss_mib": 156.28125,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 12088.963031768799,
+          "layout_managers": 2,
+          "rss_mib": 160.59375,
+          "cpu_percent": 1.6879886585798447
+        },
+        "animation": {
+          "layout_managers": 2,
+          "elapsed_ms": 239.82489109039307,
+          "rss_mib": 163.59375,
+          "cpu_percent": 0.0
+        },
+        "settled": {
+          "elapsed_ms": 1574.5909214019775,
+          "layout_managers": 2,
+          "rss_mib": 162.015625,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "layout_managers": 2,
+          "elapsed_ms": 308.84599685668945,
+          "startup_ready_ms": 982.976457999996,
+          "rss_mib": 98.265625,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 888.4919881820679,
+          "layout_managers": 2,
+          "rss_mib": 137.640625,
+          "cpu_percent": 2.0198310364074774
+        },
+        "comparison": {
+          "layout_managers": 0,
+          "elapsed_ms": 862.3859882354736,
+          "rss_mib": 153.359375,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 503.8830041885376,
+          "layout_managers": 2,
+          "rss_mib": 153.109375,
+          "cpu_percent": 1.3591865715270723
+        },
+        "wide": {
+          "elapsed_ms": 203.48989963531494,
+          "layout_managers": 2,
+          "rss_mib": 153.296875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 182.0509433746338,
+          "layout_managers": 2,
+          "rss_mib": 154.203125,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 14828.886985778809,
+          "layout_managers": 2,
+          "rss_mib": 161.625,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 279.5300483703613,
+          "layout_managers": 2,
+          "rss_mib": 164.671875,
+          "cpu_percent": 0.0
+        },
+        "settled": {
+          "elapsed_ms": 1581.6740989685059,
+          "layout_managers": 2,
+          "rss_mib": 163.09375,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "layout_managers": 2,
+          "elapsed_ms": 295.5359220504761,
+          "startup_ready_ms": 940.0401249999959,
+          "rss_mib": 98.015625,
+          "cpu_percent": 1.7236732079346684
+        },
+        "long_chapter": {
+          "layout_managers": 2,
+          "elapsed_ms": 619.238018989563,
+          "rss_mib": 139.3984375,
+          "cpu_percent": 1.388077890885858
+        },
+        "comparison": {
+          "elapsed_ms": 858.1119775772095,
+          "layout_managers": 0,
+          "rss_mib": 152.671875,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 511.2799406051636,
+          "layout_managers": 2,
+          "rss_mib": 153.265625,
+          "cpu_percent": 2.004098043811128
+        },
+        "wide": {
+          "elapsed_ms": 227.03802585601807,
+          "layout_managers": 2,
+          "rss_mib": 153.796875,
+          "cpu_percent": 1.7429795155564267
+        },
+        "narrow": {
+          "elapsed_ms": 225.23903846740723,
+          "layout_managers": 2,
+          "rss_mib": 154.25,
+          "cpu_percent": 1.785550212780565
+        },
+        "cycled": {
+          "layout_managers": 2,
+          "elapsed_ms": 16954.14102077484,
+          "rss_mib": 160.671875,
+          "cpu_percent": 2.0378641974353746
+        },
+        "animation": {
+          "elapsed_ms": 395.3549861907959,
+          "layout_managers": 2,
+          "rss_mib": 163.734375,
+          "cpu_percent": 27.711551275646833
+        },
+        "settled": {
+          "elapsed_ms": 1559.8880052566528,
+          "layout_managers": 2,
+          "rss_mib": 164.578125,
+          "cpu_percent": 1.9228136122414845
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "initial": {
+          "layout_managers": 1,
+          "elapsed_ms": 326.820969581604,
+          "startup_ready_ms": 927.856208000037,
+          "rss_mib": 98.5,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "layout_managers": 1,
+          "elapsed_ms": 616.8030500411987,
+          "rss_mib": 138.4453125,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 681.501030921936,
+          "layout_managers": 0,
+          "rss_mib": 147.53125,
+          "cpu_percent": 1.5823413865939686
+        },
+        "returned": {
+          "layout_managers": 1,
+          "elapsed_ms": 387.16602325439453,
+          "rss_mib": 148.546875,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "layout_managers": 2,
+          "elapsed_ms": 255.4030418395996,
+          "rss_mib": 148.6875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 145.18392086029053,
+          "layout_managers": 1,
+          "rss_mib": 149.484375,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "layout_managers": 1,
+          "elapsed_ms": 21253.675937652588,
+          "rss_mib": 154.125,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "layout_managers": 1,
+          "elapsed_ms": 267.80104637145996,
+          "rss_mib": 157.7578125,
+          "cpu_percent": 46.508573816229244
+        },
+        "settled": {
+          "layout_managers": 1,
+          "elapsed_ms": 1533.1090688705444,
+          "rss_mib": 155.9375,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 485.6710433959961,
+          "layout_managers": 1,
+          "startup_ready_ms": 1371.3244169999825,
+          "rss_mib": 98.125,
+          "cpu_percent": 3.4023420446756734
+        },
+        "long_chapter": {
+          "layout_managers": 1,
+          "elapsed_ms": 886.6750001907349,
+          "rss_mib": 137.8515625,
+          "cpu_percent": 1.4980756297219808
+        },
+        "comparison": {
+          "layout_managers": 0,
+          "elapsed_ms": 855.2320003509521,
+          "rss_mib": 147.359375,
+          "cpu_percent": 1.6336375779117382
+        },
+        "returned": {
+          "elapsed_ms": 848.701000213623,
+          "layout_managers": 1,
+          "rss_mib": 147.21875,
+          "cpu_percent": 2.6515172230129
+        },
+        "wide": {
+          "layout_managers": 2,
+          "elapsed_ms": 700.6510496139526,
+          "rss_mib": 148.3125,
+          "cpu_percent": 1.5548193333984082
+        },
+        "narrow": {
+          "elapsed_ms": 312.8809928894043,
+          "layout_managers": 1,
+          "rss_mib": 148.296875,
+          "cpu_percent": 1.4471615102795043
+        },
+        "cycled": {
+          "layout_managers": 1,
+          "elapsed_ms": 15746.84202671051,
+          "rss_mib": 154.84375,
+          "cpu_percent": 1.3928271734941686
+        },
+        "animation": {
+          "elapsed_ms": 250.03397464752197,
+          "layout_managers": 1,
+          "rss_mib": 156.5625,
+          "cpu_percent": 9.975172925109078
+        },
+        "settled": {
+          "elapsed_ms": 1549.2340326309204,
+          "layout_managers": 1,
+          "rss_mib": 147.546875,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 300.199031829834,
+          "layout_managers": 1,
+          "startup_ready_ms": 1108.7985409999987,
+          "rss_mib": 98.484375,
+          "cpu_percent": 3.049026826862418
+        },
+        "long_chapter": {
+          "layout_managers": 1,
+          "elapsed_ms": 601.173996925354,
+          "rss_mib": 137.15625,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "layout_managers": 0,
+          "elapsed_ms": 653.0989408493042,
+          "rss_mib": 147.359375,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "layout_managers": 1,
+          "elapsed_ms": 461.26294136047363,
+          "rss_mib": 147.1875,
+          "cpu_percent": 2.0968456073750215
+        },
+        "wide": {
+          "elapsed_ms": 336.3790512084961,
+          "layout_managers": 2,
+          "rss_mib": 147.7421875,
+          "cpu_percent": 1.640130269183589
+        },
+        "narrow": {
+          "elapsed_ms": 188.81404399871826,
+          "layout_managers": 1,
+          "rss_mib": 148.15625,
+          "cpu_percent": 1.4580979984427433
+        },
+        "cycled": {
+          "elapsed_ms": 13443.619966506958,
+          "layout_managers": 1,
+          "rss_mib": 154.46875,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "layout_managers": 1,
+          "elapsed_ms": 156.23795986175537,
+          "rss_mib": 158.359375,
+          "cpu_percent": 3.882321968239841
+        },
+        "settled": {
+          "layout_managers": 1,
+          "elapsed_ms": 1612.828016281128,
+          "rss_mib": 156.53125,
+          "cpu_percent": 0.0
+        }
+      }
+    ]
+  },
+  "source_commit": "03cd051faea2d55bb5d5b46f6bed616ca0d99295",
+  "baseline_source_commit": "7d68ccedca8392ceccae99bbbd8b46b5dc60447a"
+}
