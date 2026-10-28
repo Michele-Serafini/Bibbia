@@ -59,8 +59,10 @@ extension BibleStore {
     public func saved(edition: String, limit: Int = 200, offset: Int = 0, filter: NoteFilter = NoteFilter()) throws -> [Hit] {
         guard (1...200).contains(limit), offset >= 0, filter.query.utf8.count <= 1024, ["all","note","marked","bookmark"].contains(filter.kind) else { throw BibleError.invalid("Filtro o pagina non valida / Invalid filter or page") }
         let source = try corpus(edition), query = filter.query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let paginated=query.isEmpty && filter.kind == "all"
+        let filteredOffset=paginated ? 0:offset
         var result = [Hit](), skipped = 0
-        try database.scan("SELECT a.book,a.chapter,a.verse,a.payload,COALESCE(o.folder,''),COALESCE(o.tags,'[]') FROM annotations a LEFT JOIN note_organization o USING(edition,book,chapter,verse) WHERE a.edition=?1 AND (?2 IS NULL OR COALESCE(o.folder,'')=?2) AND (?3 IS NULL OR EXISTS(SELECT 1 FROM json_each(COALESCE(o.tags,'[]')) WHERE value=?3)) ORDER BY a.book,a.chapter,a.verse",[.text(edition),filter.folder.map(SQLValue.text) ?? .null,filter.tag.map(SQLValue.text) ?? .null]) { row in
+        try database.scan("SELECT a.book,a.chapter,a.verse,a.payload,COALESCE(o.folder,''),COALESCE(o.tags,'[]') FROM annotations a LEFT JOIN note_organization o USING(edition,book,chapter,verse) WHERE a.edition=?1 AND (?2 IS NULL OR COALESCE(o.folder,'')=?2) AND (?3 IS NULL OR EXISTS(SELECT 1 FROM json_each(COALESCE(o.tags,'[]')) WHERE value=?3)) ORDER BY a.book,a.chapter,a.verse LIMIT ?4 OFFSET ?5",[.text(edition),filter.folder.map(SQLValue.text) ?? .null,filter.tag.map(SQLValue.text) ?? .null,.integer(paginated ? limit:-1),.integer(paginated ? offset:0)]) { row in
             try Task.checkCancellation()
             guard let b=row[0].integer,let c=row[1].integer,let v=row[2].integer,let json=row[3].string else { throw BibleError.invalid("Appunto non valido / Invalid annotation") }
             let a = try JSONDecoder().decode(Annotation.self,from:Data(json.utf8))
@@ -71,7 +73,7 @@ extension BibleStore {
             var hit = Hit(position:Position(edition:edition,book:b,chapter:c,verse:v),name:source.books[b].name,label:span.label(v),text:text,annotation:a)
             hit.organization = org
             if !query.isEmpty && !([text,a.note,hit.reference,org.folder]+org.tags).contains(where: { $0.lowercased().contains(query) }) { return true }
-            if skipped < offset { skipped += 1; return true }
+            if skipped < filteredOffset { skipped += 1; return true }
             result.append(hit)
             return result.count < limit
         }

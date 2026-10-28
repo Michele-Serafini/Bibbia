@@ -376,8 +376,8 @@ Vedere [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) per fonti e licenze.
 
 ## Prestazioni e fonti dei testi
 
-La 0.10.0 riduce il testo e i controlli nascosti: Windows crea gli editor delle
-pagine visibili; GNOME usa due documenti nativi nel confronto; macOS crea la
+La 0.10.0 riduce il testo e i controlli nascosti: Windows usa controlli nativi di sola lettura al posto degli editor di input per
+ogni versetto; GNOME usa due documenti nativi nel confronto; macOS crea la
 seconda pagina soltanto quando serve e riusa l'impaginazione. Le annotazioni
 macOS aggiornano soltanto i versetti cambiati. L'indice delle corrispondenze
 comune ai motori occupa 20 KB invece di 146 KB, senza perdere riferimenti.

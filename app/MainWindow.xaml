@@ -70,16 +70,8 @@
                                         <Grid ColumnSpacing="10">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <RichEditBox Grid.Column="1" Background="Transparent" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged" IsReadOnly="True" IsSpellCheckEnabled="False"
-                                                FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" BorderThickness="0" MinHeight="0"
-                                                ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                ScrollViewer.VerticalScrollMode="Disabled" UseSystemFocusVisuals="True">
-                                                <RichEditBox.Resources>
-                                                    <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
-                                                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
-                                                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
-                                                </RichEditBox.Resources>
-                                            </RichEditBox>
+                                            <RichTextBlock Grid.Column="1" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged"
+                                                IsTextSelectionEnabled="True" FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" />
                                             <Button Grid.Column="2" Content="⋯" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
                                                 Padding="6" MinWidth="28" Background="Transparent" BorderThickness="0" />
                                         </Grid>

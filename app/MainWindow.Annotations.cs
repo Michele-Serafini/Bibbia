@@ -14,18 +14,18 @@ namespace Bibbia.Windows;
 
 public sealed partial class MainWindow
 {
-    private readonly Dictionary<int,RichEditBox> liveEditors = [];
+    private readonly Dictionary<int,RichTextBlock> liveEditors = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? selectionTimer;
-    private RichEditBox? selectionEditor;
+    private RichTextBlock? selectionEditor;
     private CommandBarFlyout? activeSelectionFlyout;
     private static readonly bool selectionDiagnostics = Environment.GetEnvironmentVariable("BIBBIA_UI_DIAGNOSTICS") == "1";
-    private void TraceSelection(string stage, RichEditBox editor)
+    private void TraceSelection(string stage, RichTextBlock editor)
     {
         if (!selectionDiagnostics || editor.DataContext is not VerseRow {Index:0}) return;
         try {
             Directory.CreateDirectory(dataDirectory);
-            var range = editor.Document.Selection;
-            File.AppendAllText(Path.Combine(dataDirectory,"ui-events.log"),$"{DateTime.UtcNow:O} {stage} start={range.StartPosition} end={range.EndPosition} readonly={editor.IsReadOnly} loaded={editor.IsLoaded} focus={editor.FocusState} font={editor.FontSize} points={editor.Document.GetRange(0,editor.DataContext is VerseRow v ? v.Text.Length : 0).CharacterFormat.Size} mouse={(GetAsyncKeyState(1)&0x8000)!=0}\n");
+            var range = ReaderSelection(editor);
+            File.AppendAllText(Path.Combine(dataDirectory,"ui-events.log"),$"{DateTime.UtcNow:O} {stage} start={range.Start} end={range.End} loaded={editor.IsLoaded} font={editor.FontSize} mouse={(GetAsyncKeyState(1)&0x8000)!=0}\n");
         } catch { }
     }
     [DllImport("user32.dll")]
@@ -38,31 +38,33 @@ public sealed partial class MainWindow
     };
     private void VerseEditorLoaded(object sender, RoutedEventArgs e)
     {
-        if (sender is RichEditBox editor) {
+        if (sender is RichTextBlock editor) {
             editor.RemoveHandler(UIElement.PointerReleasedEvent,new PointerEventHandler(VersePointerReleased));
             editor.AddHandler(UIElement.PointerReleasedEvent,new PointerEventHandler(VersePointerReleased),true);
             editor.RemoveHandler(UIElement.PointerPressedEvent,new PointerEventHandler(VersePointerPressed));
             editor.AddHandler(UIElement.PointerPressedEvent,new PointerEventHandler(VersePointerPressed),true);
         }
+        if(sender is RichTextBlock view){view.SizeChanged-=VerseTextSizeChanged;view.SizeChanged+=VerseTextSizeChanged;}
         BindVerseEditor(sender);
     }
+    private void VerseTextSizeChanged(object sender,SizeChangedEventArgs args)=>ScheduleBookLayout();
     private void VerseEditorUnloaded(object sender,RoutedEventArgs e)
     {
-        if (sender is not RichEditBox editor) return;
+        if (sender is not RichTextBlock editor) return;
         if (editor.Tag is VerseRow row && liveEditors.TryGetValue(row.Index,out var mapped) && ReferenceEquals(mapped,editor)) liveEditors.Remove(row.Index);
         if (ReferenceEquals(selectionEditor,editor)) { selectionTimer?.Stop(); selectionEditor=null; }
-        editor.ContextFlyout=null; editor.Tag=null;
+        editor.ContextFlyout=null; editor.Tag=null;readerRuns.Remove(editor);
     }
     private void VerseEditorDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs e) => BindVerseEditor(sender);
     private void BindVerseEditor(object sender)
     {
-        if (sender is not RichEditBox editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
+        if (sender is not RichTextBlock editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
         if (editor.Tag is VerseRow previous && liveEditors.TryGetValue(previous.Index,out var mapped) && ReferenceEquals(mapped,editor)) liveEditors.Remove(previous.Index);
         liveEditors[row.Index] = editor;
         if (ReferenceEquals(editor.Tag,row)) return;
         editor.Tag = row;
         editor.FontSize=row.TextSize;
-        UpdateDocument(editor,() => { editor.Document.SetText(TextSetOptions.None,row.Text); ApplyTextStylesCore(editor,row); });
+        ApplyTextStylesCore(editor,row);
         AutomationProperties.SetAutomationId(editor,$"VerseText_{row.Index}");
         AutomationProperties.SetName(editor,row.Text);
         // The text control dismisses its own SelectionFlyout on focus loss.
@@ -73,11 +75,11 @@ public sealed partial class MainWindow
     }
     private void VersePointerPressed(object sender, PointerRoutedEventArgs e)
     {
-        if (sender is RichEditBox editor) TraceSelection("pointer pressed",editor);
+        if (sender is RichTextBlock editor) TraceSelection("pointer pressed",editor);
     }
     private void VersePointerReleased(object sender, PointerRoutedEventArgs e)
     {
-        if (sender is not RichEditBox editor) return;
+        if (sender is not RichTextBlock editor) return;
         TraceSelection("pointer released",editor);
         var point = e.GetCurrentPoint(editor).Position;
         // RichEdit updates its selection while handling the mouse release.
@@ -85,7 +87,7 @@ public sealed partial class MainWindow
     }
     private void VerseSelectionChanged(object sender, RoutedEventArgs e)
     {
-        if (sender is not RichEditBox editor || bookReflowing) return;
+        if (sender is not RichTextBlock editor || bookReflowing || readerStyling) return;
         TraceSelection("selection changed",editor);
         if ((GetAsyncKeyState(1) & 0x8000) == 0) return;
         selectionEditor = editor;
@@ -103,10 +105,10 @@ public sealed partial class MainWindow
         }
         selectionTimer.Start();
     }
-    private void ShowSelectionToolbar(RichEditBox editor, global::Windows.Foundation.Point? point = null) => Guard(() =>
+    private void ShowSelectionToolbar(RichTextBlock editor, global::Windows.Foundation.Point? point = null) => Guard(() =>
     {
         TraceSelection("show requested",editor);
-        if (closed || !editor.IsLoaded || editor.Document.Selection.Length == 0 || activeSelectionFlyout?.IsOpen == true || editor.DataContext is not VerseRow row) return;
+        if (closed || !editor.IsLoaded || ReaderSelection(editor).Start==ReaderSelection(editor).End || activeSelectionFlyout?.IsOpen == true || editor.DataContext is not VerseRow row) return;
         selectionTimer?.Stop();
         var flyout = AnnotationToolbar(editor,row,true);
         activeSelectionFlyout = flyout;
@@ -116,55 +118,21 @@ public sealed partial class MainWindow
         flyout.ShowAt(editor,options);
         TraceSelection("show complete",editor);
     });
-    private static void UpdateDocument(RichEditBox editor, Action update)
-    {
-        // WinUI rejects document writes while IsReadOnly is true, including
-        // programmatic text/format changes. Keep user editing disabled outside
-        // this synchronous update on the UI thread.
-        var readOnly = editor.IsReadOnly;
-        var document = editor.Document;
-        var batched = false;
-        editor.IsReadOnly = false;
-        try { document.BatchDisplayUpdates(); batched=true; document.UndoLimit=0; update(); }
-        finally { try { if (batched) document.ApplyDisplayUpdates(); } finally { editor.IsReadOnly=readOnly; } }
-    }
-    private void ApplyTextStyles(RichEditBox editor, VerseRow row) {
-        foreach(var view in Descendants<RichEditBox>(BookColumns)) if(view.DataContext is VerseRow value && value.Index==row.Index) {
-            value.Annotation=row.Annotation;UpdateDocument(view,()=>ApplyTextStylesCore(view,value));
+    private void ApplyTextStyles(RichTextBlock editor, VerseRow row) {
+        foreach(var view in Descendants<RichTextBlock>(BookColumns)) if(view.DataContext is VerseRow value && value.Index==row.Index) {
+            value.Annotation=row.Annotation;ApplyTextStylesCore(view,value);
         }
     }
-    private void ApplyTextStylesCore(RichEditBox editor, VerseRow row)
-    {
-        var whole = editor.Document.GetRange(0,row.Text.Length);
-        whole.ParagraphFormat.SetLineSpacing(LineSpacingRule.Multiple,1.2f);
-        var a = row.Annotation;
-        var bg = EditorBackground();
-        editor.Background = new SolidColorBrush(bg);
-        whole.CharacterFormat.BackgroundColor = bg;
-        whole.CharacterFormat.ForegroundColor = Root.ActualTheme == ElementTheme.Dark ? Colors.White : Colors.Black;
-        whole.CharacterFormat.Underline = a.GetProperty("underline").GetBoolean() ? UnderlineType.Single : UnderlineType.None;
-        if (a.GetProperty("highlight").GetString() is string color) {
-            whole.CharacterFormat.BackgroundColor = MarkColor(color);
-            whole.CharacterFormat.ForegroundColor = Colors.Black;
-        }
-        foreach (var mark in a.GetProperty("ranges").EnumerateArray()) {
-            int start=mark.GetProperty("start").GetInt32(), length=mark.GetProperty("length").GetInt32();
-            var range=editor.Document.GetRange(start,start+length);
-            if (mark.GetProperty("underline").GetBoolean()) range.CharacterFormat.Underline=UnderlineType.Single;
-            if (mark.GetProperty("highlight").GetString() is string highlight) {
-                range.CharacterFormat.BackgroundColor=MarkColor(highlight); range.CharacterFormat.ForegroundColor=Colors.Black;
-            }
-        }
-    }
-    private CommandBarFlyout AnnotationToolbar(RichEditBox editor, VerseRow row, bool selection, bool lazy=false)
+    private CommandBarFlyout AnnotationToolbar(RichTextBlock editor, VerseRow row, bool selection, bool lazy=false)
     {
         var flyout = new CommandBarFlyout();
         var start = 0; var length = row.Text.Length; string? builtLanguage=null;
         flyout.Opening += (_,_) => {
             if (builtLanguage != language) { flyout.PrimaryCommands.Clear(); flyout.SecondaryCommands.Clear(); BuildCommands(); builtLanguage=language; }
             if (selection) {
-                start = Math.Clamp(editor.Document.Selection.StartPosition,0,row.Text.Length);
-                var end = Math.Clamp(editor.Document.Selection.EndPosition,start,row.Text.Length);
+                var range=ReaderSelection(editor);
+                start=Math.Clamp(range.Start,0,row.Text.Length);
+                var end=Math.Clamp(range.End,start,row.Text.Length);
                 length = end-start;
                 if (length == 0) { start = 0; length = row.Text.Length; }
             }
@@ -214,10 +182,10 @@ public sealed partial class MainWindow
     }
     private void VerseMenuClick(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button button || button.Parent is not Grid parent || parent.Children.OfType<RichEditBox>().FirstOrDefault() is not { } editor || editor.DataContext is not VerseRow row) return;
+        if (sender is not Button button || button.Parent is not Grid parent || parent.Children.OfType<RichTextBlock>().FirstOrDefault() is not { } editor || editor.DataContext is not VerseRow row) return;
         AnnotationToolbar(editor,row,false).ShowAt(button);
     }
-    private void ShowNote(RichEditBox editor, VerseRow row)
+    private void ShowNote(RichTextBlock editor, VerseRow row)
     {
         var flyout = new Flyout();
         var content = new StackPanel { Width=300,Spacing=12 };

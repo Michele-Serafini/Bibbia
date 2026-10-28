@@ -189,7 +189,7 @@ public sealed partial class MainWindow : Window
         var forward=displayedChapter==null || displayedChapter.Value.Edition!=edition ||
             (displayedChapter.Value.Book,displayedChapter.Value.Chapter).CompareTo((book,chapter))<0;
         readerRows=rows;
-        if(!comparing && !bookMode)VerseList.ItemsSource=rows;
+        if(!comparing)VerseList.ItemsSource=rows;
         VerseRight.ItemsSource=null;
         displayedChapter=target;
         VerseList.IsHitTestVisible=true;
@@ -374,7 +374,7 @@ public sealed partial class MainWindow : Window
             fontTimer.Tick += (_,_) => Guard(() => {
                 if (closed) return;
                 foreach (var row in readerRows) row.TextSize=fontSize;
-                foreach(var editor in Descendants<RichEditBox>(BookColumns))editor.FontSize=fontSize;
+                foreach(var editor in Descendants<RichTextBlock>(BookColumns)){editor.FontSize=fontSize;editor.LineHeight=fontSize*1.35;}
                 ScheduleBookLayout();
                 if(comparing)RenderComparison();
                 BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});

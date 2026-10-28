@@ -179,9 +179,22 @@ impl Engine {
         if !["all", "note", "marked", "bookmark"].contains(&kind) {
             return Err("Filtro appunti non valido".into());
         }
-        let mut statement=self.db.prepare_cached("SELECT a.book,a.chapter,a.verse,a.payload,COALESCE(o.folder,''),COALESCE(o.tags,'[]') FROM annotations a LEFT JOIN note_organization o USING(edition,book,chapter,verse) WHERE a.edition=?1 AND (?2 IS NULL OR COALESCE(o.folder,'')=?2) AND (?3 IS NULL OR EXISTS(SELECT 1 FROM json_each(COALESCE(o.tags,'[]')) WHERE value=?3)) ORDER BY a.book,a.chapter,a.verse").map_err(error)?;
+        let paginated = query.is_empty() && kind == "all";
+        let sql_offset = if paginated {
+            i64::try_from(offset).map_err(error)?
+        } else {
+            0
+        };
+        let filtered_offset = if paginated { 0 } else { offset };
+        let mut statement=self.db.prepare_cached("SELECT a.book,a.chapter,a.verse,a.payload,COALESCE(o.folder,''),COALESCE(o.tags,'[]') FROM annotations a LEFT JOIN note_organization o USING(edition,book,chapter,verse) WHERE a.edition=?1 AND (?2 IS NULL OR COALESCE(o.folder,'')=?2) AND (?3 IS NULL OR EXISTS(SELECT 1 FROM json_each(COALESCE(o.tags,'[]')) WHERE value=?3)) ORDER BY a.book,a.chapter,a.verse LIMIT ?4 OFFSET ?5").map_err(error)?;
         let mut rows = statement
-            .query(params![edition, folder, tag])
+            .query(params![
+                edition,
+                folder,
+                tag,
+                if paginated { limit as i64 } else { -1 },
+                sql_offset
+            ])
             .map_err(error)?;
         let mut result = Vec::new();
         let mut skipped = 0;
@@ -222,7 +235,7 @@ impl Engine {
             {
                 continue;
             }
-            if skipped < offset {
+            if skipped < filtered_offset {
                 skipped += 1;
                 continue;
             }

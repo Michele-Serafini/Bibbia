@@ -29,7 +29,7 @@ public sealed partial class MainWindow {
             await WaitReady();
             var elapsed=clock.Elapsed.TotalMilliseconds;
             var wait=Task.Run(()=>gate.WaitOne(TimeSpan.FromSeconds(60)));
-            File.WriteAllText(Path.Combine(profile,name+".json"),JsonSerializer.Serialize(new{elapsed_ms=elapsed,editors=Descendants<RichEditBox>(Root).Count()}));
+            File.WriteAllText(Path.Combine(profile,name+".json"),JsonSerializer.Serialize(new{elapsed_ms=elapsed,editors=Descendants<RichEditBox>(Root).Count(),readers=Descendants<RichTextBlock>(Root).Count()}));
             if(!await wait)throw new TimeoutException("Performance controller timed out");
             clock.Restart();
         }

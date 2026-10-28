@@ -96,7 +96,7 @@ public sealed partial class MainWindow
             title.ButtonHoverBackgroundColor = dark ? global::Windows.UI.Color.FromArgb(255,60,60,60) : global::Windows.UI.Color.FromArgb(255,225,225,225);
             title.ButtonHoverForegroundColor = foreground;
         }
-        foreach (var editor in Descendants<RichEditBox>(BookColumns)) if (editor.DataContext is VerseRow row) UpdateDocument(editor,()=>ApplyTextStylesCore(editor,row));
+        foreach (var editor in Descendants<RichTextBlock>(BookColumns)) if (editor.DataContext is VerseRow row) ApplyTextStylesCore(editor,row);
     }
     private global::Windows.UI.Color EditorBackground() => (BookViewport.Background as SolidColorBrush)?.Color ?? WindowBackground();
     private global::Windows.UI.Color WindowBackground() => (Root.Background as SolidColorBrush)?.Color ??
