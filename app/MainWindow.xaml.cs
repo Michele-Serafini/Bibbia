@@ -228,12 +228,20 @@ public sealed partial class MainWindow : Window
         if(comparing){LoadComparison();return;}
         if(bookMode){ScheduleBookLayout(true);return;}
         var rows=readerRows;if(rows.Count==0)return;
+        VerseList.Visibility=Visibility.Visible;VerseList.IsHitTestVisible=true;VerseList.Clip=null;
+        if(!ReferenceEquals(VerseList.ItemsSource,rows))VerseList.ItemsSource=rows;
         var target = currentVerse;
         // Ignore callbacks queued for a chapter that has since been replaced.
-        DispatcherQueue.TryEnqueue(() =>
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,() =>
         {
-            if (!closed && section == "read" && !comparing && ReferenceEquals(VerseList.ItemsSource, rows))
-                Guard(() => VerseList.ScrollIntoView(rows[target], ScrollIntoViewAlignment.Leading));
+            if (!closed && section == "read" && !comparing && ReferenceEquals(readerRows, rows))
+                Guard(() => {
+                    VerseList.UpdateLayout();
+                    var scroll=Descendants<ScrollViewer>(VerseList).FirstOrDefault();
+                    if(target==0)scroll?.ChangeView(null,0,null,true);
+                    VerseList.ScrollIntoView(rows[target],ScrollIntoViewAlignment.Leading);
+                    TraceBook($"reader items={VerseList.Items.Count} rows={rows.Count} visible={VerseList.Visibility} size={VerseList.ActualWidth}/{VerseList.ActualHeight} viewport={scroll?.ViewportHeight} extent={scroll?.ExtentHeight} offset={scroll?.VerticalOffset} target={target}");
+                });
         });
     }
 

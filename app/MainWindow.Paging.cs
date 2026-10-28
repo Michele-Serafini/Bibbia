@@ -69,7 +69,7 @@ public sealed partial class MainWindow
     }
     private void BookLayoutTick(Microsoft.UI.Dispatching.DispatcherQueueTimer sender,object args)=>Guard(ReflowBook);
     private void ReflowBook() {
-        if(comparing || bookReflowing || !ready || closed || BookViewport.ActualHeight<80)return;
+        if(comparing || section!="read" || bookReflowing || !ready || closed || BookViewport.ActualHeight<80)return;
         bookReflowing=true;
         try {
             CancelBookTurn();pageRequest++;
@@ -78,7 +78,8 @@ public sealed partial class MainWindow
             BookColumns.ColumnSpacing=bookColumns==2?24:0;
             VerseRight.Visibility=bookColumns==2?Visibility.Visible:Visibility.Collapsed;
             var panel=bookMode?fullChapterPanel:scrollingPanel;
-            if(VerseList.ItemsPanel!=panel){VerseList.ItemsPanel=panel;VerseRight.ItemsPanel=panel;}
+            var panelChanged=VerseList.ItemsPanel!=panel;
+            if(panelChanged){VerseList.ItemsPanel=panel;VerseRight.ItemsPanel=panel;}
             var height=Math.Max(40,BookViewport.ActualHeight-20);
             VerseList.Padding=VerseRight.Padding=bookMode?new Thickness(0,0,0,height):new Thickness(0);
             ScrollViewer.SetVerticalScrollBarVisibility(VerseList,bookMode?ScrollBarVisibility.Hidden:ScrollBarVisibility.Auto);
@@ -91,16 +92,19 @@ public sealed partial class MainWindow
             if(!bookMode){BookPageLabel.Text="";return;}
             var scroll=Descendants<ScrollViewer>(VerseList).FirstOrDefault();if(scroll==null)return;
             height=Math.Max(40,scroll.ViewportHeight-6);
-            var lines=new List<PageLine>();
+            if(panelChanged){DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());return;}
+            var lines=new List<PageLine>();var readyReaders=0;
             foreach(var editor in Descendants<RichTextBlock>(VerseList)) {
                 if(editor.DataContext is not VerseRow row)continue;
                 var top=editor.TransformToVisual(VerseList).TransformPoint(new Point(0,0)).Y+scroll.VerticalOffset;
-                lines.AddRange(ReaderLines(editor,row,top));
+                var before=lines.Count;lines.AddRange(ReaderLines(editor,row,top));
+                if(lines.Count>before)readyReaders++;
             }
             if(selectionDiagnostics){
                 var first=Descendants<RichTextBlock>(VerseList).FirstOrDefault();
                 TraceBook($"layout readers={Descendants<RichTextBlock>(VerseList).Count()} lines={lines.Count} viewport={height} first={(first==null?default(Rect):ReaderRect(first,0))} map={(first!=null && readerRuns.TryGetValue(first,out var map)?map.Count:0)}");
             }
+            if(readyReaders<readerRows.Count){DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());return;}
             var key=$"{edition}/{book}/{chapter}";
             var anchorVerse=bookPages.Count>bookPage?bookPages[bookPage].Verse:currentVerse;
             var anchorOffset=bookPages.Count>bookPage?bookPages[bookPage].Offset:0;
