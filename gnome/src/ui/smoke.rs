@@ -40,13 +40,25 @@ async fn screenshot(ui: &Ui, name: &str) -> Result<(), String> {
     let directory = PathBuf::from(directory);
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
     let paintable = gtk::WidgetPaintable::new(Some(&ui.window));
-    let snapshot = gtk::Snapshot::new();
-    paintable.snapshot(
-        &snapshot,
-        ui.window.width() as f64,
-        ui.window.height() as f64,
-    );
-    let node = snapshot.to_node().ok_or("No rendered GTK scene")?;
+    // A mode/scroll change invalidates GTK's cached scene. Loaded headless
+    // runners can deliver that frame after the timeout; wait for a real scene
+    // instead of treating its temporarily empty cache as an application error.
+    let mut node = None;
+    for _ in 0..50 {
+        let snapshot = gtk::Snapshot::new();
+        paintable.snapshot(
+            &snapshot,
+            ui.window.width() as f64,
+            ui.window.height() as f64,
+        );
+        node = snapshot.to_node();
+        if node.is_some() {
+            break;
+        }
+        ui.window.queue_draw();
+        glib::timeout_future(Duration::from_millis(30)).await;
+    }
+    let node = node.ok_or("No rendered GTK scene")?;
     let surface = ui.window.surface().ok_or("No GTK surface")?;
     let renderer = gtk::gsk::Renderer::for_surface(&surface).ok_or("No GTK renderer")?;
     let texture = renderer.render_texture(&node, None);
