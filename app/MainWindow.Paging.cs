@@ -31,6 +31,7 @@ public sealed partial class MainWindow
     private readonly List<(double Y,double Height)> measuredRows=[];
     private readonly List<PageLine> measuredLines=[];
     private string measuredKey="";
+    private string measurementTypography="";
     private Canvas? measurementHost;
     private Border? measurementRow;
     private RichEditBox? measurementEditor;
@@ -97,6 +98,16 @@ public sealed partial class MainWindow
         // Loaded. Measuring its pre-load document would use the system default.
         if(!measurementEditor!.IsLoaded)return false;
         measurementHost!.Clip=new RectangleGeometry{Rect=new Rect(0,0,BookStage.ActualWidth,BookStage.ActualHeight)};
+        var typography=$"{fontSize:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
+        if(measurementTypography!=typography && readerRows.Count>0) {
+            measurementRow.DataContext=readerRows[0];measurementEditor.FontSize=fontSize;
+            UpdateDocument(measurementEditor,()=>{measurementEditor.Document.SetText(TextSetOptions.None,readerRows[0].Text);ApplyTextStylesCore(measurementEditor,readerRows[0]);});
+            measurementTypography=typography;
+            // RichEdit commits XAML typography during the next rendered frame,
+            // after Loaded. Read the document metrics on the following layout.
+            DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());
+            return false;
+        }
         measuredRows.Clear();measuredLines.Clear();double y=0;
         measurementEditor!.FontSize=fontSize;
         foreach(var row in readerRows){
