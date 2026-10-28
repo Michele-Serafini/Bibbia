@@ -76,7 +76,18 @@ extension AppModel {
             let originalFrame = window.frame
             window.setFrame(NSRect(x: originalFrame.minX, y: originalFrame.minY, width: 1500, height: 900), display: true)
             try await waitUntil { book.pager.columns == 2 }
+            try await Task.sleep(for: .milliseconds(250))
+            book.layoutSubtreeIfNeeded(); book.pager.reflow()
             try check(!book.pager.right.isHidden, "Wide book displays facing native pages")
+            for (column, view) in [text, book.pager.second].compactMap({ $0 }).enumerated() {
+                guard let manager = view.layoutManager else { throw BibleError.invalid("Missing page layout manager") }
+                let page = book.pager.index + column
+                let end = page+1 < book.pager.pages.count ? book.pager.pages[page+1].character : view.string.utf16.count
+                let glyph = manager.glyphIndexForCharacter(at: max(0,end-1))
+                let lastLine = manager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+                try check(lastLine.maxY + view.textContainerInset.height <= view.visibleRect.maxY + 1,
+                          "Facing page \(column+1) contains every line before its next page break")
+            }
             if let right = book.pager.second {
                 let character = book.pager.pages[1].character
                 let verse = text.readingLayout.spans.firstIndex { $0.location >= character } ?? 0

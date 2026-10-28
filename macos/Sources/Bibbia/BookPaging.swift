@@ -69,6 +69,10 @@ final class BookPager {
             scroll.isHidden = n >= columns
             scroll.hasVerticalScroller = !mode
             scroll.frame = NSRect(x: CGFloat(n)*(width+24), y: 0, width: width, height: height)
+            // In book mode the pager owns the column width. A later document
+            // height change must not let NSTextView change line wrapping after
+            // we have measured the page breaks.
+            view.textContainer?.widthTracksTextView = !mode
             view.setFrameSize(NSSize(width: width, height: max(height, view.frame.height)))
             view.textContainer?.containerSize = NSSize(width: max(20,width-56), height: CGFloat.greatestFiniteMagnitude)
             view.layoutManager?.ensureLayout(for: view.textContainer!)
