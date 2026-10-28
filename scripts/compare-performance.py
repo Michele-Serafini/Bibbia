@@ -80,12 +80,19 @@ def exercise(binary,label,index,logs):
             try:
                 for phase in PHASES:
                     marker=profile/f'{phase}.json';deadline=time.monotonic()+90
-                    while not marker.exists():
+                    while True:
+                        # Windows publishes the checkpoint with WriteAllText;
+                        # its directory entry may appear before the JSON is
+                        # complete (or while the writer still owns the handle).
+                        try:
+                            native=json.loads(marker.read_text(encoding='utf-8-sig'))
+                            break
+                        except (FileNotFoundError,PermissionError,UnicodeDecodeError,json.JSONDecodeError):
+                            pass
                         if process.poll() is not None or time.monotonic()>deadline:
                             details=(profile/'error.txt').read_text() if (profile/'error.txt').exists() else (logs/f'{label}-{index}.log').read_text(errors='replace')[-4000:]
                             raise RuntimeError(f'{label}/{phase} did not complete: {details}')
                         time.sleep(0.01)
-                    native=json.loads(marker.read_text(encoding='utf-8-sig'))
                     if phase=='initial':native['startup_ready_ms']=(time.perf_counter()-started)*1000
                     time.sleep(0.04 if phase=='animation' else 0.3)
                     first=memory(process.pid);before=time.perf_counter();samples=[first]
