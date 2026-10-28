@@ -79,9 +79,11 @@ public sealed partial class MainWindow
         var key=$"{edition}/{book}/{chapter}/{fontSize:R}/{width:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
         if(key==measuredKey)return true;
         if(measurementRow==null){
-            measurementHost=new Canvas {Opacity=0,IsHitTestVisible=false};
+            // RichEdit defers typography synchronization at Opacity=0. Keep the
+            // measuring row opaque behind the opaque paper, clipped to its area.
+            measurementHost=new Canvas {IsHitTestVisible=false};
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(measurementHost,Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
-            BookStage.Children.Add(measurementHost);
+            BookStage.Children.Insert(0,measurementHost);
             // Use the actual XAML data template, so font resolution, native
             // RichEdit initialization and styling match the displayed pages.
             measurementRow=(Border)VerseList.ItemTemplate.LoadContent();
@@ -94,6 +96,7 @@ public sealed partial class MainWindow
         // WinUI initializes the native RichEdit font and custom font face on
         // Loaded. Measuring its pre-load document would use the system default.
         if(!measurementEditor!.IsLoaded)return false;
+        measurementHost!.Clip=new RectangleGeometry{Rect=new Rect(0,0,BookStage.ActualWidth,BookStage.ActualHeight)};
         measuredRows.Clear();measuredLines.Clear();double y=0;
         measurementEditor!.FontSize=fontSize;
         foreach(var row in readerRows){
