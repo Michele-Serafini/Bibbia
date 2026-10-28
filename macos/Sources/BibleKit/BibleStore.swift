@@ -4,9 +4,10 @@ import Foundation
 /// A single edition is mapped/cached. There are no timers or background polling.
 public actor BibleStore {
     private let database: Database
-    private let resources: URL
+    let resources: URL
     private var catalog: [Edition]
     private var cached: (String, Corpus)?
+    var comparisonIndex: ComparisonIndex?
 
     private static var resourceBundle: Bundle {
         // SwiftPM's generated Bundle.module searches next to a command-line
@@ -50,7 +51,7 @@ public actor BibleStore {
 
     public func editions() -> [Edition] { catalog }
 
-    private func corpus(_ id: String) throws -> Corpus {
+    func corpus(_ id: String) throws -> Corpus {
         if let cached, cached.0 == id { return cached.1 }
         guard let edition = catalog.first(where: { $0.id == id }) else { throw BibleError.invalid("Traduzione non disponibile / Edition unavailable") }
         // Release the old mapping/import before loading a different edition.
@@ -89,6 +90,7 @@ public actor BibleStore {
         preferences.theme = try database.setting("theme", as: String.self) ?? "Default"
         preferences.fontSize = try database.setting("fontSize", as: Int.self) ?? 22
         preferences.bibleLanguage = try database.setting("bibleLanguage", as: String.self) ?? "all"
+        preferences.comparisonEdition = try database.setting("comparisonEdition", as: String.self) ?? "CEI 2008"
         if !["it", "en"].contains(preferences.language) { preferences.language = "it" }
         if !["Default", "Light", "Dark"].contains(preferences.theme) { preferences.theme = "Default" }
         preferences.fontSize = min(32, max(14, preferences.fontSize))
@@ -114,6 +116,7 @@ public actor BibleStore {
             try database.set("theme", preferences.theme)
             try database.set("fontSize", preferences.fontSize)
             try database.set("bibleLanguage", preferences.bibleLanguage)
+            try database.set("comparisonEdition", preferences.comparisonEdition)
         }
     }
 

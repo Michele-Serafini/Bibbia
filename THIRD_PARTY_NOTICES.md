@@ -1,5 +1,15 @@
 # Testi e dipendenze
 
+## Allineamento dei riferimenti
+
+Le tabelle dei riferimenti dei Salmi derivano da TVTMS di **STEPBible.org,
+Tyndale House Cambridge**, [STEPBible-Data](https://github.com/STEPBible/STEPBible-Data/tree/master/Versification),
+con licenza [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+L'estratto raggruppa i riferimenti equivalenti e adatta i titoli numerati ai
+conteggi dei testi inclusi. Le corrispondenze non verificate restano segnalate,
+senza modificare il testo biblico. Provenienza e modifiche sono documentate in
+`comparison-source.json`, `LICENSE.comparison.txt` e `scripts/prepare-comparison.py`.
+
 ## Applicazione macOS
 
 La versione macOS è sviluppata in Swift con SwiftUI, AppKit, Foundation e SQLite

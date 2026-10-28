@@ -40,7 +40,7 @@ def payload(directory, binary):
     doc = directory / 'usr/share/doc/bibbia'
     for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
         copy(ROOT / name, doc / name)
-    for name in ['LICENSE.bible-data', 'LICENSE.cei2008.txt', 'LICENSE.gutenberg.txt', 'cei2008-source.json', 'extended-source.json', 'martini-source.json', 'diodati-source.json']:
+    for name in ['LICENSE.bible-data', 'LICENSE.cei2008.txt', 'LICENSE.gutenberg.txt', 'LICENSE.comparison.txt', 'comparison-source.json', 'cei2008-source.json', 'extended-source.json', 'martini-source.json', 'diodati-source.json']:
         copy(ROOT / 'core/data' / name, doc / name)
     for name in ['LICENSE.Adwaita', 'LICENSE.SourceSerif']:
         copy(ROOT / 'assets/fonts' / name, doc / name)

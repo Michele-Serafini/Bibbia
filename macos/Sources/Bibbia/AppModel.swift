@@ -25,6 +25,10 @@ final class AppModel: ObservableObject {
     @Published var showNotices = false
     @Published var bookMode = true
     @Published var pageInfo = ""
+    @Published var comparing = false
+    @Published var comparison: Comparison?
+    @Published var comparisonLoading = false
+    private var comparisonTask: Task<Void,Never>?
     weak var readingSurface: BookSurface?
     func bookModeChanged() {
         readingSurface?.cancelTurn(); readingSurface?.pager.reflow(); readingSurface?.pager.save()
@@ -101,6 +105,7 @@ final class AppModel: ObservableObject {
                 self.position = target; self.books = books; self.verses = verses
                 pendingPosition = nil
                 scrollTarget = target.verse; revision += 1; loading = false
+                if comparing { refreshComparison() }
                 if editionChanged && panel == .saved { loadSaved(reset: true) }
                 if editionChanged && panel == .search { search() }
             } catch {
@@ -113,7 +118,7 @@ final class AppModel: ObservableObject {
 
     func step(_ delta: Int) {
         if bookMode && loading { return }
-        if bookMode, readingSurface?.pager.turn(delta) == true { return }
+        if bookMode && !comparing, readingSurface?.pager.turn(delta) == true { return }
         var target = pendingPosition ?? position; target.verse = 0
         guard target.edition == position.edition, books.indices.contains(target.book) else { return }
         target.chapter += delta
@@ -217,12 +222,40 @@ final class AppModel: ObservableObject {
     }
 
     func flush() async {
-        readingSurface?.pager.save()
+        if !comparing { readingSurface?.pager.save() }
+        comparisonTask?.cancel()
         positionTask?.cancel(); preferencesTask?.cancel(); searchTask?.cancel()
         do {
             try await store?.savePosition(position)
             try await store?.savePreferences(preferences)
         } catch { self.error = error.localizedDescription }
+    }
+
+    func comparisonChanged() {
+        readingSurface?.cancelTurn()
+        comparisonTask?.cancel()
+        if comparing { refreshComparison() }
+        else { comparison = nil; comparisonLoading = false; scrollTarget = position.verse }
+    }
+    func refreshComparison() {
+        guard comparing, let store else { return }
+        if !editions.contains(where: { $0.id == preferences.comparisonEdition && $0.id != position.edition }) {
+            preferences.comparisonEdition = position.edition == "CEI 2008" ? "Martini 1781 (cattolica)" : "CEI 2008"
+        }
+        comparisonTask?.cancel(); comparison = nil; comparisonLoading = true
+        let position = position, other = preferences.comparisonEdition
+        comparisonTask = Task {
+            do {
+                let result = try await store.compare(position, other: other)
+                try Task.checkCancellation()
+                guard self.comparing, self.position.edition == position.edition,
+                      self.position.book == position.book, self.position.chapter == position.chapter else { return }
+                comparison = result; comparisonLoading = false
+            } catch is CancellationError {} catch { comparisonLoading = false; self.error = error.localizedDescription }
+        }
+    }
+    func openComparedVerse(_ verse: ComparedVerse) {
+        comparing = false; comparisonChanged(); navigate(verse.position)
     }
 
     func importEdition() {

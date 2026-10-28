@@ -43,11 +43,12 @@
                     <Grid x:Name="ReadPanel" RowSpacing="14">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                         <Grid ColumnSpacing="10" MaxWidth="1600" HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <ComboBox x:Name="BookPicker" HorizontalAlignment="Stretch" DisplayMemberPath="Name" SelectionChanged="BookChanged" AutomationProperties.Name="Libro" AutomationProperties.AutomationId="BookPicker" />
                             <ComboBox x:Name="ChapterPicker" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="ChapterChanged" AutomationProperties.Name="Capitolo" />
                             <Button Grid.Column="2" Content="Aa" Click="AppearanceClick" AutomationProperties.Name="Aspetto della lettura" ToolTipService.ToolTip="Dimensione del testo e tema" />
                             <ToggleButton x:Name="BookModeToggle" Grid.Column="3" Content="Libro" IsChecked="True" Checked="BookModeChanged" Unchecked="BookModeChanged" AutomationProperties.AutomationId="BookModeToggle" />
+                            <ToggleButton x:Name="ComparisonToggle" Grid.Column="4" Content="Confronta" Checked="ComparisonChanged" Unchecked="ComparisonChanged" AutomationProperties.AutomationId="ComparisonToggle" />
                         </Grid>
                         <Grid x:Name="BookStage" Grid.Row="1" MaxWidth="1600" HorizontalAlignment="Stretch" Margin="0,3,0,8" AutomationProperties.AutomationId="BookStage">
                           <Border Background="{ThemeResource BookEdgeBrush}" CornerRadius="7" Margin="5,7,0,-5" />
@@ -91,6 +92,25 @@
                             </Grid>
                           </Border>
                         </Grid>
+                        <Border x:Name="ComparisonPanel" Grid.Row="1" Visibility="Collapsed" Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7" Padding="16">
+                          <Grid RowSpacing="12">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                            <Grid ColumnSpacing="24"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                              <TextBlock x:Name="ComparisonPrimary" VerticalAlignment="Center" TextWrapping="Wrap" FontWeight="SemiBold" />
+                              <ComboBox x:Name="ComparisonEdition" Grid.Column="1" HorizontalAlignment="Stretch" DisplayMemberPath="Id" SelectionChanged="ComparisonEditionChanged" AutomationProperties.AutomationId="ComparisonEdition" />
+                            </Grid>
+                            <TextBlock x:Name="ComparisonNotice" Grid.Row="1" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" AutomationProperties.AutomationId="ComparisonNotice" />
+                            <ListView x:Name="ComparisonList" Grid.Row="2" HorizontalContentAlignment="Stretch" SelectionMode="None" AutomationProperties.AutomationId="ComparisonList" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                              <ListView.ItemTemplate><DataTemplate x:DataType="local:ComparisonRowView">
+                                <Grid ColumnSpacing="24" Padding="0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                  <StackPanel Spacing="8"><TextBlock Text="{x:Bind LeftReference}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /><TextBlock Text="{x:Bind LeftText}" FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" IsTextSelectionEnabled="True" /><Button Content="↗" Tag="{x:Bind LeftPosition}" Click="OpenComparedVerse" AutomationProperties.Name="{x:Bind OpenLabel}" ToolTipService.ToolTip="{x:Bind OpenLabel}" Padding="6,2" /></StackPanel>
+                                  <StackPanel Grid.Column="1" Spacing="8"><TextBlock Text="{x:Bind RightReference}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /><TextBlock Text="{x:Bind RightText}" FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" IsTextSelectionEnabled="True" /><Button Content="↗" Tag="{x:Bind RightPosition}" IsEnabled="{x:Bind RightAvailable}" Click="OpenComparedVerse" AutomationProperties.Name="{x:Bind OpenLabel}" ToolTipService.ToolTip="{x:Bind OpenLabel}" Padding="6,2" /></StackPanel>
+                                </Grid>
+                              </DataTemplate></ListView.ItemTemplate>
+                            </ListView>
+                          </Grid>
+                        </Border>
                         <Grid Grid.Row="2">
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <StackPanel HorizontalAlignment="Center" Spacing="4" Margin="0,0,0,8">

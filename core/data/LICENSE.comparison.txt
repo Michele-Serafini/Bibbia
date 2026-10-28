@@ -1,0 +1,12 @@
+Psalm reference alignment data: STEPBible.org, Tyndale House Cambridge.
+Source: TVTMS, Translators Versification Traditions with Methodology for
+Standardisation, https://github.com/STEPBible/STEPBible-Data/tree/master/Versification
+Licensed under Creative Commons Attribution 4.0 International:
+https://creativecommons.org/licenses/by/4.0/
+
+This application contains a reformatted extract of the Psalm reference tables.
+Changes: equivalent verse references are grouped; numbered titles omitted by
+the bundled corpus are adapted using its chapter counts; unverified chapter
+numberings are explicitly left unmatched. Original Bible texts are unchanged.
+See comparison-source.json and scripts/prepare-comparison.py for provenance.
+Book-name aliases and Joel/Malachi chapter rules are project data (MIT).

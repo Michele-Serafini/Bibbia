@@ -44,7 +44,7 @@ public sealed partial class MainWindow
         fullChapterPanel=(ItemsPanelTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><StackPanel /></ItemsPanelTemplate>");
         BookStage.SizeChanged+=(_,_)=>ScheduleBookLayout();
         Root.AddHandler(UIElement.KeyDownEvent,new Microsoft.UI.Xaml.Input.KeyEventHandler((_,e)=>{
-            if(bookMode && section=="read" && e.Key is VirtualKey.PageDown or VirtualKey.PageUp){
+            if(bookMode && !comparing && section=="read" && e.Key is VirtualKey.PageDown or VirtualKey.PageUp){
                 if(e.Key==VirtualKey.PageDown) NextClick(this,new RoutedEventArgs());else PreviousClick(this,new RoutedEventArgs());e.Handled=true;
             }
         }),true);
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
     }
     private void BookLayoutTick(Microsoft.UI.Dispatching.DispatcherQueueTimer sender,object args)=>Guard(ReflowBook);
     private void ReflowBook() {
-        if(bookReflowing || !ready || closed || BookViewport.ActualHeight<80)return;
+        if(comparing || bookReflowing || !ready || closed || BookViewport.ActualHeight<80)return;
         bookReflowing=true;
         try {
             CancelBookTurn();pageRequest++;
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
         BookModeToggle.Content=T("Libro");
     }
     private bool TryTurnBookPage(int direction) {
-        if(!bookMode || bookPages.Count==0)return false;
+        if(comparing || !bookMode || bookPages.Count==0)return false;
         var target=bookPage+direction*bookColumns;
         if(target<0 || target>=bookPages.Count){bookLast=direction<0;return false;}
         activeSelectionFlyout?.Hide();selectionTimer?.Stop();selectionEditor=null;

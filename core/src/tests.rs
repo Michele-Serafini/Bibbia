@@ -1,6 +1,54 @@
 use super::*;
 
 #[test]
+fn comparisons_use_book_identity_and_original_verse_references() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(dir.path()).unwrap();
+    let john = engine
+        .request(json!({"op":"compare","edition":"CEI 2008","other":"KJV","book":49,"chapter":2}))
+        .unwrap();
+    assert_eq!(john["status"], "aligned");
+    let row = &john["rows"][15];
+    assert_eq!(row["left"][0]["label"], "16");
+    assert_eq!(row["right"][0]["book"], 42);
+    assert!(
+        row["right"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("God so loved")
+    );
+    let psalm = engine.request(json!({"op":"compare","edition":"CEI 2008","other":"Martini 1781 (cattolica)","book":22,"chapter":22})).unwrap();
+    assert_eq!(psalm["rows"][0]["right"][0]["chapter"], 21);
+    assert_eq!(psalm["rows"][0]["right"][0]["label"], "1");
+    let joel = engine
+        .request(json!({"op":"compare","edition":"CEI 2008","other":"KJV","book":35,"chapter":2}))
+        .unwrap();
+    assert_eq!(joel["rows"][0]["right"][0]["reference"], "Joel 2:28");
+    let absent = engine
+        .request(json!({"op":"compare","edition":"CEI 2008","other":"KJV","book":16,"chapter":0}))
+        .unwrap();
+    assert_eq!(absent["status"], "missingBook");
+    assert!(
+        absent["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|r| r["right"].as_array().unwrap().is_empty())
+    );
+    let esther = engine
+        .request(json!({"op":"compare","edition":"CEI 2008","other":"KJV","book":18,"chapter":0}))
+        .unwrap();
+    assert!(
+        esther["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|r| r["left"][0]["label"].as_str().unwrap().starts_with('G'))
+            .all(|r| r["right"].as_array().unwrap().is_empty())
+    );
+}
+
+#[test]
 fn complete_corpus_navigation_and_search() {
     let dir = tempfile::tempdir().unwrap();
     let mut engine = Engine::open(dir.path()).unwrap();

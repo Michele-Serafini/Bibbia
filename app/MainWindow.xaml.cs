@@ -67,7 +67,7 @@ public sealed partial class MainWindow : Window
         Root.Loaded += OnLoaded;
         Closed += (_, _) =>
         {
-            if (ready && bookChapter == $"{edition}/{book}/{chapter}") {
+            if (ready && !comparing && bookChapter == $"{edition}/{book}/{chapter}") {
                 try { SaveBookPlace(); } catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); }
             }
             closed = true;
@@ -217,6 +217,7 @@ public sealed partial class MainWindow : Window
 
     private void ScrollToCurrentVerse()
     {
+        if(comparing){LoadComparison();return;}
         if(bookMode){ScheduleBookLayout(true);return;}
         if (VerseList.ItemsSource is not List<VerseRow> rows) return;
         var target = currentVerse;
@@ -369,6 +370,7 @@ public sealed partial class MainWindow : Window
                 if (closed) return;
                 if (VerseList.ItemsSource is List<VerseRow> rows) foreach (var row in rows) row.TextSize=fontSize;
                 ScheduleBookLayout();
+                if(comparing)RenderComparison();
                 BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});
             });
         }

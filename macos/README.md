@@ -1,13 +1,13 @@
 # Bibbia per macOS
 
-Versione 0.8.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
+Versione 0.9.0, interamente Swift 6 con SwiftUI e AppKit, senza Rust o framework
 di terze parti. macOS 13 Ventura o successivi, Apple Silicon e Intel.
 
 ## Installazione
 
-La [release unificata 0.8.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.8.0)
-contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.8.0/Bibbia-0.8.0-universal.dmg)
-e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.8.0/Bibbia-0.8.0-universal.zip),
+La [release unificata 0.9.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.9.0)
+contiene il [DMG Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.9.0/Bibbia-0.9.0-universal.dmg)
+e lo [ZIP della stessa app](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.9.0/Bibbia-0.9.0-universal.zip),
 ciascuno con checksum SHA-256. Aprire il DMG e trascinare Bibbia in **Applicazioni**.
 Non occorrono runtime, account, librerie aggiuntive o Internet.
 
@@ -100,7 +100,7 @@ python3 scripts/prepare-macos.py
 swift test --package-path macos -c release
 swift run --package-path macos Bibbia
 python3 scripts/package-macos.py
-python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.8.0-universal.dmg
+python3 scripts/test-macos.py --dmg artifacts/macos/Bibbia-0.9.0-universal.dmg
 ```
 
 `swift run` serve allo sviluppo; per provare icona, menu, firma locale e risorse

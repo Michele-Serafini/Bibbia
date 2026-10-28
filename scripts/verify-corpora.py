@@ -33,3 +33,14 @@ fonts = root.parents[1] / 'assets/fonts'
 for name, meta in json.loads((fonts / 'sources.json').read_text(encoding='utf-8')).items():
     assert hashlib.sha256((fonts / name).read_bytes()).hexdigest() == meta['sha256'], name
 print('Private fonts: source checksums verified')
+
+comparison = (root / 'comparison.json').read_bytes()
+metadata = json.loads((root / 'comparison-source.json').read_text())
+assert hashlib.sha256(comparison).hexdigest() == metadata['converted_sha256']
+mapping = json.loads(comparison)
+for name, psalms in mapping['psalms'].items():
+    bible = json.loads((root / f'{name}.json').read_bytes())
+    book = next(b for b in bible if b['name'] in ['Salmi','Salmo','Psalms'])
+    assert len(psalms) == len(book['chapters']) == 150
+    assert all(len(refs) == len(verses) for refs, verses in zip(psalms, book['chapters'], strict=True))
+print('Comparison references: checksum and all five Psalm chapter/verse counts verified')

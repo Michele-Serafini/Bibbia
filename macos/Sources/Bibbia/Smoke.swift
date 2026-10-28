@@ -168,6 +168,21 @@ extension AppModel {
             try check(notes.first?.annotation.note == "Nota macOS 😀", "Notes survive reopen")
             let ext = try await reopened.books(edition: "Raccolta estesa (83 sezioni)")
             try check(ext.count == 83 && ext.contains(where: { $0.chapters.count == 108 && $0.name.contains("Enoch") }), "Extended collection available")
+            let beforeComparison = position
+            preferences.comparisonEdition = "KJV"; comparing = true; comparisonChanged()
+            try await waitUntil { !self.comparisonLoading && self.comparison != nil }
+            try check(comparison?.rows[15].right.first?.book == 42
+                      && comparison?.rows[15].right.first?.text.contains("God so loved") == true,
+                      "Comparison aligns CEI and KJV John 3:16 across canonical book indices")
+            try await Task.sleep(for: .milliseconds(300))
+            try screenshot(window,name: "macos-comparison.png")
+            if let verse = comparison?.rows[15].right.first { openComparedVerse(verse) }
+            try await waitUntil { !self.comparing && !self.loading && self.position.edition == "KJV" }
+            try check(position.book == 42 && position.chapter == 2 && position.verse == 15,
+                      "Compared verse opens at the original annotatable position")
+            navigate(beforeComparison)
+            try await waitUntil { !self.loading && self.position == beforeComparison }
+            await flush()
             let marker = directory.appendingPathComponent("ui-passed.txt")
             try Data("Native macOS UI checks passed\n".utf8).write(to: marker)
             print("Native macOS UI checks passed")

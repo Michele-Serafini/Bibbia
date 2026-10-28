@@ -109,6 +109,7 @@ public struct Preferences: Codable, Sendable, Equatable {
     public var theme = "Default"
     public var fontSize = 22
     public var bibleLanguage = "all"
+    public var comparisonEdition = "CEI 2008"
     public init() {}
 }
 

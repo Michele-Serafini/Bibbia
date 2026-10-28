@@ -17,12 +17,12 @@ struct MainView: View {
             ToolbarItemGroup(placement: .navigation) {
                 Button { model.step(-1) } label: { Image(systemName: "chevron.left") }
                     .buttonStyle(BookButtonStyle())
-                    .help(model.bookMode ? model.t("Pagina precedente (⌥⌘←)", "Previous page (⌥⌘←)")
+                    .help(model.bookMode && !model.comparing ? model.t("Pagina precedente (⌥⌘←)", "Previous page (⌥⌘←)")
                           : model.t("Capitolo precedente (⌥⌘←)", "Previous chapter (⌥⌘←)"))
                     .accessibilityIdentifier("previousChapter")
                 Button { model.step(1) } label: { Image(systemName: "chevron.right") }
                     .buttonStyle(BookButtonStyle())
-                    .help(model.bookMode ? model.t("Pagina successiva (⌥⌘→)", "Next page (⌥⌘→)")
+                    .help(model.bookMode && !model.comparing ? model.t("Pagina successiva (⌥⌘→)", "Next page (⌥⌘→)")
                           : model.t("Capitolo successivo (⌥⌘→)", "Next chapter (⌥⌘→)"))
                     .accessibilityIdentifier("nextChapter")
             }
@@ -32,6 +32,11 @@ struct MainView: View {
                     set: { var target = model.position; target.chapter = $0; target.verse = 0; model.navigate(target) })) {
                         ForEach(0..<model.chapterCount, id: \.self) { Text("\($0 + 1)").tag($0) }
                     }.fixedSize().accessibilityIdentifier("chapterPicker")
+            }
+            ToolbarItem {
+                Toggle(isOn: $model.comparing) { Label(model.t("Confronta","Compare"),systemImage: "rectangle.split.2x1") }
+                    .toggleStyle(.button).accessibilityIdentifier("comparisonToggle")
+                    .onChange(of: model.comparing) { _ in model.comparisonChanged() }
             }
             ToolbarItem {
                 Menu {
@@ -143,20 +148,22 @@ struct MainView: View {
                 if model.loading { ProgressView().controlSize(.small) }
             }.padding(.horizontal, 32).padding(.top, 26).padding(.bottom, 16)
                 .frame(maxWidth: 820)
-            ChapterTextView(model: model)
-                .frame(maxWidth: 1600, maxHeight: .infinity)
-                .accessibilityIdentifier("chapterText")
+            Group {
+                if model.comparing { ComparisonView(model: model) }
+                else { ChapterTextView(model: model).accessibilityIdentifier("chapterText") }
+            }.frame(maxWidth: 1600, maxHeight: .infinity)
             Divider()
             HStack {
                 Text(model.t("Capitolo \(model.position.chapter + 1) di \(model.chapterCount)", "Chapter \(model.position.chapter + 1) of \(model.chapterCount)"))
                 Spacer()
-                Text(model.pageInfo).monospacedDigit().accessibilityIdentifier("pageCounter")
+                Text(model.comparing ? "" : model.pageInfo).monospacedDigit().accessibilityIdentifier("pageCounter")
                 Toggle(model.t("Libro", "Book"), isOn: $model.bookMode)
                     .toggleStyle(.switch).controlSize(.small).accessibilityIdentifier("bookMode")
+                    .disabled(model.comparing)
                     .onChange(of: model.bookMode) { _ in model.bookModeChanged() }
                 Text(model.t("Seleziona una frase per annotarla", "Select a phrase to annotate it"))
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24).padding(.vertical, 10)
-            if model.position.edition == "CEI 2008" {
+            if model.position.edition == "CEI 2008" || (model.comparing && model.preferences.comparisonEdition == "CEI 2008") {
                 Button { model.showNotices = true } label: {
                     Text("CEI 2008 · © Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena · " + model.t("uso didattico non commerciale", "non-commercial educational use"))
                         .font(.system(size: 10)).foregroundStyle(.secondary).multilineTextAlignment(.center)

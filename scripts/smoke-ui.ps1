@@ -304,9 +304,22 @@ try {
     Save-WindowImage 'windows-book.png'
     $toggle.Toggle()
     Start-Sleep -Milliseconds 200
+    $compareToggle = (Wait-Control $window 'ComparisonToggle').GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
+    $compareToggle.Toggle()
+    $compared = Wait-Control $window 'ComparisonList'
+    $ceiFirst = 'In principio Dio cre' + [char]0xF2 + ' il cielo e la terra.'
+    $leftCell = Wait-Text $compared $firstVerse
+    $rightCell = Wait-Text $compared $ceiFirst
+    if ([Math]::Abs($leftCell.Current.BoundingRectangle.Top - $rightCell.Current.BoundingRectangle.Top) -gt 2) { throw 'Compared verses are not aligned in the shared row.' }
+    if ((Wait-Control $window 'BookModeToggle').Current.IsEnabled) { throw 'Book page navigation remained enabled during comparison.' }
+    Save-WindowImage 'windows-comparison.png'
+    Select-Option 'ComparisonEdition' 'Diodati 1649'
+    Wait-Text $compared ('NEL principio Iddio cre' + [char]0xF2 + ' il cielo e la terra.') | Out-Null
+    $compareToggle.Toggle()
+    Wait-Text (Wait-Control $window 'VerseList') $firstVerse | Out-Null
     $errorBarControl = Find-Control $window 'ErrorBar'
     if ($null -ne $errorBarControl -and -not $errorBarControl.Current.IsOffscreen) { throw "An application error was shown: $($errorBarControl.Current.Name)" }
-    Write-Host 'WinUI: CEI, extended collection, animated navigation, text resizing, matching caption/surface colors, Catholic Italian text, mouse selection toolbar, note popup, bookmark, search, language filters and native title bar verified.'
+    Write-Host 'WinUI: synchronized translation comparison, second-edition switching, CEI, extended collection, animated navigation, text resizing, matching caption/surface colors, mouse selection toolbar, note popup, bookmark, search and language filters verified.'
 }
 catch {
     $diagnostics = Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts/diagnostics'

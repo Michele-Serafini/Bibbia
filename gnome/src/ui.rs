@@ -16,6 +16,7 @@ use std::{
 mod annotations;
 mod book;
 mod book_math;
+mod comparison;
 mod paging;
 mod preferences;
 pub mod smoke;
@@ -74,6 +75,17 @@ pub struct Ui {
     pager: RefCell<paging::Pager>,
     book_seek: Cell<bool>,
     active_right: Cell<bool>,
+    comparison: gtk::ToggleButton,
+    comparison_panel: gtk::Box,
+    comparison_primary: gtk::Label,
+    comparison_edition: gtk::DropDown,
+    comparison_notice: gtk::Label,
+    comparison_scroll: gtk::ScrolledWindow,
+    comparison_rows: gtk::Box,
+    comparison_choice: RefCell<String>,
+    comparison_options: RefCell<Vec<String>>,
+    comparison_generation: Cell<u64>,
+    comparison_data: RefCell<Option<(String, Value)>>,
     book_surface: book::BookSurface,
     body_tag: gtk::TextTag,
     number_tag: gtk::TextTag,
@@ -343,6 +355,32 @@ impl Ui {
         book_mode.set_active(pager.place.book_mode);
         let book_surface = book::BookSurface::new(&read_panes);
         paper.append(&book_surface);
+        let comparison = gtk::ToggleButton::with_label("Confronta");
+        let comparison_panel = gtk::Box::new(gtk::Orientation::Vertical, 12);
+        margin(&comparison_panel, 16);
+        comparison_panel.set_vexpand(true);
+        comparison_panel.set_visible(false);
+        let comparison_header = gtk::Box::new(gtk::Orientation::Horizontal, 24);
+        comparison_header.set_homogeneous(true);
+        let comparison_primary = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .css_classes(["heading"])
+            .build();
+        let comparison_edition = gtk::DropDown::from_strings(&[]);
+        comparison_header.append(&comparison_primary);
+        comparison_header.append(&comparison_edition);
+        comparison_panel.append(&comparison_header);
+        let comparison_notice = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .css_classes(["caption", "dim-label"])
+            .build();
+        comparison_panel.append(&comparison_notice);
+        let comparison_rows = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let comparison_scroll = scroll(&comparison_rows);
+        comparison_panel.append(&comparison_scroll);
+        paper.append(&comparison_panel);
         paper.set_vexpand(true);
         let clamp = adw::Clamp::builder()
             .maximum_size(1640)
@@ -368,6 +406,7 @@ impl Ui {
             .tooltip_text("Annotazioni del versetto")
             .build();
         footer.append(&book_mode);
+        footer.append(&comparison);
         footer.append(&page_counter);
         footer.append(&previous);
         footer.append(&edition);
@@ -519,6 +558,17 @@ impl Ui {
             pager: RefCell::new(pager),
             book_seek: Cell::new(false),
             active_right: Cell::new(false),
+            comparison,
+            comparison_panel,
+            comparison_primary,
+            comparison_edition,
+            comparison_notice,
+            comparison_scroll,
+            comparison_rows,
+            comparison_choice: RefCell::new("CEI 2008".into()),
+            comparison_options: RefCell::new(Vec::new()),
+            comparison_generation: Cell::new(0),
+            comparison_data: RefCell::new(None),
             book_surface,
             body_tag,
             number_tag,
@@ -548,6 +598,33 @@ impl Ui {
             }
         });
         let weak = ui.weak();
+        ui.comparison.connect_toggled(move |_| {
+            if let Some(ui) = weak.upgrade() {
+                ui.comparison_changed();
+            }
+        });
+        let weak = ui.weak();
+        ui.comparison_edition
+            .connect_selected_notify(move |picker| {
+                if let Some(ui) = weak.upgrade() {
+                    let choice = ui
+                        .comparison_options
+                        .borrow()
+                        .get(picker.selected() as usize)
+                        .cloned();
+                    let changed = choice
+                        .as_ref()
+                        .is_some_and(|choice| *ui.comparison_choice.borrow() != *choice);
+                    if changed && let Some(choice) = choice {
+                        ui.comparison_choice.replace(choice.clone());
+                        ui.core.post(
+                            json!({"op":"settings","key":"comparisonEdition","value":choice}),
+                        );
+                        ui.refresh_comparison();
+                    }
+                }
+            });
+        let weak = ui.weak();
         ui.book_mode.connect_toggled(move |_| {
             if let Some(ui) = weak.upgrade() {
                 ui.book_surface.cancel();
@@ -563,6 +640,7 @@ impl Ui {
         wheel.connect_scroll(move |_, _, dy| {
             if let Some(ui) = weak.upgrade()
                 && ui.book_mode.is_active()
+                && !ui.comparison.is_active()
             {
                 if last
                     .get()
@@ -583,6 +661,7 @@ impl Ui {
         keys.connect_key_pressed(move |_, key, _, _| {
             if let Some(ui) = weak.upgrade()
                 && ui.book_mode.is_active()
+                && !ui.comparison.is_active()
                 && (key == gdk::Key::Page_Down || key == gdk::Key::Page_Up)
             {
                 ui.step(if key == gdk::Key::Page_Down { 1 } else { -1 });
@@ -804,6 +883,9 @@ impl Ui {
                 .sort_by(|a, b| b.catholic.cmp(&a.catholic).then(a.id.cmp(&b.id)));
             s.position.edition = boot["defaultEdition"].as_str().unwrap().into();
             let settings = &boot["settings"];
+            if let Some(choice) = settings["comparisonEdition"].as_str() {
+                self.comparison_choice.replace(choice.into());
+            }
             if let Ok(p) = serde_json::from_value::<Position>(settings["position"].clone())
                 && s.editions.iter().any(|e| e.id == p.edition)
             {
@@ -1046,6 +1128,9 @@ impl Ui {
         drop(s);
         self.changing.set(false);
         self.schedule_book();
+        if self.comparison.is_active() {
+            self.refresh_comparison();
+        }
     }
     fn update_gutter(&self) {
         let s = self.state.borrow();
@@ -1107,6 +1192,9 @@ impl Ui {
     fn relabel(&self) {
         self.relabel_annotations();
         self.relabel_book();
+        self.comparison.set_label(&self.t("Confronta", "Compare"));
+        self.comparison_edition
+            .set_tooltip_text(Some(&self.t("Seconda traduzione", "Second translation")));
         self.header_title.set_subtitle(&self.position().edition);
         let en = self.state.borrow().language == "en";
         for (name, it, english) in [
@@ -1159,7 +1247,7 @@ impl Ui {
         self.book_mode.set_label(&self.t("Libro", "Book"));
         self.book_mode
             .set_tooltip_text(Some(&self.t("Libro impaginato", "Paged book")));
-        let (previous, next) = if self.book_mode.is_active() {
+        let (previous, next) = if self.book_mode.is_active() && !self.comparison.is_active() {
             (
                 self.t("Pagina precedente", "Previous page"),
                 self.t("Pagina successiva", "Next page"),
@@ -1253,7 +1341,9 @@ impl Ui {
             source.remove();
         }
         if self.ready.get() {
-            self.save_book();
+            if !self.comparison.is_active() {
+                self.save_book();
+            }
             self.save_position();
             self.core.post(json!({"op":"settings","key":"fontSize","value":self.state.borrow().font_size as i64}));
         }

@@ -62,7 +62,7 @@ impl Ui {
         self.save_book();
     }
     pub(super) fn reflow_book(self: &Rc<Self>) {
-        if !self.ready.get() || self.pager.borrow().applying {
+        if self.comparison.is_active() || !self.ready.get() || self.pager.borrow().applying {
             return;
         }
         let width = self.book_surface.width();
@@ -205,7 +205,7 @@ impl Ui {
         );
     }
     pub(super) fn turn_book(self: &Rc<Self>, direction: i32) -> bool {
-        if !self.book_mode.is_active() {
+        if self.comparison.is_active() || !self.book_mode.is_active() {
             return false;
         }
         let mut p = self.pager.borrow_mut();

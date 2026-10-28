@@ -27,7 +27,7 @@ try {
     Copy-Item core/data/LICENSE.bible-data "$staging/LICENSE.bible-data" -Force
     Copy-Item core/data/diodati-source.json "$staging/diodati-source.json" -Force
     Copy-Item core/data/martini-source.json "$staging/martini-source.json" -Force
-    foreach ($file in @('cei2008-source.json','extended-source.json','LICENSE.cei2008.txt','LICENSE.gutenberg.txt')) {
+    foreach ($file in @('cei2008-source.json','extended-source.json','LICENSE.cei2008.txt','LICENSE.gutenberg.txt','LICENSE.comparison.txt','comparison-source.json')) {
         Copy-Item "core/data/$file" "$staging/$file" -Force
     }
     foreach ($file in @('LICENSE.Adwaita','LICENSE.SourceSerif','sources.json')) {

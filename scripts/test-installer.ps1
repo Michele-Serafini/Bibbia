@@ -27,6 +27,17 @@ try {
     }
     if (-not (Test-Path $shortcut)) { throw 'Collegamento Start mancante.' }
     if ((Get-ItemProperty $registry).InstallDir -ne $installDirectory) { throw 'Percorso installazione nel registro errato.' }
+    $entry = Get-ItemProperty $uninstallRegistry
+    $installedKiB = [Math]::Floor((Get-ChildItem $installDirectory -Recurse -File | Measure-Object Length -Sum).Sum / 1024)
+    if ($entry.EstimatedSize -le 0 -or [Math]::Abs($entry.EstimatedSize - $installedKiB) -gt 16) { throw 'Dimensione applicazione nelle Impostazioni non corretta.' }
+    if ($entry.SystemComponent -ne 0 -or $entry.NoRemove -ne 0 -or $entry.AppUserModelID -ne 'io.github.MicheleSerafini.Bibbia') { throw 'Registrazione di disinstallazione Start/Impostazioni non corretta.' }
+    $shell = New-Object -ComObject Shell.Application
+    $link = $shell.Namespace((Split-Path $shortcut -Parent)).ParseName((Split-Path $shortcut -Leaf))
+    if ($link.ExtendedProperty('System.AppUserModel.ID') -ne $entry.AppUserModelID) { throw 'Il collegamento Start non ha la stessa identità dell''app.' }
+    $startUninstall = $link.ExtendedProperty('System.AppUserModel.UninstallCommand')
+    if (-not $startUninstall) { $startUninstall = $link.ExtendedProperty('{9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3} 37') }
+    if ($startUninstall -ne $entry.UninstallString) { throw 'Il menu contestuale Start non ha il comando di disinstallazione registrato.' }
+    if (-not (Test-Path (Join-Path (Split-Path $shortcut -Parent) 'Disinstalla Bibbia.lnk'))) { throw 'Collegamento di disinstallazione Start mancante.' }
     $extraFile = Join-Path $installDirectory 'file-personale.txt'
     [IO.File]::WriteAllText($extraFile, 'Conservare anche questo file.')
     # An upgrade must replace only application files and leave user data intact.
@@ -47,9 +58,11 @@ try {
         if ($blocked.ExitCode -ne 2) { throw 'Disinstallazione non bloccata durante l''esecuzione dell''app.' }
     }
     finally { $marker.Dispose() }
-    Invoke-Setup "$installDirectory/Uninstall.exe" "/S _?=$installDirectory"
+    $registeredCommand = (Get-ItemProperty $uninstallRegistry).QuietUninstallString
+    if ($registeredCommand -notmatch '^"([^\"]+)" /S$') { throw 'Comando di disinstallazione registrato non valido.' }
+    Invoke-Setup $Matches[1] "/S _?=$installDirectory"
     if (Test-Path "$installDirectory/Bibbia.Windows.exe") { throw 'File applicazione rimasto dopo disinstallazione.' }
-    if ((Test-Path $registry) -or (Test-Path $uninstallRegistry) -or (Test-Path $shortcut)) { throw 'Registrazione o collegamenti rimasti dopo disinstallazione.' }
+    if ((Test-Path $registry) -or (Test-Path $uninstallRegistry) -or (Test-Path $shortcut) -or (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\Bibbia.Windows.exe')) { throw 'Registrazione o collegamenti rimasti dopo disinstallazione.' }
     if (-not (Test-Path $extraFile) -or -not (Test-Path $noteFixture)) { throw 'La disinstallazione ha eliminato dati personali.' }
     Write-Host 'Installer: installazione, aggiornamento, collegamenti, blocco app aperta e conservazione dati verificati.'
 }

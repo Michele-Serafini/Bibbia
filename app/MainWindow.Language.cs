@@ -17,6 +17,14 @@ public sealed partial class MainWindow
     private string T(string text, params object[] args) { var value = language == "en" ? English.GetValueOrDefault(text, text) : text; return args.Length == 0 ? value : string.Format(value,args); }
     private static readonly Dictionary<string, string> English = new()
     {
+        ["Confronta"]="Compare", ["Seconda traduzione"]="Second translation", ["Caricamento confronto…"]="Loading comparison…",
+        ["Apri e annota"]="Open and annotate",
+        ["Nessun versetto corrispondente verificato."]="No verified matching verse.",
+        ["Questo libro non è presente nella seconda traduzione."]="This book is absent from the second translation.",
+        ["Numerazione diversa: corrispondenza non verificata per questo capitolo."]="Different numbering: no verified alignment for this chapter.",
+        ["Alcuni riferimenti non hanno una corrispondenza verificata. I riferimenti originali sono conservati."]="Some references have no verified counterpart. Original references are preserved.",
+        ["Versetti allineati · scorrimento sincronizzato · ↗ per leggere e annotare."]="Aligned verses · synchronized scrolling · ↗ to read and annotate.",
+        ["Uso formativo e didattico non commerciale."]="Educational noncommercial use.",
         ["Appunti {0}–{1} · {2}"]="Annotations {0}–{1} · {2}",
         ["Pagina precedente di appunti"]="Previous annotations page", ["Pagina successiva di appunti"]="Next annotations page",
         ["Capitolo {0} di {1}"]="Chapter {0} of {1}",
@@ -39,7 +47,7 @@ public sealed partial class MainWindow
         ["Importa traduzione JSON…"]="Import JSON translation…", ["Apri cartella dati"]="Open data folder", ["I tuoi appunti restano sul dispositivo"]="Your notes stay on your device",
         ["Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento."]="Highlights, underlines, notes, bookmarks and reading position are stored locally. No account or tracking.",
         ["CEI 2008 e Martini: Bibbie cattoliche italiane complete, 73 libri. Diodati e KJV: 66 libri. Raccolta estesa in inglese: 83 libri/sezioni, compresi apocrifi, 1 Enoc e Giubilei. La lingua dell’app è indipendente dal testo."]="CEI 2008 and Martini: complete Italian Catholic Bibles, 73 books. Diodati and KJV: 66 books. Extended English collection: 83 books/sections, including apocrypha, 1 Enoch and Jubilees. App language and text language are independent.",
-        ["Bibbia · 0.6\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion."]="Bibbia · 0.6\nNative Windows interface · Rust engine\nIndependent project, not affiliated with YouVersion.",
+        ["Bibbia · {0}\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion."]="Bibbia · {0}\nNative Windows interface · Rust engine\nIndependent project, not affiliated with YouVersion.",
         ["Inserisci almeno due caratteri"]="Enter at least two characters", ["Ricerca troppo lunga"]="Search query is too long", ["Seleziona una parola o una frase"]="Select a word or phrase",
         ["Nome della traduzione"]="Translation name", ["Ho il diritto di utilizzare questo testo."]="I have the right to use this text.", ["Importa traduzione"]="Import translation", ["Importa"]="Import",
         ["Formato: elenco di libri con name, abbrev e chapters (elenchi di versetti). Massimo 32 MB. La traduzione sarà copiata nel database locale."]="Format: an array of books with name, abbrev and chapters (arrays of verses). Maximum 32 MB. The translation will be copied into the local database.",
@@ -51,6 +59,7 @@ public sealed partial class MainWindow
     private void InitializeLanguages(JsonElement boot)
     {
         var settings = boot.GetProperty("settings");
+        if(settings.TryGetProperty("comparisonEdition",out var other))comparisonEdition=other.GetString()??"CEI 2008";
         if (settings.TryGetProperty("language", out var saved)) language = saved.GetString()!;
         InitializeEditionOptions(boot);
         bibleLanguage = editionOptions.First(x => x.Id == edition).Language;
@@ -122,12 +131,15 @@ public sealed partial class MainWindow
         FontSlider.Header = T("Dimensione del testo"); EditionPicker.Header = T("Traduzione");
         PreviousButton.Content = T("← Precedente"); NextButton.Content = T("Successivo →");
         BookModeToggle.Content = T("Libro");
+        ComparisonToggle.Content=T("Confronta");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ComparisonEdition,T("Seconda traduzione"));
+        if(comparing)RenderComparison();
         SearchBox.PlaceholderText = T("Una parola o una frase…"); SearchButton.Content = T("Cerca");
         CatalogDescription.Text = T("CEI 2008 e Martini: Bibbie cattoliche italiane complete, 73 libri. Diodati e KJV: 66 libri. Raccolta estesa in inglese: 83 libri/sezioni, compresi apocrifi, 1 Enoc e Giubilei. La lingua dell’app è indipendente dal testo.");
         ImportButton.Content = T("Importa traduzione JSON…"); OpenDataButton.Content = T("Apri cartella dati");
         PrivacyTitle.Text = T("I tuoi appunti restano sul dispositivo");
         PrivacyDescription.Text = T("Evidenziazioni, sottolineature, note, segnalibri e ultima lettura sono salvati in SQLite. Nessun account o tracciamento.");
-        AboutLabel.Text = T("Bibbia · 0.6\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.");
+        AboutLabel.Text = T("Bibbia · {0}\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.",typeof(App).Assembly.GetName().Version?.ToString(3)??"0.9.0");
         UpdatePageTitle();
         if (books.Count > book) ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BookPicker,T("Libro"));

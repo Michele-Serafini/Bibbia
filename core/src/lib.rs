@@ -10,6 +10,7 @@ use std::{
 };
 
 type Result<T> = std::result::Result<T, String>;
+mod comparison;
 mod corpus;
 mod selection;
 use corpus::{BookRef, Chapter, Edition};
@@ -335,14 +336,18 @@ impl Engine {
             .get("edition")
             .and_then(Value::as_str)
             .unwrap_or("KJV");
-        if ["books", "chapter", "search", "saved"].contains(&op) {
+        if ["books", "chapter", "search", "saved", "compare"].contains(&op) {
             for (id, data) in &mut self.editions {
-                if id != edition && data.builtin.is_none() {
+                if id != edition
+                    && Some(id.as_str()) != request.get("other").and_then(Value::as_str)
+                    && data.builtin.is_none()
+                {
                     data.release();
                 }
             }
         }
         match op {
+            "compare" => self.compare(edition, field(&request,"other")?, index(&request,"book")?, index(&request,"chapter")?),
             "bootstrap" => {
                 let mut settings = serde_json::Map::new();
                 let mut stmt = self
@@ -491,10 +496,13 @@ impl Engine {
             }
             "settings" => {
                 let key = field(&request, "key")?;
-                if !["position", "fontSize", "theme", "language", "bibleLanguage"].contains(&key) {
+                if !["position", "fontSize", "theme", "language", "bibleLanguage", "comparisonEdition"].contains(&key) {
                     return Err("Impostazione sconosciuta".into());
                 }
                 let value = request.get("value").ok_or("Valore mancante")?;
+                if key == "comparisonEdition" && !value.as_str().is_some_and(|id| self.editions.contains_key(id)) {
+                    return Err("Traduzione non disponibile".into());
+                }
                 if key == "language" && !value.as_str().is_some_and(|s| ["it", "en"].contains(&s)) {
                     return Err("Lingua non disponibile".into());
                 }

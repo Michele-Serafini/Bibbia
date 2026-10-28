@@ -490,6 +490,72 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
     )
     .await?;
     screenshot(&ui, "gnome-dark.png").await?;
+    ui.navigate(Position {
+        edition: "CEI 2008".into(),
+        book: 49,
+        chapter: 2,
+        verse: 15,
+    })
+    .await?;
+    ui.comparison_choice.replace("KJV".into());
+    ui.comparison.set_active(true);
+    until(
+        || {
+            ui.comparison_data
+                .borrow()
+                .as_ref()
+                .is_some_and(|(_, v)| v["other"] == "KJV")
+        },
+        "Comparison did not load",
+    )
+    .await?;
+    {
+        let data = ui.comparison_data.borrow();
+        let rows = &data.as_ref().unwrap().1["rows"];
+        check(
+            rows[15]["right"][0]["book"] == 42
+                && rows[15]["right"][0]["text"]
+                    .as_str()
+                    .unwrap()
+                    .contains("God so loved"),
+            "Comparison did not align John 3:16 across different book indices",
+        )?;
+    }
+    check(
+        !ui.book_surface.is_visible() && !ui.book_mode.is_sensitive(),
+        "Book paging was not suspended for comparison",
+    )?;
+    screenshot(&ui, "gnome-comparison.png").await?;
+    let row = ui.comparison_rows.first_child().unwrap();
+    let left = row.first_child().unwrap();
+    let right = left.next_sibling().unwrap();
+    let a = left.compute_bounds(&ui.comparison_rows).unwrap();
+    let b = right.compute_bounds(&ui.comparison_rows).unwrap();
+    check(
+        (a.y() - b.y()).abs() < 1.0,
+        "Compared verses do not share the same row",
+    )?;
+    let link = right
+        .last_child()
+        .unwrap()
+        .downcast::<gtk::Button>()
+        .unwrap();
+    link.emit_clicked();
+    until(
+        || !ui.comparison.is_active() && ui.position().edition == "KJV",
+        "Compared verse did not open in the annotatable reader",
+    )
+    .await?;
+    ui.navigate(Position {
+        edition: "Martini 1781 (cattolica)".into(),
+        book: 0,
+        chapter: 0,
+        verse: 0,
+    })
+    .await?;
+    println!(
+        "GTK comparison: canonical references, aligned rows, synchronized scroll container and open-to-annotate passed"
+    );
     println!(
         "GTK: real mouse selection, compact popup, phrase underline, note, bookmark, native preferences, font layout, themes, languages, CEI search, extended canons and saved navigation verified"
     );

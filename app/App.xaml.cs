@@ -4,12 +4,15 @@ namespace Bibbia.Windows;
 
 public partial class App : Application
 {
+    [System.Runtime.InteropServices.DllImport("shell32.dll",CharSet=System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
     private Window? window;
     // The installer checks this marker before replacing files. Multiple app
     // instances each retain a handle, so it disappears only after all close.
     private readonly Mutex lifetimeMarker = new(false, @"Local\BibbiaRust.App");
     public App()
     {
+        SetCurrentProcessExplicitAppUserModelID("io.github.MicheleSerafini.Bibbia");
         InitializeComponent();
         UnhandledException += (_, e) =>
         {
