@@ -84,8 +84,9 @@ public sealed partial class MainWindow
             ScrollViewer.SetVerticalScrollBarVisibility(VerseList,bookMode?ScrollBarVisibility.Hidden:ScrollBarVisibility.Auto);
             ScrollViewer.SetVerticalScrollBarVisibility(VerseRight,ScrollBarVisibility.Hidden);
             VerseList.Clip=null;VerseRight.Clip=null;
-            VerseList.ItemsSource=readerRows;
-            VerseRight.ItemsSource=bookColumns==2?readerRows:null;
+            if(!ReferenceEquals(VerseList.ItemsSource,readerRows))VerseList.ItemsSource=readerRows;
+            var rightRows=bookColumns==2?readerRows:null;
+            if(!ReferenceEquals(VerseRight.ItemsSource,rightRows))VerseRight.ItemsSource=rightRows;
             BookColumns.UpdateLayout();
             if(!bookMode){BookPageLabel.Text="";return;}
             var scroll=Descendants<ScrollViewer>(VerseList).FirstOrDefault();if(scroll==null)return;

@@ -28,7 +28,10 @@ public sealed partial class MainWindow {
     private TextPointer ReaderPointer(RichTextBlock editor,int offset) {
         var spans=readerRuns.GetValue(editor,_=>[]);
         var span=spans.LastOrDefault(s=>s.Start<=offset)??spans[0];
-        return span.Run.ContentStart.GetPositionAtOffset(Math.Clamp(offset-span.Start,0,span.Length),LogicalDirection.Forward)??span.Run.ContentEnd;
+        var local=Math.Clamp(offset-span.Start,0,span.Length);
+        if(local==0)return span.Run.ContentStart;
+        if(local==span.Length)return span.Run.ContentEnd;
+        return span.Run.ContentStart.GetPositionAtOffset(local,LogicalDirection.Forward)??span.Run.ContentEnd;
     }
     private Rect ReaderRect(RichTextBlock editor,int offset)=>ReaderPointer(editor,offset).GetCharacterRect(LogicalDirection.Forward);
     private void ApplyTextStylesCore(RichTextBlock editor,VerseRow row) {
@@ -58,7 +61,7 @@ public sealed partial class MainWindow {
             if(color!=null)run.Foreground=new SolidColorBrush(Colors.Black);
             paragraph.Inlines.Add(run);pieces.Add(new ReaderRun(a,b-a,run));
         }
-        editor.Blocks.Add(paragraph);readerRuns.Add(editor,pieces);
+        editor.Blocks.Add(paragraph);readerRuns.Add(editor,pieces);editor.UpdateLayout();
         // Native TextPointer offsets account for inline boundaries. Use them
         // for both selection mapping and the native text highlighter ranges.
         foreach(var span in pieces){

@@ -47,7 +47,7 @@ public sealed partial class MainWindow
         if(sender is RichTextBlock view){view.SizeChanged-=VerseTextSizeChanged;view.SizeChanged+=VerseTextSizeChanged;}
         BindVerseEditor(sender);
     }
-    private void VerseTextSizeChanged(object sender,SizeChangedEventArgs args)=>ScheduleBookLayout();
+    private void VerseTextSizeChanged(object sender,SizeChangedEventArgs args){if(bookMode && !readerStyling)ScheduleBookLayout();}
     private void VerseEditorUnloaded(object sender,RoutedEventArgs e)
     {
         if (sender is not RichTextBlock editor) return;
