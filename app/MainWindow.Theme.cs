@@ -78,7 +78,7 @@ public sealed partial class MainWindow
     private global::Windows.UI.Color? appliedSurface;
     private void UpdateWindowTheme()
     {
-        var background = EditorBackground();
+        var background = WindowBackground();
         if (appliedSurface == background) return;
         appliedSurface = background;
         var dark = Root.ActualTheme == ElementTheme.Dark;
@@ -98,6 +98,7 @@ public sealed partial class MainWindow
         }
         foreach (var editor in liveEditors.Values) if (editor.DataContext is VerseRow row) ApplyTextStyles(editor,row);
     }
-    private global::Windows.UI.Color EditorBackground() => (Root.Background as SolidColorBrush)?.Color ??
+    private global::Windows.UI.Color EditorBackground() => (BookViewport.Background as SolidColorBrush)?.Color ?? WindowBackground();
+    private global::Windows.UI.Color WindowBackground() => (Root.Background as SolidColorBrush)?.Color ??
         (Root.ActualTheme == ElementTheme.Dark ? global::Windows.UI.Color.FromArgb(255,32,32,32) : global::Windows.UI.Color.FromArgb(255,248,248,248));
 }

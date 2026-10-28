@@ -67,6 +67,9 @@ public sealed partial class MainWindow : Window
         Root.Loaded += OnLoaded;
         Closed += (_, _) =>
         {
+            if (ready && bookChapter == $"{edition}/{book}/{chapter}") {
+                try { SaveBookPlace(); } catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); }
+            }
             closed = true;
             ready = false;
             searchGeneration++;

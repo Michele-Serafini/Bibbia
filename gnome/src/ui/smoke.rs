@@ -182,6 +182,9 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         "Private Source Serif font did not load",
     )?;
     set_theme("Light");
+    // Theme transitions and the initial change from pages to scrolling can
+    // resize the surface. Let native allocation settle before capturing it.
+    glib::timeout_future(Duration::from_millis(250)).await;
     if let Some(settings) = gtk::Settings::default() {
         let initial = ui.position();
         settings.set_gtk_enable_animations(true);

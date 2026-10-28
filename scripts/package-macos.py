@@ -7,12 +7,27 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(*args, **kwargs):
     return subprocess.run([str(a) for a in args], check=True, **kwargs)
+
+
+def verify_dmg(image):
+    # DiskImages can briefly retain the image after `create` exits on CI.
+    # Retry only that transient error; malformed images must still fail.
+    for attempt in range(4):
+        result = subprocess.run(['hdiutil', 'verify', str(image)], text=True, capture_output=True)
+        print(result.stdout, end='')
+        print(result.stderr, end='', file=sys.stderr)
+        if result.returncode == 0:
+            return
+        if attempt == 3 or 'Resource temporarily unavailable' not in result.stderr:
+            result.check_returncode()
+        time.sleep(attempt + 1)
 
 
 def package():
@@ -73,7 +88,7 @@ def package():
     archive = output / f'Bibbia-{version}-universal.zip'
     run('hdiutil', 'create', '-volname', f'Bibbia {version}', '-srcfolder', staging,
         '-ov', '-format', 'UDZO', dmg)
-    run('hdiutil', 'verify', dmg)
+    verify_dmg(dmg)
     run('ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', staging / 'Bibbia.app', archive)
     for artifact in [dmg, archive]:
         digest = hashlib.file_digest(artifact.open('rb'), 'sha256').hexdigest()

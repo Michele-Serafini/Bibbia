@@ -1244,6 +1244,7 @@ impl Ui {
             source.remove();
         }
         if self.ready.get() {
+            self.save_book();
             self.save_position();
             self.core.post(json!({"op":"settings","key":"fontSize","value":self.state.borrow().font_size as i64}));
         }
