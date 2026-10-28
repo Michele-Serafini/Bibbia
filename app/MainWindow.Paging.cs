@@ -33,9 +33,10 @@ public sealed partial class MainWindow
     private string measuredKey="";
     private string measurementTypography="";
     private Canvas? measurementHost;
-    private Border? measurementRow;
+    private FrameworkElement? measurementRow;
+    private ListView? measurementList;
+    private readonly System.Collections.ObjectModel.ObservableCollection<VerseRow> measuringItems=[];
     private RichEditBox? measurementEditor;
-    private TextBlock? measurementNumber;
     private static IEnumerable<T> Descendants<T>(DependencyObject root) where T:DependencyObject {
         for(var i=0;i<VisualTreeHelper.GetChildrenCount(root);i++) {
             var child=VisualTreeHelper.GetChild(root,i);
@@ -79,49 +80,43 @@ public sealed partial class MainWindow
     private bool MeasureChapter(double width) {
         var key=$"{edition}/{book}/{chapter}/{fontSize:R}/{width:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
         if(key==measuredKey)return true;
-        if(measurementRow==null){
-            // RichEdit defers typography synchronization at Opacity=0. Keep the
-            // measuring row opaque behind the opaque paper, clipped to its area.
+        if(readerRows.Count==0)return false;
+        if(measurementList==null){
             measurementHost=new Canvas {IsHitTestVisible=false};
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(measurementHost,Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
             BookStage.Children.Insert(0,measurementHost);
-            // Use the actual XAML data template, so font resolution, native
-            // RichEdit initialization and styling match the displayed pages.
-            measurementRow=(Border)VerseList.ItemTemplate.LoadContent();
-            measurementEditor=Descendants<RichEditBox>(measurementRow).Single();
-            measurementNumber=Descendants<TextBlock>(measurementRow).First();
-            measurementEditor.Loaded+=(_,_)=>{measuredKey="";ScheduleBookLayout();};
-            measurementHost.Children.Add(measurementRow);
-            BookStage.UpdateLayout();
+            // Let ListView initialize the compiled x:Bind template exactly as
+            // for a displayed verse. LoadContent alone does not initialize its
+            // data-template component and leaves native RichEdit at 14px.
+            measurementList=new ListView {IsHitTestVisible=false,IsTabStop=false,SelectionMode=ListViewSelectionMode.None,HorizontalContentAlignment=HorizontalAlignment.Stretch,Padding=new Thickness(0),ItemTemplate=VerseList.ItemTemplate,ItemContainerStyle=VerseList.ItemContainerStyle,ItemsPanel=fullChapterPanel,ItemsSource=measuringItems};
+            ScrollViewer.SetHorizontalScrollBarVisibility(measurementList,ScrollBarVisibility.Disabled);
+            ScrollViewer.SetVerticalScrollBarVisibility(measurementList,ScrollBarVisibility.Disabled);
+            measurementHost.Children.Add(measurementList);
+            measuringItems.Add(readerRows[0]);
         }
-        // WinUI initializes the native RichEdit font and custom font face on
-        // Loaded. Measuring its pre-load document would use the system default.
-        if(!measurementEditor!.IsLoaded)return false;
         measurementHost!.Clip=new RectangleGeometry{Rect=new Rect(0,0,BookStage.ActualWidth,BookStage.ActualHeight)};
+        if(!ReferenceEquals(measuringItems[0],readerRows[0]))measuringItems[0]=readerRows[0];
+        void LayoutMeasure() {
+            measurementList.Width=width;measurementList.InvalidateMeasure();measurementList.Measure(new Size(width,double.PositiveInfinity));
+            measurementList.Arrange(new Rect(0,0,width,measurementList.DesiredSize.Height));measurementList.UpdateLayout();
+        }
+        LayoutMeasure();
+        measurementRow=measurementList.ContainerFromIndex(0) as FrameworkElement;
+        measurementEditor=measurementRow==null?null:Descendants<RichEditBox>(measurementRow).FirstOrDefault();
+        if(measurementEditor?.IsLoaded!=true){DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());return false;}
         var typography=$"{fontSize:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
-        if(measurementTypography!=typography && readerRows.Count>0) {
-            measurementRow.DataContext=readerRows[0];measurementEditor.FontSize=fontSize;
-            UpdateDocument(measurementEditor,()=>{measurementEditor.Document.SetText(TextSetOptions.None,readerRows[0].Text);ApplyTextStylesCore(measurementEditor,readerRows[0]);});
-            measurementTypography=typography;
-            // RichEdit commits XAML typography during the next rendered frame,
-            // after Loaded. Read the document metrics on the following layout.
-            DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());
-            return false;
+        if(measurementTypography!=typography) {
+            measuringItems[0]=readerRows[0];measurementEditor.FontSize=fontSize;
+            measurementTypography=typography;DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());return false;
         }
         measuredRows.Clear();measuredLines.Clear();double y=0;
-        measurementEditor!.FontSize=fontSize;
         foreach(var row in readerRows){
-            measurementRow.DataContext=row;
-            measurementNumber!.Text=row.Number;
-            measurementEditor.FontSize=fontSize;
-            UpdateDocument(measurementEditor,()=>{
-                measurementEditor.Document.SetText(TextSetOptions.None,row.Text);
-                ApplyTextStylesCore(measurementEditor,row);
-            });
-            measurementRow.Width=width;measurementRow.InvalidateMeasure();measurementRow.Measure(new Size(width,double.PositiveInfinity));
+            ((ContentControl)measurementRow!).Content=row;LayoutMeasure();
+            measurementRow=(FrameworkElement)measurementList.ContainerFromIndex(0);
+            measurementEditor=Descendants<RichEditBox>(measurementRow).First();
+            BindVerseEditor(measurementEditor);LayoutMeasure();
             var h=measurementRow.DesiredSize.Height;
-            measurementRow.Arrange(new Rect(0,0,width,h));measurementRow.UpdateLayout();
-            var top=measurementEditor.TransformToVisual(measurementHost!).TransformPoint(new Point(0,0)).Y;
+            var top=measurementEditor.TransformToVisual(measurementRow).TransformPoint(new Point(0,0)).Y;
             var range=measurementEditor.Document.GetRange(0,0);
             while(range.StartPosition<row.Text.Length){
                 range.GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var rect,out _);
