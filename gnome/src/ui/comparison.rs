@@ -19,6 +19,8 @@ impl Ui {
             self.refresh_comparison();
         } else {
             self.comparison_data.borrow_mut().take();
+            self.core
+                .post(json!({"op":"books","edition":self.position().edition}));
             while let Some(child) = self.comparison_rows.first_child() {
                 self.comparison_rows.remove(&child);
             }

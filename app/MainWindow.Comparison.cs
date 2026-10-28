@@ -31,7 +31,13 @@ public sealed partial class MainWindow {
         ComparisonPanel.Visibility=comparing?Visibility.Visible:Visibility.Collapsed;
         BookModeToggle.IsEnabled=!comparing;
         if(comparing){BookPageLabel.Text="";LoadComparison();}
-        else {ComparisonList.ItemsSource=null;comparisonData=null;comparisonKey="";ScrollToCurrentVerse();}
+        else {
+            ComparisonList.ItemsSource=null;comparisonData=null;comparisonKey="";
+            // Ordinary catalog reads release imported editions outside the
+            // active reader, including the now hidden comparison partner.
+            BibleEngine.Call(new{op="books",edition});
+            ScrollToCurrentVerse();
+        }
     });
     private void ComparisonEditionChanged(object sender,SelectionChangedEventArgs e) {
         if(!ready || comparisonChanging || ComparisonEdition.SelectedItem is not EditionOption option)return;

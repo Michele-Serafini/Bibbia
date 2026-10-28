@@ -102,7 +102,7 @@ impl Engine {
         }
         {
             // Only the catalog is needed at startup. Imported texts stay on
-            // disk until opened; at most one imported edition is cached.
+            // disk until opened; comparison temporarily retains its two inputs.
             let mut stmt = db
                 .prepare("SELECT id, book_count FROM editions")
                 .map_err(error)?;
@@ -339,7 +339,8 @@ impl Engine {
         if ["books", "chapter", "search", "saved", "compare"].contains(&op) {
             for (id, data) in &mut self.editions {
                 if id != edition
-                    && Some(id.as_str()) != request.get("other").and_then(Value::as_str)
+                    && (op != "compare"
+                        || Some(id.as_str()) != request.get("other").and_then(Value::as_str))
                     && data.builtin.is_none()
                 {
                     data.release();

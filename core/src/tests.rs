@@ -422,6 +422,16 @@ fn imported_texts_are_lazy_and_only_one_edition_is_retained() {
                 .all(|(name, e)| e.loaded.get().is_none() || name == id)
         );
     }
+    engine
+        .request(json!({"op":"compare","edition":"First","other":"Second","book":0,"chapter":0}))
+        .unwrap();
+    assert!(engine.editions["First"].loaded.get().is_some());
+    assert!(engine.editions["Second"].loaded.get().is_some());
+    engine
+        .request(json!({"op":"books","edition":"First"}))
+        .unwrap();
+    assert!(engine.editions["First"].loaded.get().is_some());
+    assert!(engine.editions["Second"].loaded.get().is_none());
 }
 
 #[test]
