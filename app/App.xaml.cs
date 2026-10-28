@@ -18,7 +18,7 @@ public partial class App : Application
         {
             try
             {
-                var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BibbiaRust");
+                var directory = MainWindow.PerformanceProfile() is {} profile?Path.Combine(profile,"notes"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BibbiaRust");
                 Directory.CreateDirectory(directory);
                 File.WriteAllText(Path.Combine(directory, "last-error.log"), e.Exception.ToString());
             }

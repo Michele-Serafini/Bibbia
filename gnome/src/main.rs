@@ -11,6 +11,9 @@ use std::{
 };
 
 fn data_directory() -> PathBuf {
+    if let Some(path) = performance_profile() {
+        return path.join("notes");
+    }
     let mut args = std::env::args_os();
     while let Some(arg) = args.next() {
         if arg == "--data-dir"
@@ -20,6 +23,15 @@ fn data_directory() -> PathBuf {
         }
     }
     glib::user_data_dir().join("bibbia")
+}
+fn performance_profile() -> Option<PathBuf> {
+    let path = PathBuf::from(std::env::var_os("BIBBIA_PERFORMANCE_PROFILE")?);
+    (path
+        .file_name()?
+        .to_string_lossy()
+        .starts_with("bibbia-perf-")
+        && path.join(".bibbia-perf-fixture").is_file())
+    .then_some(path)
 }
 fn benchmark_ready(ui: &Rc<ui::Ui>) {
     let Some(path) = std::env::var_os("BIBBIA_BENCHMARK_READY") else {
@@ -38,7 +50,7 @@ fn benchmark_ready(ui: &Rc<ui::Ui>) {
 fn main() -> glib::ExitCode {
     let mut smoke = false;
     let mut reopen = false;
-    let mut has_directory = false;
+    let mut has_directory = performance_profile().is_some();
     let mut args = std::env::args_os().skip(1);
     while let Some(arg) = args.next() {
         match arg.to_str() {
@@ -140,6 +152,11 @@ fn main() -> glib::ExitCode {
                 dialog.set_close_response("close");
                 dialog.connect_response(None, move |_, _| app.quit());
                 dialog.present();
+            } else if let Some(path) = performance_profile() {
+                if let Err(e) = ui::performance::run(ui.clone(), path).await {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
             } else if smoke {
                 let result = if reopen {
                     ui::smoke::reopen(ui.clone()).await

@@ -28,6 +28,7 @@ final class AppModel: ObservableObject {
     @Published var comparing = false
     @Published var comparison: Comparison?
     @Published var comparisonLoading = false
+    var performanceMotion = true
     private var comparisonTask: Task<Void,Never>?
     weak var readingSurface: BookSurface?
     func bookModeChanged() {
@@ -43,7 +44,9 @@ final class AppModel: ObservableObject {
 
     init() {
         let arguments = ProcessInfo.processInfo.arguments
-        if let index = arguments.firstIndex(of: "--data-dir"), arguments.indices.contains(index + 1) {
+        if let profile=Self.performanceProfile(){
+            directory=profile.appendingPathComponent("notes",isDirectory:true)
+        } else if let index = arguments.firstIndex(of: "--data-dir"), arguments.indices.contains(index + 1) {
             directory = URL(fileURLWithPath: arguments[index + 1], isDirectory: true)
         } else {
             directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -73,6 +76,7 @@ final class AppModel: ObservableObject {
             position = snapshot.position; preferences = snapshot.preferences
             scrollTarget = position.verse
             applyTheme(); revision += 1; loading = false
+            if let profile=Self.performanceProfile(){try await runPerformance(profile);return}
             if ProcessInfo.processInfo.arguments.contains("--ui-smoke") { await runSmoke() }
             if ProcessInfo.processInfo.arguments.contains("--ui-reopen") { await runReopenSmoke() }
             if let marker = ProcessInfo.processInfo.environment["BIBBIA_BENCHMARK_READY"] {
@@ -81,7 +85,10 @@ final class AppModel: ObservableObject {
                 for window in NSApp.windows { window.contentView?.layoutSubtreeIfNeeded(); window.displayIfNeeded() }
                 try Data("ready\n".utf8).write(to: URL(fileURLWithPath: marker))
             }
-        } catch { self.error = error.localizedDescription; loading = false }
+        } catch {
+            if let profile=Self.performanceProfile(){try? Data(String(describing:error).utf8).write(to:profile.appendingPathComponent("error.txt"));Darwin.exit(1)}
+            self.error = error.localizedDescription; loading = false
+        }
     }
 
     func navigate(_ target: Position) {

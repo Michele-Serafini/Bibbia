@@ -18,6 +18,7 @@ mod book;
 mod book_math;
 mod comparison;
 mod paging;
+pub mod performance;
 mod preferences;
 pub mod smoke;
 

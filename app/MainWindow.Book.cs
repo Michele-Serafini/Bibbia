@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     private int chapterRenderGeneration;
     private int bookMotionGeneration;
     private (string Edition,int Book,int Chapter)? displayedChapter;
-    private bool BookMotionAllowed => motionSettings.AnimationsEnabled || Environment.GetEnvironmentVariable("BIBBIA_UI_TEST_MOTION") == "1";
+    private bool BookMotionAllowed => performanceMotion && (motionSettings.AnimationsEnabled || Environment.GetEnvironmentVariable("BIBBIA_UI_TEST_MOTION") == "1");
     private void TraceBook(string message)
     {
         if (!selectionDiagnostics) return;

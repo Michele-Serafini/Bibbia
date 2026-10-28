@@ -40,7 +40,7 @@ public sealed class SearchRow
 
 public sealed partial class MainWindow : Window
 {
-    private readonly string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BibbiaRust");
+    private readonly string dataDirectory = PerformanceProfile() is {} profile?Path.Combine(profile,"notes"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BibbiaRust");
     private List<BookRow> books = [];
     private readonly Dictionary<string,List<BookRow>> bookCatalogs = [];
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? fontTimer;
@@ -137,6 +137,9 @@ public sealed partial class MainWindow : Window
             ready = true;
             LoadChapter(currentVerse);
             Navigation.IsEnabled = true;
+            if(PerformanceProfile() is {} profile)_=GuardAsync(async()=>{
+                try {await RunPerformance(profile);}catch(Exception error){File.WriteAllText(Path.Combine(profile,"error.txt"),error.ToString());Close();}
+            });
         });
     }
 

@@ -42,8 +42,8 @@ final class BookSurface: NSView {
         }
     }
     var motionAllowed: Bool {
-        allowsMotion && (!NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ||
-            (ProcessInfo.processInfo.arguments.contains("--ui-smoke") && ProcessInfo.processInfo.environment["BIBBIA_UI_TEST_MOTION"] == "1"))
+        allowsMotion && (pager.model?.performanceMotion ?? true) && (!NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ||
+            ((ProcessInfo.processInfo.arguments.contains("--ui-smoke") || AppModel.performanceProfile() != nil) && ProcessInfo.processInfo.environment["BIBBIA_UI_TEST_MOTION"] == "1"))
     }
     private var paperCGColor: CGColor {
         var color = CGColor(gray: 1, alpha: 1)
