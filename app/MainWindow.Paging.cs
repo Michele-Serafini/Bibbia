@@ -31,12 +31,6 @@ public sealed partial class MainWindow
     private readonly List<(double Y,double Height)> measuredRows=[];
     private readonly List<PageLine> measuredLines=[];
     private string measuredKey="";
-    private string measurementTypography="";
-    private Canvas? measurementHost;
-    private FrameworkElement? measurementRow;
-    private ListView? measurementList;
-    private readonly System.Collections.ObjectModel.ObservableCollection<VerseRow> measuringItems=[];
-    private RichEditBox? measurementEditor;
     private static IEnumerable<T> Descendants<T>(DependencyObject root) where T:DependencyObject {
         for(var i=0;i<VisualTreeHelper.GetChildrenCount(root);i++) {
             var child=VisualTreeHelper.GetChild(root,i);
@@ -81,49 +75,41 @@ public sealed partial class MainWindow
         var key=$"{edition}/{book}/{chapter}/{fontSize:R}/{width:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
         if(key==measuredKey)return true;
         if(readerRows.Count==0)return false;
-        if(measurementList==null){
-            measurementHost=new Canvas {IsHitTestVisible=false};
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(measurementHost,Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
-            BookStage.Children.Insert(0,measurementHost);
-            // Let ListView initialize the compiled x:Bind template exactly as
-            // for a displayed verse. LoadContent alone does not initialize its
-            // data-template component and leaves native RichEdit at 14px.
-            measurementList=new ListView {IsHitTestVisible=false,IsTabStop=false,SelectionMode=ListViewSelectionMode.None,HorizontalContentAlignment=HorizontalAlignment.Stretch,Padding=new Thickness(0),ItemTemplate=VerseList.ItemTemplate,ItemContainerStyle=VerseList.ItemContainerStyle,ItemsPanel=fullChapterPanel,ItemsSource=measuringItems};
-            ScrollViewer.SetHorizontalScrollBarVisibility(measurementList,ScrollBarVisibility.Disabled);
-            ScrollViewer.SetVerticalScrollBarVisibility(measurementList,ScrollBarVisibility.Disabled);
-            measurementHost.Children.Add(measurementList);
-            measuringItems.Add(readerRows[0]);
-        }
-        measurementHost!.Clip=new RectangleGeometry{Rect=new Rect(0,0,BookStage.ActualWidth,BookStage.ActualHeight)};
-        if(!ReferenceEquals(measuringItems[0],readerRows[0]))measuringItems[0]=readerRows[0];
-        void LayoutMeasure() {
-            measurementList.Width=width;measurementList.InvalidateMeasure();measurementList.Measure(new Size(width,double.PositiveInfinity));
-            measurementList.Arrange(new Rect(0,0,width,measurementList.DesiredSize.Height));measurementList.UpdateLayout();
-        }
-        LayoutMeasure();
-        measurementRow=measurementList.ContainerFromIndex(0) as FrameworkElement;
-        measurementEditor=measurementRow==null?null:Descendants<RichEditBox>(measurementRow).FirstOrDefault();
-        if(measurementEditor?.IsLoaded!=true){DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());return false;}
-        var typography=$"{fontSize:R}/{motionSettings.TextScaleFactor:R}/{Root.XamlRoot.RasterizationScale:R}";
-        if(measurementTypography!=typography) {
-            measuringItems[0]=readerRows[0];measurementEditor.FontSize=fontSize;
-            measurementTypography=typography;DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());return false;
-        }
+        // Reuse one editor in the actual reading column. The native RichEdit
+        // view then has precisely the same DPI, font and coordinate context as
+        // the displayed pages; no hidden control needs to approximate it.
+        if(VerseList.ItemsSource is not List<VerseRow> probe || probe.Count!=1 || !ReferenceEquals(probe[0],readerRows[0]))
+            VerseList.ItemsSource=new List<VerseRow>{readerRows[0]};
+        VerseRight.ItemsSource=null;VerseList.UpdateLayout();
+        var container=VerseList.ContainerFromIndex(0) as FrameworkElement;
+        var editor=container==null?null:Descendants<RichEditBox>(container).FirstOrDefault();
+        if(editor?.IsLoaded!=true){DispatcherQueue.TryEnqueue(()=>ScheduleBookLayout());return false;}
+        var paragraph=editor.Document.GetRange(0,1).ParagraphFormat.GetClone();
+        var original=readerRows[0];
         measuredRows.Clear();measuredLines.Clear();double y=0;
-        foreach(var row in readerRows){
-            ((ContentControl)measurementRow!).Content=row;LayoutMeasure();
-            measurementRow=(FrameworkElement)measurementList.ContainerFromIndex(0);
-            measurementEditor=Descendants<RichEditBox>(measurementRow).First();
-            BindVerseEditor(measurementEditor);LayoutMeasure();
-            var h=measurementRow.DesiredSize.Height;
-            var top=measurementEditor.TransformToVisual(measurementRow).TransformPoint(new Point(0,0)).Y;
-            var range=measurementEditor.Document.GetRange(0,0);
-            while(range.StartPosition<row.Text.Length){
-                range.GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var rect,out _);
-                if(rect.Height>0 && double.IsFinite(rect.Y))measuredLines.Add(new(y+top+rect.Y,rect.Height,row.Index,range.StartPosition));
-                var previous=range.StartPosition;if(range.Move(TextRangeUnit.Line,1)==0 || range.StartPosition<=previous)break;
+        try {
+            foreach(var row in readerRows){
+                UpdateDocument(editor,()=>{
+                    editor.Document.SetText(TextSetOptions.None,row.Text);
+                    ApplyTextStylesCore(editor,row);
+                    editor.Document.GetRange(0,row.Text.Length).ParagraphFormat.SetClone(paragraph);
+                });
+                container!.InvalidateMeasure();VerseList.UpdateLayout();
+                var h=container.DesiredSize.Height;
+                var top=editor.TransformToVisual(container).TransformPoint(new Point(0,0)).Y;
+                var range=editor.Document.GetRange(0,0);
+                while(range.StartPosition<row.Text.Length){
+                    range.GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var rect,out _);
+                    if(rect.Height>0 && double.IsFinite(rect.Y))measuredLines.Add(new(y+top+rect.Y,rect.Height,row.Index,range.StartPosition));
+                    var previous=range.StartPosition;if(range.Move(TextRangeUnit.Line,1)==0 || range.StartPosition<=previous)break;
+                }
+                measuredRows.Add((y,h));y+=h;
             }
-            measuredRows.Add((y,h));y+=h;
+        } finally {
+            UpdateDocument(editor,()=>{
+                editor.Document.SetText(TextSetOptions.None,original.Text);ApplyTextStylesCore(editor,original);
+                editor.Document.GetRange(0,original.Text.Length).ParagraphFormat.SetClone(paragraph);
+            });
         }
         measuredKey=key;
         return true;
@@ -194,7 +180,7 @@ public sealed partial class MainWindow
                         editor.Document.GetRange(line.Offset,line.Offset).GetRect(PointOptions.ClientCoordinates|PointOptions.AllowOffClient|PointOptions.Start,out var actual,out _);
                         var expected=line.Y-measuredRows[first].Y;
                         if(Math.Abs(origin+actual.Y-expected)>2 || Math.Abs(actual.Height-line.Height)>2)
-                            throw new InvalidOperationException($"Native page layout differs at verse {row.Index}, offset {line.Offset}: expected {expected}/{line.Height}, actual {origin+actual.Y}/{actual.Height}; measure font {measurementEditor!.Document.GetRange(0,1).CharacterFormat.Name}/{measurementEditor.Document.GetRange(0,1).CharacterFormat.Size}, actual font {editor.Document.GetRange(0,1).CharacterFormat.Name}/{editor.Document.GetRange(0,1).CharacterFormat.Size}");
+                            throw new InvalidOperationException($"Native page layout differs at verse {row.Index}, offset {line.Offset}: expected {expected}/{line.Height}, actual {origin+actual.Y}/{actual.Height}; actual font {editor.Document.GetRange(0,1).CharacterFormat.Name}/{editor.Document.GetRange(0,1).CharacterFormat.Size}");
                     }
                 }
             }

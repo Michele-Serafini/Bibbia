@@ -33,7 +33,6 @@ public sealed partial class MainWindow {
         if(comparing){
             chapterSnapshot=null;chapterRenderGeneration++;
             VerseList.ItemsSource=null;VerseRight.ItemsSource=null;
-            if(measurementEditor!=null)UpdateDocument(measurementEditor,()=>measurementEditor.Document.SetText(Microsoft.UI.Text.TextSetOptions.None,""));
             BookPageLabel.Text="";LoadComparison();
         }
         else {

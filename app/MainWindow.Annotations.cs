@@ -85,7 +85,7 @@ public sealed partial class MainWindow
     }
     private void VerseSelectionChanged(object sender, RoutedEventArgs e)
     {
-        if (sender is not RichEditBox editor) return;
+        if (sender is not RichEditBox editor || bookReflowing) return;
         TraceSelection("selection changed",editor);
         if ((GetAsyncKeyState(1) & 0x8000) == 0) return;
         selectionEditor = editor;
