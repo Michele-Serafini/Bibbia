@@ -106,7 +106,9 @@ fn snapshot(source: &Connection, path: &Path) -> Result<()> {
             ))
             .map_err(error)?;
         drop(target);
-        File::open(&temp)
+        OpenOptions::new()
+            .write(true)
+            .open(&temp)
             .map_err(error)?
             .sync_all()
             .map_err(error)?;

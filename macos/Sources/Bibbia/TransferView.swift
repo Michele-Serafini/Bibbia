@@ -63,12 +63,14 @@ enum NotesPDF {
         var media=CGRect(x:0,y:0,width:595.28,height:841.89)
         guard let pdf=CGContext(temp as CFURL,mediaBox:&media,[kCGPDFContextTitle:"Bibbia · Appunti",kCGPDFContextCreator:"Bibbia"] as CFDictionary) else{throw BibleError.invalid("Impossibile creare il PDF / Cannot create PDF")}
         let input=try FileHandle(forReadingFrom:text);defer{try? input.close()}
-        var buffer=Data(),y:CGFloat=794,first=true,pages=1
+        var buffer=Data(),y:CGFloat=794,first=true
+        let bodyFont=CTFontCreateWithName("Helvetica" as CFString,11,nil)
+        let titleFont=CTFontCreateWithName("Helvetica-Bold" as CFString,18,nil)
         pdf.textMatrix = .identity
         pdf.beginPDFPage(nil)
-        func newPage(){pdf.endPDFPage();pdf.beginPDFPage(nil);y=794;pages+=1}
+        func newPage(){pdf.endPDFPage();pdf.beginPDFPage(nil);y=794}
         func draw(_ line:String){
-            let font=CTFontCreateWithName("Helvetica" as CFString,first ? 18:11,nil);first=false
+            let font=first ? titleFont:bodyFont;first=false
             if line.isEmpty{y-=8;return}
             let value=NSAttributedString(string:line,attributes:[NSAttributedString.Key(kCTFontAttributeName as String):font])
             let setter=CTTypesetterCreateWithAttributedString(value as CFAttributedString),length=value.length
@@ -84,12 +86,12 @@ enum NotesPDF {
         }
         while let data=try input.read(upToCount:8192),!data.isEmpty {
             buffer.append(data)
-            while let index=buffer.firstIndex(of:10){let line=String(decoding:buffer[..<index],as:UTF8.self);buffer.removeSubrange(...index);draw(line)}
+            while let index=buffer.firstIndex(of:10){let line=String(decoding:buffer[..<index],as:UTF8.self);buffer.removeSubrange(...index);autoreleasepool{draw(line)}}
         }
         if !buffer.isEmpty{draw(String(decoding:buffer,as:UTF8.self))}
         pdf.endPDFPage();pdf.closePDF()
         guard FileManager.default.fileExists(atPath:temp.path) else{throw BibleError.invalid("PDF non creato / PDF not created")}
         if rename(temp.path,output.path) != 0{throw BibleError.invalid("Impossibile salvare il PDF / Cannot save PDF")}
-        _ = pages
+
     }
 }
