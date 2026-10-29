@@ -39,7 +39,7 @@
                     <TextBlock x:Name="PageTitle" Text="Leggi con calma." Style="{ThemeResource TitleTextBlockStyle}" />
                 </StackPanel>
                 <InfoBar x:Name="ErrorBar" AutomationProperties.AutomationId="ErrorBar" Grid.Row="1" IsOpen="False" Severity="Error" IsClosable="True" />
-                <Grid Grid.Row="2">
+                <Grid x:Name="ContentPanels" Grid.Row="2">
                     <Grid x:Name="ReadPanel" RowSpacing="14">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                         <Grid ColumnSpacing="10" MaxWidth="1600" HorizontalAlignment="Stretch">

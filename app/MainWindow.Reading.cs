@@ -18,7 +18,7 @@ public sealed partial class MainWindow {
         var nav=new NavigationViewItem{Content=N("Piani di lettura","Reading plans"),Tag="plans",Icon=new SymbolIcon(Symbol.Calendar)};
         AutomationProperties.SetAutomationId(nav,"ReadingPlansNavigation");Navigation.MenuItems.Add(nav);
         var host=new ScrollViewer{Content=readingPlansPanel,Visibility=Visibility.Collapsed};readingPlansHost=host;
-        ((Grid)ReadPanel.Parent).Children.Add(host);
+        ContentPanels.Children.Add(host);
     }
     private void EnsureReadingPlans(){
         if(plansBuilt)return;plansBuilt=true;
