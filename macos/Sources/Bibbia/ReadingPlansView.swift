@@ -52,7 +52,7 @@ struct ReadingPlansView: View {
                 ForEach(detail.chapters){chapter in
                     HStack {
                         Toggle(isOn:Binding(get:{chapter.complete},set:{value in Task{do{try await model.store?.completeReadingChapter(selected,index:chapter.index,complete:value);await reload()}catch{self.error=error.localizedDescription}}})){Text("\(chapter.name) \(chapter.chapter+1)")}
-                        Spacer();Button(model.t("Leggi","Read")){model.navigate(Position(edition:detail.edition,book:chapter.book,chapter:chapter.chapter));dismiss()}
+                        Spacer();Button(model.t("Leggi","Read")){Task{do{try await model.store?.activateReadingPlan(selected);model.navigate(Position(edition:detail.edition,book:chapter.book,chapter:chapter.chapter));dismiss()}catch{self.error=error.localizedDescription}}}
                     }
                 }
                 Text(model.t("Il punto di lettura si salva automaticamente. Segna i capitoli letti per aggiornare i progressi.","Your reading position is saved automatically. Mark finished chapters to update progress.")).font(.caption).foregroundStyle(.secondary)

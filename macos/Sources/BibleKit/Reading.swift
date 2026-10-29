@@ -35,11 +35,12 @@ extension BibleStore {
         guard let text=try database.rows("SELECT payload FROM reading_plans WHERE id=?",[.integer(id)]).first?.first?.string else {throw BibleError.invalid("Piano non disponibile / Plan unavailable")}
         return try JSONDecoder().decode(StoredPlan.self,from:Data(text.utf8))
     }
-    public func deleteReadingPlan(_ id:Int) throws { _ = try database.rows("DELETE FROM reading_plans WHERE id=?",[.integer(id)]) }
-    public func resumeReadingPlan(_ id:Int) throws -> Position { try readingPlan(id).resume }
+    public func deleteReadingPlan(_ id:Int) throws { try database.transaction { _ = try database.rows("DELETE FROM reading_plans WHERE id=?",[.integer(id)]); _ = try database.rows("DELETE FROM settings WHERE key='activeReadingPlan' AND CAST(payload AS INTEGER)=?",[.integer(id)]) } }
+    public func resumeReadingPlan(_ id:Int) throws -> Position { let p=try readingPlan(id);try database.set("activeReadingPlan",id);return p.resume }
+    public func activateReadingPlan(_ id:Int) throws { _ = try readingPlan(id);try database.set("activeReadingPlan",id) }
     func trackReading(_ position:Position) throws {
         let value=String(decoding:try JSONEncoder().encode(position),as:UTF8.self)
-        _ = try database.rows("UPDATE reading_plans SET payload=json_set(payload,'$.resume',json(?1)) WHERE json_extract(payload,'$.edition')=?2 AND (json_extract(payload,'$.book') IS NULL OR json_extract(payload,'$.book')=?3) AND (json_extract(payload,'$.resume.book')<>json_extract(?1,'$.book') OR json_extract(payload,'$.resume.chapter')<>json_extract(?1,'$.chapter') OR json_extract(payload,'$.resume.verse')<>json_extract(?1,'$.verse'))",[.text(value),.text(position.edition),.integer(position.book)])
+        _ = try database.rows("UPDATE reading_plans SET payload=json_set(payload,'$.resume',json(?1)) WHERE id=COALESCE((SELECT CAST(payload AS INTEGER) FROM settings WHERE key='activeReadingPlan'),-1) AND json_extract(payload,'$.edition')=?2 AND (json_extract(payload,'$.book') IS NULL OR json_extract(payload,'$.book')=?3) AND (json_extract(payload,'$.resume.book')<>json_extract(?1,'$.book') OR json_extract(payload,'$.resume.chapter')<>json_extract(?1,'$.chapter') OR json_extract(payload,'$.resume.verse')<>json_extract(?1,'$.verse'))",[.text(value),.text(position.edition),.integer(position.book)])
     }
     private func readingChapters(_ p:StoredPlan) throws -> [(Int,Int,String)] {
         let source=try corpus(p.edition)

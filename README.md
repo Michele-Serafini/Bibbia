@@ -38,6 +38,19 @@ Disattivare **Libro** per tornare allo scorrimento continuo. Il file locale
 `reader.json`, accanto al database, conserva modalità e punto di lettura.
 Testo, selezioni e annotazioni continuano a usare i controlli del sistema.
 
+## Piani di lettura
+
+Aprire **Piani di lettura** dalla navigazione Windows/GNOME o dal pulsante calendario nella barra macOS.
+Creare un piano per l'intera traduzione aperta o per il solo libro corrente, indicando titolo,
+data iniziale e da 1 a 12 capitoli al giorno. Si possono conservare fino a 24 piani.
+
+Il calendario mostra i capitoli previsti per la data selezionata; spuntarli aggiorna i progressi
+ed evidenzia i giorni completati. Una spunta si può togliere. **Leggi** apre il capitolo;
+**Riprendi** torna al versetto salvato del piano. Soltanto il piano aperto per leggere aggiorna
+il proprio punto di ripresa: gli altri mantengono il loro. Alla riapertura l'app ripristina
+l'ultima lettura. I dati restano offline in SQLite e i calendari si costruiscono quando servono.
+Eliminare un piano rimuove i suoi progressi, conservando tutti gli appunti sui versetti.
+
 ## Appunti organizzati
 
 Aprire **La mia raccolta / Appunti** e usare **Organizza…** accanto al versetto
@@ -45,6 +58,11 @@ per assegnargli una cartella e fino a 16 etichette. Scrivere un nome nuovo lo
 crea automaticamente; una cartella vuota rimuove l'assegnazione. **Gestisci…**
 permette anche di creare cartelle vuote, rinominare ed eliminare cartelle o
 etichette: gli appunti e le evidenziazioni vengono conservati.
+
+Nell'editor delle note si può scegliere giallo, verde, blu o rosa e lo stile **Post-it**,
+visibile anche nelle schede della raccolta. Su Windows e GNOME **Organizza…** consente
+anche di modificare il testo e lo stile; su macOS usare il pulsante matita accanto all'appunto.
+Svuotare il testo e salvare rimuove la nota, conservando gli altri segni sul versetto.
 
 La ricerca trova parole nel testo biblico salvato, nelle note, nei riferimenti,
 nelle cartelle e nelle etichette. I filtri per cartella, etichetta e tipo di
@@ -378,7 +396,7 @@ Vedere [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) per fonti e licenze.
 
 ## Prestazioni e fonti dei testi
 
-La 0.11.0 riduce il testo e i controlli nascosti: Windows usa controlli nativi di sola lettura al posto degli editor di input per
+Dalla 0.10.0 sono ridotti il testo e i controlli nascosti: Windows usa controlli nativi di sola lettura al posto degli editor di input per
 ogni versetto; GNOME usa due documenti nativi nel confronto; macOS crea la
 seconda pagina soltanto quando serve e riusa l'impaginazione. Le annotazioni
 macOS aggiornano soltanto i versetti cambiati. L'indice delle corrispondenze

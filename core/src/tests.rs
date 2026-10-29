@@ -855,7 +855,9 @@ fn reading_calendar_progress_and_colored_notes_survive_reopen() {
             .unwrap()["chapter"],
         2
     );
+    let second=e.request(json!({"op":"reading","action":"create","edition":"CEI 2008","title":"Altro piano","start":"2024-02-28","daily":1,"book":0})).unwrap();
     e.request(json!({"op":"settings","key":"position","value":{"edition":"CEI 2008","book":0,"chapter":2,"verse":4}})).unwrap();
+    assert_eq!(e.request(json!({"op":"reading","action":"detail","id":second,"from":"2024-02-28","selected":"2024-02-28"})).unwrap()["resume"]["chapter"],0);
     e.request(json!({"op":"note","edition":"CEI 2008","book":0,"chapter":2,"verse":4,"text":"Speranza 🌅","color":"blue","style":"sticky"})).unwrap();
     e.request(json!({"op":"organize","edition":"CEI 2008","book":0,"chapter":2,"verse":4,"folder":"Studio","tags":["speranza"]})).unwrap();
     e.request(json!({"op":"mark","edition":"CEI 2008","book":0,"chapter":2,"verse":4,"start":0,"length":2,"action":"underline"})).unwrap();

@@ -62,7 +62,7 @@ public sealed partial class MainWindow {
             var check=new CheckBox{Content=$"{item.GetProperty("name").GetString()} {c+1}",IsChecked=item.GetProperty("complete").GetBoolean()};
             void Complete(bool value)=>_=GuardAsync(async()=>{await Task.Run(()=>BibleEngine.Call(new{op="reading",action="complete",id=p.Id,index,complete=value}));await LoadReadingDetail();});
             check.Checked+=(_,_)=>Complete(true);check.Unchecked+=(_,_)=>Complete(false);
-            var open=new Button{Content=T("Leggi")};open.Click+=(_,_)=>Guard(()=>OpenPlanPosition(JsonSerializer.SerializeToElement(new{edition=selectedEdition,book=b,chapter=c,verse=0})));
+            var open=new Button{Content=T("Leggi")};open.Click+=(_,_)=>Guard(()=>{BibleEngine.Call(new{op="reading",action="activate",id=p.Id});OpenPlanPosition(JsonSerializer.SerializeToElement(new{edition=selectedEdition,book=b,chapter=c,verse=0}));});
             row.Children.Add(check);row.Children.Add(open);planChapters.Children.Add(row);
         }
         if(planChapters.Children.Count==0)planChapters.Children.Add(new TextBlock{Text=N("Nessuna lettura prevista per questo giorno.","No reading scheduled for this day.")});

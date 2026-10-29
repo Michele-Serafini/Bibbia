@@ -135,7 +135,12 @@ impl Plans {
                     ui.stack.set_visible_child_name("read");
                     let u = ui.clone();
                     let p = target.clone();
-                    ui.launch(async move { u.navigate(p).await });
+                    ui.launch(async move {
+                        u.core
+                            .call(json!({"op":"reading","action":"activate","id":id}))
+                            .await?;
+                        u.navigate(p).await
+                    });
                 }
             });
             row.append(&check);

@@ -88,7 +88,7 @@ impl Engine {
         Ok(json!(a))
     }
     pub(crate) fn track_reading(&self, p: &Value) -> Result<()> {
-        self.db.prepare_cached("UPDATE reading_plans SET payload=json_set(payload,'$.resume',json(?1)) WHERE json_extract(payload,'$.edition')=?2 AND (json_extract(payload,'$.book') IS NULL OR json_extract(payload,'$.book')=?3) AND (json_extract(payload,'$.resume.book')<>json_extract(?1,'$.book') OR json_extract(payload,'$.resume.chapter')<>json_extract(?1,'$.chapter') OR json_extract(payload,'$.resume.verse')<>json_extract(?1,'$.verse'))").map_err(error)?.execute(params![p.to_string(),field(p,"edition")?,index(p,"book")? as i64]).map_err(error)?;
+        self.db.prepare_cached("UPDATE reading_plans SET payload=json_set(payload,'$.resume',json(?1)) WHERE id=COALESCE((SELECT CAST(payload AS INTEGER) FROM settings WHERE key='activeReadingPlan'),-1) AND json_extract(payload,'$.edition')=?2 AND (json_extract(payload,'$.book') IS NULL OR json_extract(payload,'$.book')=?3) AND (json_extract(payload,'$.resume.book')<>json_extract(?1,'$.book') OR json_extract(payload,'$.resume.chapter')<>json_extract(?1,'$.chapter') OR json_extract(payload,'$.resume.verse')<>json_extract(?1,'$.verse'))").map_err(error)?.execute(params![p.to_string(),field(p,"edition")?,index(p,"book")? as i64]).map_err(error)?;
         Ok(())
     }
     pub(crate) fn reading(&self, r: &Value) -> Result<Value> {
@@ -164,13 +164,24 @@ impl Engine {
             .map_err(error)?;
         let p: Plan = serde_json::from_str(&payload).map_err(error)?;
         if action == "delete" {
-            self.db
-                .execute("DELETE FROM reading_plans WHERE id=?", [id])
+            let tx = self.db.unchecked_transaction().map_err(error)?;
+            tx.execute("DELETE FROM reading_plans WHERE id=?", [id])
                 .map_err(error)?;
+            tx.execute(
+                "DELETE FROM settings WHERE key='activeReadingPlan' AND CAST(payload AS INTEGER)=?",
+                [id],
+            )
+            .map_err(error)?;
+            tx.commit().map_err(error)?;
             return Ok(json!(true));
         }
-        if action == "resume" {
-            return Ok(p.resume);
+        if action == "resume" || action == "activate" {
+            self.db.execute("INSERT INTO settings VALUES('activeReadingPlan',?1) ON CONFLICT(key) DO UPDATE SET payload=excluded.payload WHERE payload<>excluded.payload",[id.to_string()]).map_err(error)?;
+            return Ok(if action == "resume" {
+                p.resume
+            } else {
+                json!(true)
+            });
         }
         let books = self.books(&p.edition)?;
         let chapters: Vec<_> = books
