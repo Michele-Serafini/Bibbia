@@ -1,6 +1,8 @@
 # Bibbia per Windows, GNOME e macOS
 
-**Versione 0.10.0 su Windows, Linux e macOS**, pubblicata in un’unica release.
+**Versione 0.11.0 su Windows, Linux e macOS**, pubblicata in un’unica release.
+Piani di lettura offline con calendario, progressi e punto di ripresa salvato; note colorate e post-it organizzabili in cartelle ed etichette.
+
 Lettura su una superficie carta con margini, dorso e ombre; al cambio di capitolo
 l’angolo superiore si solleva e la piega scende diagonalmente, trascinando
 il resto del foglio in 1.100 ms. Ombre mobili e retro opaco
@@ -8,10 +10,10 @@ accompagnano la curvatura.
 La modalità Libro impagina anche i capitoli lunghi e il testo conserva selezione e annotazioni native.
 Le preferenze di sistema per ridurre le animazioni sono rispettate.
 
-[EXE Windows](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/Bibbia-Setup-0.10.0-x64.exe) ·
-[DEB Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/bibbia_0.10.0-1_amd64.deb) ·
-[RPM Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/bibbia-0.10.0-1.x86_64.rpm) ·
-[DMG macOS Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/Bibbia-0.10.0-universal.dmg).
+[EXE Windows](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.11.0/Bibbia-Setup-0.11.0-x64.exe) ·
+[DEB Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.11.0/bibbia_0.11.0-1_amd64.deb) ·
+[RPM Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.11.0/bibbia-0.11.0-1.x86_64.rpm) ·
+[DMG macOS Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.11.0/Bibbia-0.11.0-universal.dmg).
 
 macOS è sviluppato interamente in **Swift**, motore compreso, con **SwiftUI e AppKit**.
 Usa gli strumenti e i font Apple di sistema e il disegno serif per la lettura.
@@ -132,13 +134,13 @@ testi e lo stesso schema delle annotazioni; si può trasferire un backup a app c
 
 Pacchetti **x86-64** per Debian 12+, Ubuntu 24.04+ e Fedora 43+:
 
-- [bibbia_0.10.0-1_amd64.deb](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/bibbia_0.10.0-1_amd64.deb)
-- [bibbia-0.10.0-1.x86_64.rpm](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/bibbia-0.10.0-1.x86_64.rpm)
+- [bibbia_0.11.0-1_amd64.deb](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.11.0/bibbia_0.11.0-1_amd64.deb)
+- [bibbia-0.11.0-1.x86_64.rpm](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.11.0/bibbia-0.11.0-1.x86_64.rpm)
 
 ```sh
-sudo apt install ./bibbia_0.10.0-1_amd64.deb
+sudo apt install ./bibbia_0.11.0-1_amd64.deb
 # Su Fedora:
-sudo dnf install ./bibbia-0.10.0-1.x86_64.rpm
+sudo dnf install ./bibbia-0.11.0-1.x86_64.rpm
 ```
 
 Aprire **Bibbia** dal menu delle applicazioni oppure eseguire `bibbia`.
@@ -162,7 +164,7 @@ sono piccoli popover nativi.
 
 ## Installare su Windows
 
-[Scarica **Bibbia-Setup-0.10.0-x64.exe**](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.10.0/Bibbia-Setup-0.10.0-x64.exe): un solo installer offline,
+[Scarica **Bibbia-Setup-0.11.0-x64.exe**](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.11.0/Bibbia-Setup-0.11.0-x64.exe): un solo installer offline,
 con interfaccia italiana. Non richiede Rust, .NET, Visual Studio, account o
 download aggiuntivi sul PC destinatario. Supporta Windows 10 versione 2004 o
 successiva e Windows 11 a 64 bit.
@@ -173,7 +175,7 @@ successiva e Windows 11 a 64 bit.
 4. Per rimuovere l'app usare **Impostazioni Windows → App → Bibbia → Disinstalla**.
    Note, segnalibri e traduzioni importate vengono conservati.
 
-La [release v0.10.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.10.0)
+La [release v0.11.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.11.0)
 contiene l'installer e il checksum SHA-256. Per le nuove build il workflow
 GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-x64**.
 Il workflow manuale **Publish verified packages** richiede due build riuscite,
@@ -223,7 +225,7 @@ tutti i prerequisiti, dalla radice del repository:
 pwsh -File ./scripts/package.ps1
 ```
 
-Il risultato è `artifacts/installer/Bibbia-Setup-0.10.0-x64.exe`, con un file
+Il risultato è `artifacts/installer/Bibbia-Setup-0.11.0-x64.exe`, con un file
 `.sha256` accanto. Il flag `-SkipBuild` riutilizza una pubblicazione già completata.
 La cartella `artifacts/Bibbia/` viene sempre rigenerata da una pubblicazione pulita,
 per evitare di includere file rimasti da vecchie build.
@@ -236,7 +238,7 @@ Su un runner Windows pulito, per provare installazione, aggiornamento, interfacc
 reale, blocco con app aperta, disinstallazione e conservazione dei dati:
 
 ```powershell
-pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.10.0-x64.exe
+pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.11.0-x64.exe
 ```
 
 Il test rifiuta di avviarsi se trova dati o un'installazione Bibbia preesistenti.
@@ -376,7 +378,7 @@ Vedere [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) per fonti e licenze.
 
 ## Prestazioni e fonti dei testi
 
-La 0.10.0 riduce il testo e i controlli nascosti: Windows usa controlli nativi di sola lettura al posto degli editor di input per
+La 0.11.0 riduce il testo e i controlli nascosti: Windows usa controlli nativi di sola lettura al posto degli editor di input per
 ogni versetto; GNOME usa due documenti nativi nel confronto; macOS crea la
 seconda pagina soltanto quando serve e riusa l'impaginazione. Le annotazioni
 macOS aggiornano soltanto i versetti cambiati. L'indice delle corrispondenze

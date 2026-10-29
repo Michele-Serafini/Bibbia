@@ -186,17 +186,17 @@ public sealed partial class MainWindow
     }
     private void ShowNote(RichTextBlock editor, VerseRow row)
     {
+        var targetEdition=edition;var targetBook=book;var targetChapter=chapter;
         var flyout = new Flyout();
         var content = new StackPanel { Width=300,Spacing=12 };
         content.Children.Add(new TextBlock {Text=$"{books[book].Name} {chapter+1}:{row.Number}",FontWeight=Microsoft.UI.Text.FontWeights.SemiBold});
         var input = new TextBox {Header=T("La tua nota"),Text=row.Annotation.GetProperty("note").GetString(),AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Height=130,MaxLength=8000};
         AutomationProperties.SetAutomationId(input,"NoteText"); content.Children.Add(input);
+        var (noteColor,noteStyle)=NoteChoices(content,row.Annotation);
         var save = new Button {Content=T("Salva"),HorizontalAlignment=HorizontalAlignment.Right};
         AutomationProperties.SetAutomationId(save,"SaveNote");
         save.Click += (_,_) => Guard(() => {
-            var a=row.Annotation;
-            row.Annotation=BibleEngine.Call(new {op="annotate",edition,book,chapter,verse=row.Index,annotation=new {
-                highlight=a.GetProperty("highlight"),underline=a.GetProperty("underline"),bookmark=a.GetProperty("bookmark"),note=input.Text,ranges=a.GetProperty("ranges")}});
+            row.Annotation=BibleEngine.Call(new {op="note",edition=targetEdition,book=targetBook,chapter=targetChapter,verse=row.Index,text=input.Text,color=NoteColors[Math.Max(0,noteColor.SelectedIndex)],style=noteStyle.SelectedIndex==1?"sticky":"plain"});
             flyout.Hide();
         }); content.Children.Add(save); flyout.Content=content;
         DispatcherQueue.TryEnqueue(() => flyout.ShowAt(editor));

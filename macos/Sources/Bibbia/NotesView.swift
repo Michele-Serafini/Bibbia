@@ -115,3 +115,34 @@ struct NoteCollectionsSheet: View {
         }.padding(24).frame(width: 430)
     }
 }
+
+func noteTint(_ color:String?) -> Color { Color(nsColor:ReadingTextView.highlightColor(color ?? "yellow") ?? .systemYellow) }
+struct SavedNoteEditor: View {
+    @ObservedObject var model:AppModel
+    let hit:Hit
+    @Environment(\.dismiss) private var dismiss
+    @State private var text=""
+    @State private var color="yellow"
+    @State private var style="plain"
+    @State private var error=""
+    var body:some View {
+        VStack(alignment:.leading,spacing:12){
+            Text(hit.reference).font(.headline)
+            NoteStylePicker(model:model,color:$color,style:$style)
+            TextEditor(text:$text).frame(height:180).padding(6).background(noteTint(color).opacity(style=="sticky" ? 0.25:0.08)).accessibilityIdentifier("savedNoteText")
+            if !error.isEmpty{Text(error).foregroundStyle(.red)}
+            HStack{Button(model.t("Annulla","Cancel")){dismiss()};Spacer();Button(model.t("Salva","Save")){Task{do{if let verses=try await model.store?.writeNote(text,color:color,style:style,at:hit.position){model.apply(verses,at:hit.position)};dismiss()}catch{self.error=error.localizedDescription}}}.disabled(text.utf8.count>32768)}
+        }.padding(24).frame(width:420).onAppear{text=hit.annotation.note;color=hit.annotation.noteColor ?? "yellow";style=hit.annotation.noteStyle ?? "plain"}
+    }
+}
+struct NoteStylePicker:View {
+    @ObservedObject var model:AppModel
+    @Binding var color:String
+    @Binding var style:String
+    var body:some View {
+        HStack {
+            Picker(model.t("Colore","Color"),selection:$color){ForEach([("yellow","Giallo","Yellow"),("green","Verde","Green"),("blue","Blu","Blue"),("pink","Rosa","Pink")],id:\.0){v in Text(model.t(v.1,v.2)).tag(v.0)}}
+            Picker(model.t("Stile","Style"),selection:$style){Text(model.t("Nota","Note")).tag("plain");Text("Post-it").tag("sticky")}
+        }
+    }
+}

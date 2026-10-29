@@ -36,6 +36,8 @@ final class Database {
             CREATE TABLE IF NOT EXISTS note_groups(kind TEXT NOT NULL CHECK(kind IN ('folder','tag')),name TEXT NOT NULL,PRIMARY KEY(kind,name));
             CREATE TABLE IF NOT EXISTS note_organization(edition TEXT NOT NULL,book INTEGER NOT NULL,chapter INTEGER NOT NULL,verse INTEGER NOT NULL,folder TEXT NOT NULL DEFAULT '',tags TEXT NOT NULL DEFAULT '[]',PRIMARY KEY(edition,book,chapter,verse));
             CREATE INDEX IF NOT EXISTS note_organization_folder ON note_organization(edition,folder,book,chapter,verse);
+            CREATE TABLE IF NOT EXISTS reading_plans(id INTEGER PRIMARY KEY,payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS reading_progress(plan_id INTEGER NOT NULL REFERENCES reading_plans(id) ON DELETE CASCADE,chapter_index INTEGER NOT NULL,PRIMARY KEY(plan_id,chapter_index));
             CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS editions (id TEXT PRIMARY KEY, payload TEXT NOT NULL, book_count INTEGER);
             """)

@@ -285,6 +285,9 @@ try {
         if ([Math]::Abs(($after.right-$after.left)-($before.right-$before.left)) -gt 2) { throw 'Title bar restore button did not restore the window.' }
         Check-TitleTheme 1
     }
+    Select-Page 'ReadingPlansNavigation'
+    Wait-Control $window 'PlanCalendar' | Out-Null
+    Save-WindowImage 'windows-plans.png'
     Select-Page 'SavedNavigation'
     Wait-Text (Wait-Control $window 'ResultList') 'Genesi 1:1' | Out-Null
     Invoke-Control (Wait-Control $window 'OrganizeSaved')

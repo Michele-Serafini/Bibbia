@@ -28,6 +28,12 @@ extension AppModel {
             guard directory.lastPathComponent.hasPrefix("bibbia-macos-smoke-"),
                   FileManager.default.fileExists(atPath: directory.appendingPathComponent(".bibbia-test-fixture").path),
                   let store else { throw BibleError.invalid("UI tests require a marked isolated --data-dir") }
+            let readingID=try await store.createReadingPlan(title:"Native calendar",edition:position.edition,start:"2024-02-28",daily:2,book:0)
+            showReadingPlans=true
+            try await Task.sleep(for:.milliseconds(400))
+            showReadingPlans=false
+            try await Task.sleep(for:.milliseconds(200))
+            try await store.deleteReadingPlan(readingID)
             try await Task.sleep(for: .seconds(2))
             guard let window = NSApp.windows.first(where: { $0.contentView != nil && $0.isVisible }),
                   let root = window.contentView,

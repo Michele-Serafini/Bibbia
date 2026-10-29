@@ -21,3 +21,13 @@
 .highlight-green { color: #268326; }
 .highlight-blue { color: #3584e4; }
 .highlight-pink { color: #b44893; }
+/* Native list rows are recycled; style classes are reset when a row is rebound. */
+.note-yellow { background-color: alpha(#e1bf41, .10); }
+.note-green { background-color: alpha(#97cf91, .10); }
+.note-blue { background-color: alpha(#8ec0ed, .10); }
+.note-pink { background-color: alpha(#eca8c3, .10); }
+.sticky-note { border-radius: 9px; border-left: 4px solid alpha(currentColor, .25); margin: 4px; }
+.sticky-note.note-yellow { background-color: alpha(#e1bf41, .24); }
+.sticky-note.note-green { background-color: alpha(#97cf91, .24); }
+.sticky-note.note-blue { background-color: alpha(#8ec0ed, .24); }
+.sticky-note.note-pink { background-color: alpha(#eca8c3, .24); }

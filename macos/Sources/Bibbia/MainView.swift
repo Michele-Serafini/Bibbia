@@ -39,6 +39,9 @@ struct MainView: View {
                     .onChange(of: model.comparing) { _ in model.comparisonChanged() }
             }
             ToolbarItem {
+                Button { model.showReadingPlans = true } label: { Label(model.t("Piani di lettura","Reading plans"),systemImage:"calendar") }.accessibilityIdentifier("readingPlans")
+            }
+            ToolbarItem {
                 Menu {
                     Button(model.t("Importa traduzione…", "Import edition…")) { model.importEdition() }
                     Button(model.t("Mostra cartella degli appunti", "Show notes folder")) { NSWorkspace.shared.open(model.directory) }
@@ -54,6 +57,8 @@ struct MainView: View {
         } message: { Text(model.error ?? "") }
         .sheet(isPresented: $model.showNotices) { NoticesView(model: model) }
         .sheet(item: $model.organizingNote) { hit in NoteOrganizationSheet(model: model, hit: hit) }
+        .sheet(isPresented: $model.showReadingPlans) { ReadingPlansView(model:model) }
+        .sheet(item: $model.editingNote) { hit in SavedNoteEditor(model:model,hit:hit) }
         .sheet(isPresented: $model.showCollections) { NoteCollectionsSheet(model: model) }
         .onChange(of: model.noteFilter) { _ in model.loadSaved(reset: true) }
         .onChange(of: model.panel) { panel in
@@ -133,12 +138,13 @@ struct MainView: View {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(hit.reference).font(.headline).foregroundStyle(.primary)
                             Text(hit.text).font(.callout).foregroundStyle(.secondary).lineLimit(3)
-                            if !hit.annotation.note.isEmpty { Label(hit.annotation.note, systemImage: "note.text").font(.caption).lineLimit(2) }
+                            if !hit.annotation.note.isEmpty { Label(hit.annotation.note, systemImage: hit.annotation.noteStyle == "sticky" ? "pin.fill":"note.text").font(.caption).lineLimit(3).padding(7).frame(maxWidth:.infinity,alignment:.leading).background(noteTint(hit.annotation.noteColor).opacity(hit.annotation.noteStyle == "sticky" ? 0.25:0.10),in:RoundedRectangle(cornerRadius:7)) }
                             if !hit.organization.summary.isEmpty { Text(hit.organization.summary).font(.caption2).foregroundStyle(.secondary).lineLimit(2) }
                         }.padding(.vertical, 5).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }.buttonStyle(.plain)
                         .contextMenu { if model.panel == .saved { Button(model.t("Organizza…", "Organize…")) { model.organizingNote = hit } } }
                     if model.panel == .saved {
+                        Button { model.editingNote = hit } label: { Image(systemName:"square.and.pencil") }.buttonStyle(.borderless).help(model.t("Modifica nota","Edit note"))
                         Button { model.organizingNote = hit } label: { Image(systemName: "folder") }
                             .buttonStyle(.borderless).help(model.t("Organizza…", "Organize…")).accessibilityLabel(model.t("Organizza…", "Organize…")).accessibilityIdentifier("organizeNote")
                     }

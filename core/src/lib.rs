@@ -13,6 +13,7 @@ type Result<T> = std::result::Result<T, String>;
 mod comparison;
 mod corpus;
 mod organization;
+mod reading;
 mod selection;
 use corpus::{BookRef, Chapter, Edition};
 use selection::TextMark;
@@ -41,6 +42,10 @@ pub struct Annotation {
     pub note: String,
     #[serde(default)]
     pub ranges: Vec<TextMark>,
+    #[serde(default, rename = "noteColor", skip_serializing_if = "Option::is_none")]
+    pub note_color: Option<String>,
+    #[serde(default, rename = "noteStyle", skip_serializing_if = "Option::is_none")]
+    pub note_style: Option<String>,
 }
 
 pub struct Engine {
@@ -78,6 +83,7 @@ impl Engine {
         )
         .map_err(error)?;
         db.execute_batch(organization::SCHEMA).map_err(error)?;
+        db.execute_batch(reading::SCHEMA).map_err(error)?;
         // Upgrade old installations once, without parsing imported corpora on
         // subsequent launches. Personal annotations and source text are untouched.
         let has_count = db
@@ -147,6 +153,7 @@ impl Engine {
                         params![id, original],
                     )
                     .map_err(error)?;
+                    tx.execute("UPDATE reading_plans SET payload=json_set(payload,'$.edition',?1,'$.resume.edition',?1) WHERE json_extract(payload,'$.edition')=?2",params![id,original]).map_err(error)?;
                     tx.execute(
                         "UPDATE note_organization SET edition=?1 WHERE edition=?2",
                         params![id, original],
@@ -169,7 +176,12 @@ impl Engine {
         verse: usize,
         a: &Annotation,
     ) -> Result<()> {
-        if *a == Annotation::default() {
+        if a.highlight.is_none()
+            && !a.underline
+            && !a.bookmark
+            && a.note.is_empty()
+            && a.ranges.is_empty()
+        {
             self.db.execute("DELETE FROM note_organization WHERE edition=? AND book=? AND chapter=? AND verse=?",params![edition,book as i64,chapter as i64,verse as i64]).map_err(error)?;
             self.db
                 .execute(
@@ -393,13 +405,17 @@ impl Engine {
                 if verse >= self.chapter(edition, book, chapter)?.len() {
                     return Err("Versetto non disponibile".into());
                 }
-                let annotation: Annotation = serde_json::from_value(
+                let mut annotation: Annotation = serde_json::from_value(
                     request
                         .get("annotation")
                         .cloned()
                         .ok_or("Annotazione mancante")?,
                 )
                 .map_err(error)?;
+                let old = self.annotation(edition, book, chapter, verse)?;
+                if request["annotation"].get("noteColor").is_none() { annotation.note_color = old.note_color; }
+                if request["annotation"].get("noteStyle").is_none() { annotation.note_style = old.note_style; }
+                reading::validate_note(&annotation)?;
                 if !selection::valid_color(&annotation.highlight) {
                     return Err("Colore non valido".into());
                 }
@@ -443,6 +459,8 @@ impl Engine {
                 self.save_annotation(edition, book, chapter, verse, &annotation)?;
                 Ok(json!(annotation))
             }
+            "reading" => self.reading(&request),
+            "note" => self.write_note(&request,edition),
             "saved" => self.saved_notes(&request,edition),
             "collections" => self.collections(),
             "collection" => self.collection(&request),
@@ -499,6 +517,7 @@ impl Engine {
                 self.db.prepare_cached("INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET payload=excluded.payload WHERE payload<>excluded.payload").map_err(error)?
                     .execute(params![key, value.to_string()])
                     .map_err(error)?;
+                if key == "position" { self.track_reading(value)?; }
                 Ok(json!(true))
             }
             "import" => {

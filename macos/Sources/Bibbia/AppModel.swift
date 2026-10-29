@@ -19,6 +19,8 @@ final class AppModel: ObservableObject {
     @Published var noteCollections = NoteCollections()
     @Published var organizingNote: Hit?
     @Published var showCollections = false
+    @Published var showReadingPlans = false
+    @Published var editingNote: Hit?
     private var savedTask: Task<Void,Never>?
     private var savedGeneration = 0
     @Published var savedPage = 0
@@ -228,7 +230,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func apply(_ verses: [Verse], at target: Position) {
+    func apply(_ verses: [Verse], at target: Position) {
         if target.edition == position.edition, target.book == position.book, target.chapter == position.chapter {
             self.verses = verses; revision += 1
         }

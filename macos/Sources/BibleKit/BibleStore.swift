@@ -42,6 +42,7 @@ public actor BibleStore {
                 try database.transaction {
                     _ = try database.rows("UPDATE editions SET id=? WHERE id=?", [.text(id), .text(original)])
                     _ = try database.rows("UPDATE annotations SET edition=? WHERE edition=?", [.text(id), .text(original)])
+                    _ = try database.rows("UPDATE reading_plans SET payload=json_set(payload,'$.edition',?1,'$.resume.edition',?1) WHERE json_extract(payload,'$.edition')=?2", [.text(id),.text(original)])
                     _ = try database.rows("UPDATE note_organization SET edition=? WHERE edition=?", [.text(id), .text(original)])
                     _ = try database.rows("UPDATE settings SET payload=json_set(payload,'$.edition',?) WHERE key='position' AND json_extract(payload,'$.edition')=?", [.text(id), .text(original)])
                 }
@@ -109,6 +110,7 @@ public actor BibleStore {
     public func savePosition(_ position: Position) throws {
         _ = try corpus(position.edition).verse(position.book, position.chapter, position.verse)
         try database.set("position", position)
+        try trackReading(position)
     }
 
     public func savePreferences(_ preferences: Preferences) throws {
@@ -126,14 +128,14 @@ public actor BibleStore {
         }
     }
 
-    private func annotation(_ position: Position) throws -> Annotation {
+    func annotation(_ position: Position) throws -> Annotation {
         let rows = try database.rows("SELECT payload FROM annotations WHERE edition=? AND book=? AND chapter=? AND verse=?",
             [.text(position.edition), .integer(position.book), .integer(position.chapter), .integer(position.verse)])
         guard let json = rows.first?.first?.string else { return Annotation() }
         return try JSONDecoder().decode(Annotation.self, from: Data(json.utf8))
     }
 
-    private func save(_ annotation: Annotation, at position: Position) throws {
+    func save(_ annotation: Annotation, at position: Position) throws {
         let keys: [SQLValue] = [.text(position.edition), .integer(position.book), .integer(position.chapter), .integer(position.verse)]
         if annotation.isEmpty {
             _ = try database.rows("DELETE FROM note_organization WHERE edition=? AND book=? AND chapter=? AND verse=?", keys)

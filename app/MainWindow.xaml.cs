@@ -33,6 +33,9 @@ public sealed class SearchRow
     public required string Reference { get; init; }
     public required string Text { get; init; }
     public required string Detail { get; init; }
+    public string Note {get;init;}="";
+    public JsonElement Annotation {get;init;}
+    public Microsoft.UI.Xaml.Media.Brush NoteBackground {get;init;}=new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
     public string Folder {get;init;}="";
     public string[] Tags {get;init;}=[];
     public string OrganizeLabel {get;init;}="";
@@ -57,6 +60,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         InitializeBookMotion();
         InitializeOrganization();
+        InitializeReadingPlans();
         InitializeBookPagination();
         ConfigureWindowCaption();
         Navigation.IsEnabled = false;
@@ -284,6 +288,8 @@ public sealed partial class MainWindow : Window
         ReadPanel.Visibility = tag == "read" ? Visibility.Visible : Visibility.Collapsed;
         ResultsPanel.Visibility = tag is "search" or "saved" ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
+        if(readingPlansHost!=null)readingPlansHost.Visibility=tag=="plans"?Visibility.Visible:Visibility.Collapsed;
+        if(tag=="plans" && ready)_=GuardAsync(LoadReadingPlans);
         SearchBar.Visibility = tag == "search" ? Visibility.Visible : Visibility.Collapsed;
         UpdatePageTitle();
         if (tag == "search")
@@ -317,7 +323,7 @@ public sealed partial class MainWindow : Window
         var folder=annotated && x.TryGetProperty("organization",out var org)?org.GetProperty("folder").GetString()!:"";
         var tags=annotated && x.TryGetProperty("organization",out org)?org.GetProperty("tags").EnumerateArray().Select(v=>v.GetString()!).ToArray():[];
         if(annotated)detail=string.Join(" · ",new[]{detail,folder,string.Join(" ",tags.Select(t=>"#"+t))}.Where(s=>s.Length>0));
-        return new SearchRow { Folder=folder,Tags=tags,OrganizeLabel=N("Organizza…","Organize…"),OrganizationVisibility=annotated?Visibility.Visible:Visibility.Collapsed,Book = b, Chapter = c, Verse = v, Reference = $"{x.GetProperty("name").GetString()} {c + 1}:{x.GetProperty("label").GetString()}", Text = x.GetProperty("text").GetString()!, Detail = detail };
+        return new SearchRow { Note=annotated?x.GetProperty("annotation").GetProperty("note").GetString()!:"",Annotation=annotated?x.GetProperty("annotation"):default,NoteBackground=SavedNoteBrush(annotated?x.GetProperty("annotation"):default),Folder=folder,Tags=tags,OrganizeLabel=N("Organizza…","Organize…"),OrganizationVisibility=annotated?Visibility.Visible:Visibility.Collapsed,Book = b, Chapter = c, Verse = v, Reference = $"{x.GetProperty("name").GetString()} {c + 1}:{x.GetProperty("label").GetString()}", Text = x.GetProperty("text").GetString()!, Detail = detail };
     }
     private void LoadSaved()=>_ = GuardAsync(LoadSavedNotes);
     private void SavedPreviousClick(object sender,RoutedEventArgs e) => Guard(() => { savedOffset=Math.Max(0,savedOffset-200); LoadSaved(); });

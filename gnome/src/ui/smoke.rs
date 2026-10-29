@@ -191,6 +191,18 @@ async fn native_drag(
 }
 
 pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
+    let plan=ui.core.call(json!({"op":"reading","action":"create","title":"Native calendar","edition":"CEI 2008","start":"2024-02-28","daily":2,"book":0})).await?;
+    ui.stack.set_visible_child_name("plans");
+    glib::timeout_future(Duration::from_millis(400)).await;
+    check(
+        ui.stack.child_by_name("plans").is_some(),
+        "Native plans page missing",
+    )?;
+    screenshot(&ui, "gnome-plans.png").await?;
+    ui.stack.set_visible_child_name("read");
+    ui.core
+        .call(json!({"op":"reading","action":"delete","id":plan}))
+        .await?;
     ui.set_book_mode(false);
     glib::timeout_future(Duration::from_millis(400)).await;
     check(

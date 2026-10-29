@@ -65,19 +65,23 @@ public struct Annotation: Codable, Sendable, Equatable {
     public var underline = false
     public var bookmark = false
     public var note = ""
+    public var noteColor: String?
+    public var noteStyle: String?
     public var ranges: [TextMark] = []
     public init() {}
     public var isEmpty: Bool {
         highlight == nil && !underline && !bookmark && note.isEmpty && ranges.isEmpty
     }
     // Old backups written before phrase annotations have no `ranges` field.
-    enum CodingKeys: String, CodingKey { case highlight, underline, bookmark, note, ranges }
+    enum CodingKeys: String, CodingKey { case highlight, underline, bookmark, note, ranges, noteColor, noteStyle }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         highlight = try c.decodeIfPresent(String.self, forKey: .highlight)
         underline = try c.decodeIfPresent(Bool.self, forKey: .underline) ?? false
         bookmark = try c.decodeIfPresent(Bool.self, forKey: .bookmark) ?? false
         note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        noteColor = try c.decodeIfPresent(String.self, forKey: .noteColor)
+        noteStyle = try c.decodeIfPresent(String.self, forKey: .noteStyle)
         ranges = try c.decodeIfPresent([TextMark].self, forKey: .ranges) ?? []
     }
 }

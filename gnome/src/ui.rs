@@ -21,6 +21,7 @@ mod organization;
 mod paging;
 pub mod performance;
 mod preferences;
+mod reading;
 pub mod smoke;
 
 pub const APP_ID: &str = "io.github.MicheleSerafini.Bibbia";
@@ -107,6 +108,8 @@ pub struct Ui {
     underline: gtk::Button,
     note_input: gtk::TextView,
     note_save: gtk::Button,
+    note_color: gtk::DropDown,
+    note_style: gtk::DropDown,
     note_title: gtk::Label,
     note_target: RefCell<Option<(Position, usize)>>,
     query: gtk::SearchEntry,
@@ -217,6 +220,19 @@ fn results() -> (gio::ListStore, gtk::ListView) {
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
             .join(" · ");
+        for color in ["yellow", "green", "blue", "pink"] {
+            row.remove_css_class(&format!("note-{color}"));
+        }
+        row.remove_css_class("sticky-note");
+        if let Some(a) = hit.annotation.as_ref().filter(|a| !a.note.is_empty()) {
+            row.add_css_class(&format!(
+                "note-{}",
+                a.note_color.as_deref().unwrap_or("yellow")
+            ));
+            if a.note_style.as_deref() == Some("sticky") {
+                row.add_css_class("sticky-note");
+            }
+        }
         note.set_text(&detail);
         note.set_visible(!detail.is_empty());
         let button = note
@@ -560,6 +576,15 @@ impl Ui {
         note_scroll.set_min_content_height(120);
         note_scroll.set_max_content_height(220);
         notes.append(&note_scroll);
+        let note_color = gtk::DropDown::from_strings(&[
+            "Giallo / Yellow",
+            "Verde / Green",
+            "Blu / Blue",
+            "Rosa / Pink",
+        ]);
+        let note_style = gtk::DropDown::from_strings(&["Nota / Note", "Post-it"]);
+        notes.append(&note_color);
+        notes.append(&note_style);
         let note_save = gtk::Button::with_label("Salva nota");
         note_save.add_css_class("suggested-action");
         notes.append(&note_save);
@@ -648,6 +673,8 @@ impl Ui {
             underline,
             note_input,
             note_save,
+            note_color,
+            note_style,
             note_title,
             note_target: RefCell::new(None),
             query,
@@ -779,6 +806,7 @@ impl Ui {
     }
     fn connect(self: &Rc<Self>, app: &adw::Application, verse_menu: &gtk::MenuButton) {
         self.connect_notes();
+        self.connect_reading();
         let w = self.weak();
         self.window.connect_close_request(move |_| {
             if let Some(ui) = w.upgrade() {
@@ -1278,6 +1306,7 @@ impl Ui {
             ("read", "Leggi", "Read"),
             ("search", "Cerca", "Search"),
             ("saved", "La mia raccolta", "My collection"),
+            ("plans", "Piani di lettura", "Reading plans"),
         ] {
             if let Some(widget) = self.stack.child_by_name(name) {
                 self.stack

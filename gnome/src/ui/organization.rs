@@ -198,6 +198,44 @@ impl Ui {
         )));
         help.set_wrap(true);
         content.append(&help);
+        let note = gtk::TextView::new();
+        note.set_wrap_mode(gtk::WrapMode::WordChar);
+        note.buffer().set_text(
+            hit.annotation
+                .as_ref()
+                .map(|a| a.note.as_str())
+                .unwrap_or(""),
+        );
+        let note_scroll = scroll(&note);
+        note_scroll.set_min_content_height(110);
+        content.append(&note_scroll);
+        let color = gtk::DropDown::from_strings(&[
+            "Giallo / Yellow",
+            "Verde / Green",
+            "Blu / Blue",
+            "Rosa / Pink",
+        ]);
+        color.set_selected(
+            ["yellow", "green", "blue", "pink"]
+                .iter()
+                .position(|c| {
+                    Some(*c)
+                        == hit
+                            .annotation
+                            .as_ref()
+                            .and_then(|a| a.note_color.as_deref())
+                })
+                .unwrap_or(0) as u32,
+        );
+        let style = gtk::DropDown::from_strings(&["Nota / Note", "Post-it"]);
+        style.set_selected(u32::from(
+            hit.annotation
+                .as_ref()
+                .and_then(|a| a.note_style.as_deref())
+                == Some("sticky"),
+        ));
+        content.append(&color);
+        content.append(&style);
         let save = gtk::Button::with_label(&self.t("Salva", "Save"));
         save.set_widget_name("save-organization");
         save.add_css_class("suggested-action");
@@ -206,7 +244,8 @@ impl Ui {
         let weak_popup = popup.downgrade();
         let p = self.position();
         let (b, c, v) = (hit.book, hit.chapter, hit.verse);
-        save.connect_clicked(move |_|{if let Some(ui)=weak.upgrade(){let ui2=ui.clone();let popup=weak_popup.clone();let req=json!({"op":"organize","edition":p.edition,"book":b,"chapter":c,"verse":v,"folder":input.text().to_string(),"tags":tags.text().split(',').map(str::trim).filter(|s|!s.is_empty()).collect::<Vec<_>>()});ui.launch(async move{ui2.core.call(req).await?;if let Some(popup)=popup.upgrade(){popup.popdown()}ui2.load_saved().await})}});
+        save.connect_clicked(move |_|{if let Some(ui)=weak.upgrade(){let ui2=ui.clone();let popup=weak_popup.clone();let req=json!({"op":"organize","edition":p.edition,"book":b,"chapter":c,"verse":v,"folder":input.text().to_string(),"tags":tags.text().split(',').map(str::trim).filter(|s|!s.is_empty()).collect::<Vec<_>>()});let buffer=note.buffer();let text=buffer.text(&buffer.start_iter(),&buffer.end_iter(),false).to_string();let note_req=json!({"op":"note","edition":p.edition,"book":b,"chapter":c,"verse":v,"text":text,"color":(["yellow","green","blue","pink"][color.selected().min(3) as usize]),"style":if style.selected()==1{"sticky"}else{"plain"}});ui.launch(async move{let a=ui2.core.call(note_req).await?;if !a["note"].as_str().unwrap_or("").is_empty() || a["bookmark"]==true || a["underline"]==true || a["highlight"].is_string() || a["ranges"].as_array().is_some_and(|r|!r.is_empty()){ui2.core.call(req).await?;}
+if let Some(popup)=popup.upgrade(){popup.popdown()}ui2.load_saved().await})}});
         popup.set_child(Some(&content));
         popup.popup();
     }

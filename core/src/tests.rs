@@ -827,3 +827,72 @@ fn organized_notes_filter_search_rename_and_delete_without_losing_annotations() 
     );
     assert!(e.request(json!({"op":"organize","edition":"KJV","book":0,"chapter":0,"verse":99,"folder":"Invalid","tags":[]})).is_err());
 }
+
+#[test]
+fn reading_calendar_progress_and_colored_notes_survive_reopen() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    let id=e.request(json!({"op":"reading","action":"create","edition":"CEI 2008","title":"Quaresima 🌅","start":"2024-02-28","daily":2,"book":0})).unwrap();
+    let mut detail=e.request(json!({"op":"reading","action":"detail","id":id,"from":"2024-02-28","selected":"2024-02-29"})).unwrap();
+    assert_eq!(detail["total"], 50);
+    assert_eq!(detail["duration"], 25);
+    assert_eq!(detail["chapters"][0]["chapter"], 2);
+    assert_eq!(detail["days"].as_array().unwrap().len(), 42);
+    for index in 0..2 {
+        e.request(
+            json!({"op":"reading","action":"complete","id":id,"index":index,"complete":true}),
+        )
+        .unwrap();
+    }
+    e.request(json!({"op":"reading","action":"complete","id":id,"index":0,"complete":true}))
+        .unwrap();
+    detail=e.request(json!({"op":"reading","action":"detail","id":id,"from":"2024-02-28","selected":"2024-02-27"})).unwrap();
+    assert_eq!(detail["completed"], 2);
+    assert_eq!(detail["days"][0]["done"], 2);
+    assert!(detail["chapters"].as_array().unwrap().is_empty());
+    assert_eq!(
+        e.request(json!({"op":"reading","action":"resume","id":id}))
+            .unwrap()["chapter"],
+        2
+    );
+    e.request(json!({"op":"settings","key":"position","value":{"edition":"CEI 2008","book":0,"chapter":2,"verse":4}})).unwrap();
+    e.request(json!({"op":"note","edition":"CEI 2008","book":0,"chapter":2,"verse":4,"text":"Speranza 🌅","color":"blue","style":"sticky"})).unwrap();
+    e.request(json!({"op":"organize","edition":"CEI 2008","book":0,"chapter":2,"verse":4,"folder":"Studio","tags":["speranza"]})).unwrap();
+    e.request(json!({"op":"mark","edition":"CEI 2008","book":0,"chapter":2,"verse":4,"start":0,"length":2,"action":"underline"})).unwrap();
+    let mut legacy = e
+        .request(json!({"op":"chapter","edition":"CEI 2008","book":0,"chapter":2}))
+        .unwrap()[4]["annotation"]
+        .clone();
+    legacy.as_object_mut().unwrap().remove("noteColor");
+    legacy.as_object_mut().unwrap().remove("noteStyle");
+    e.request(json!({"op":"annotate","edition":"CEI 2008","book":0,"chapter":2,"verse":4,"annotation":legacy})).unwrap();
+    drop(e);
+    let mut e = Engine::open(dir.path()).unwrap();
+    assert_eq!(
+        e.request(json!({"op":"reading","action":"resume","id":id}))
+            .unwrap()["verse"],
+        4
+    );
+    let rows = e
+        .request(json!({"op":"saved","edition":"CEI 2008","query":"SPERANZA","tag":"speranza"}))
+        .unwrap();
+    assert_eq!(rows[0]["annotation"]["noteColor"], "blue");
+    assert_eq!(rows[0]["annotation"]["noteStyle"], "sticky");
+    assert_eq!(rows[0]["organization"]["folder"], "Studio");
+    assert!(
+        e.request(json!({"op":"reading","action":"complete","id":id,"index":50,"complete":true}))
+            .is_err()
+    );
+    assert!(e.request(json!({"op":"reading","action":"create","edition":"KJV","title":"Bad","start":"2023-02-29","daily":2})).is_err());
+    assert!(e.request(json!({"op":"note","edition":"KJV","book":0,"chapter":0,"verse":0,"text":"Invalid","color":"red","style":"sticky"})).is_err());
+    e.request(json!({"op":"reading","action":"complete","id":id,"index":0,"complete":false}))
+        .unwrap();
+    e.request(json!({"op":"reading","action":"delete","id":id}))
+        .unwrap();
+    assert_eq!(
+        e.db.query_row("SELECT count(*) FROM reading_progress", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+}

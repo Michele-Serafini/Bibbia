@@ -249,3 +249,32 @@ private struct Fixture {
     let store = try BibleStore(directory: directory)
     #expect(try await store.bootstrap().position == Position(edition: "KJV", book: 1, chapter: 2))
 }
+
+@Test func readingPlansAndColoredNotesPersistWithoutLosingMarks() async throws {
+    let f=try Fixture();defer{f.cleanup()}
+    let id=try await f.store.createReadingPlan(title:"Quaresima 🌅",edition:"CEI 2008",start:"2024-02-28",daily:2,book:0)
+    var detail=try await f.store.readingDetail(id,from:"2024-02-28",selected:"2024-02-29")
+    #expect(detail.total==50 && detail.duration==25 && detail.days.count==42)
+    #expect(detail.chapters.first?.chapter==2)
+    try await f.store.completeReadingChapter(id,index:0,complete:true)
+    try await f.store.completeReadingChapter(id,index:0,complete:true)
+    try await f.store.completeReadingChapter(id,index:1,complete:true)
+    detail=try await f.store.readingDetail(id,from:"2024-02-28",selected:"2024-02-27")
+    #expect(detail.completed==2 && detail.days[0].done==2 && detail.chapters.isEmpty)
+    #expect(try await f.store.resumeReadingPlan(id).chapter==2)
+    let position=Position(edition:"CEI 2008",book:0,chapter:2,verse:4)
+    try await f.store.savePosition(position)
+    _ = try await f.store.writeNote("Speranza 🌅",color:"blue",style:"sticky",at:position)
+    _ = try await f.store.organize(position,folder:"Studio",tags:["speranza"])
+    _ = try await f.store.mark(position,selection:[SelectedSpan(verse:4,start:0,length:2)],action:"underline")
+    let reopened=try BibleStore(directory:f.directory)
+    #expect(try await reopened.resumeReadingPlan(id)==position)
+    var filter=NoteFilter();filter.query="SPERANZA";filter.tag="speranza"
+    let rows=try await reopened.saved(edition:position.edition,filter:filter)
+    #expect(rows.count==1 && rows[0].annotation.noteColor=="blue" && rows[0].annotation.noteStyle=="sticky")
+    #expect(rows[0].organization.folder=="Studio" && !rows[0].annotation.ranges.isEmpty)
+    try await reopened.deleteReadingPlan(id)
+    #expect(try await reopened.readingPlans().isEmpty)
+    #expect(try ReadingDates.day("2024-03-01")-ReadingDates.day("2024-02-28")==2)
+    #expect(throws: BibleError.self){try ReadingDates.day("2023-02-29")}
+}

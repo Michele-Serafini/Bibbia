@@ -287,17 +287,19 @@ final class ReadingTextView: NSTextView {
     func showNote() {
         guard let model, model.verses.indices.contains(capturedPosition.verse) else { return }
         let target = capturedPosition
-        let value = model.verses[target.verse].annotation.note
+        let annotation = model.verses[target.verse].annotation
+        let value = annotation.note
         closePopover()
         let popover = NSPopover()
         popover.behavior = .semitransient
         popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         popover.contentViewController = NSHostingController(rootView: NoteEditor(
-            text: value, title: model.t("Nota", "Note"), saveTitle: model.t("Salva", "Save"),
+            model:model, text: value, color:annotation.noteColor ?? "yellow", style:annotation.noteStyle ?? "plain", title: model.t("Nota", "Note"), saveTitle: model.t("Salva", "Save"),
             cancelTitle: model.t("Annulla", "Cancel"),
-            save: { [weak self, weak model] text in model?.note(text, at: target); self?.closePopover() },
+            save: { [weak self, weak model] text,color,style in
+                Task { do {if let verses=try await model?.store?.writeNote(text,color:color,style:style,at:target){model?.apply(verses,at:target)}}catch{model?.error=error.localizedDescription} }; self?.closePopover() },
             cancel: { [weak self] in self?.closePopover() }))
-        popover.contentSize = NSSize(width: 350, height: 210)
+        popover.contentSize = NSSize(width: 380, height: 270)
         annotationPopover = popover
         popover.show(relativeTo: selectionAnchor(), of: self, preferredEdge: .maxY)
     }
@@ -338,24 +340,28 @@ private struct SelectionToolbar: View {
 }
 
 private struct NoteEditor: View {
+    @ObservedObject var model:AppModel
     @State var text: String
+    @State var color:String
+    @State var style:String
     let title: String
     let saveTitle: String
     let cancelTitle: String
-    let save: (String) -> Void
+    let save: (String,String,String) -> Void
     let cancel: () -> Void
     @FocusState private var focused: Bool
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(.headline)
+            NoteStylePicker(model:model,color:$color,style:$style)
             TextEditor(text: $text).font(.body).focused($focused)
                 .border(Color.secondary.opacity(0.2))
             HStack {
                 Button(cancelTitle, action: cancel).keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(saveTitle) { save(text) }.keyboardShortcut(.defaultAction)
+                Button(saveTitle) { save(text,color,style) }.keyboardShortcut(.defaultAction)
                     .disabled(text.utf8.count > 32768)
             }
-        }.padding(14).frame(width: 350, height: 210).task { focused = true }
+        }.padding(14).frame(width: 380, height: 270).task { focused = true }
     }
 }

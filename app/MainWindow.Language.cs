@@ -105,11 +105,12 @@ public sealed partial class MainWindow
     }
     private void UpdatePageTitle() => PageTitle.Text = section == "read" && books.Count > book
         ? $"{books[book].Name} {chapter+1}"
-        : T(section switch {"search"=>"Trova le parole.","saved"=>"Portale con te.","settings"=>"Come piace a te.",_=>"Leggi con calma."});
+        : T(section switch {"search"=>"Trova le parole.","saved"=>"Portale con te.","settings"=>"Come piace a te.","plans"=>N("Piani di lettura","Reading plans"),_=>"Leggi con calma."});
     private void ApplyLanguage()
     {
         for (int i=0;i<3;i++) ((NavigationViewItem)Navigation.MenuItems[i]).Content = T(new[]{"Leggi","Cerca","La mia raccolta"}[i]);
         ((NavigationViewItem)Navigation.FooterMenuItems[0]).Content = T("Aspetto e traduzioni");
+        if(Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i=>i.Tag as string=="plans") is {} plansNav)plansNav.Content=N("Piani di lettura","Reading plans");
         EyebrowLabel.Text = T("UNO SPAZIO PER LA PAROLA"); AppearanceLabel.Text = T("Il tuo modo di leggere");
         AppLanguagePicker.Header = T("Lingua dell’app"); BibleLanguagePicker.Header = T("Lingua della Bibbia");
         ((ComboBoxItem)BibleLanguagePicker.Items[2]).Content = T("Tutte");

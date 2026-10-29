@@ -83,9 +83,13 @@ public sealed partial class MainWindow {
         var tags=new TextBox{Header=N("Etichette separate da virgole","Tags separated by commas"),Text=string.Join(", ",row.Tags),MaxLength=1000};
         AutomationProperties.SetAutomationId(folder,"OrganizeFolder");AutomationProperties.SetAutomationId(tags,"OrganizeTags");
         content.Children.Add(folder);content.Children.Add(tags);
+        var input=new TextBox{Header=N("La tua nota","Your note"),Text=row.Note,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Height=120,MaxLength=8000};content.Children.Add(input);
+        var (color,style)=NoteChoices(content,row.Annotation);
         content.Children.Add(new TextBlock{Text=N("Puoi scrivere nomi nuovi. Le etichette possono essere più di una.","Type new names to create them. An annotation can have several tags."),TextWrapping=TextWrapping.Wrap,FontSize=12});
         var save=new Button{Content=T("Salva"),HorizontalAlignment=HorizontalAlignment.Right};AutomationProperties.SetAutomationId(save,"SaveOrganization");
         save.Click+=(_,_)=>Guard(()=>{
+            var a=BibleEngine.Call(new{op="note",edition=selected,book=row.Book,chapter=row.Chapter,verse=row.Verse,text=input.Text,color=NoteColors[Math.Max(0,color.SelectedIndex)],style=style.SelectedIndex==1?"sticky":"plain"});
+            if(input.Text.Length>0 || a.GetProperty("bookmark").GetBoolean() || a.GetProperty("highlight").ValueKind==JsonValueKind.String || a.GetProperty("underline").GetBoolean() || a.GetProperty("ranges").GetArrayLength()>0)
             BibleEngine.Call(new{op="organize",edition=selected,book=row.Book,chapter=row.Chapter,verse=row.Verse,folder=folder.Text,tags=tags.Text.Split(',',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries)});
             flyout.Hide();LoadSaved();
         });content.Children.Add(save);flyout.Content=content;flyout.ShowAt(button);

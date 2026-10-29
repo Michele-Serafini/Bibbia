@@ -378,6 +378,15 @@ impl Ui {
             verse.label
         ));
         self.note_input.buffer().set_text(&verse.annotation.note);
+        self.note_color.set_selected(
+            ["yellow", "green", "blue", "pink"]
+                .iter()
+                .position(|c| Some(*c) == verse.annotation.note_color.as_deref())
+                .unwrap_or(0) as u32,
+        );
+        self.note_style.set_selected(u32::from(
+            verse.annotation.note_style.as_deref() == Some("sticky"),
+        ));
         *self.note_target.borrow_mut() = Some((s.position.clone(), index));
         drop(s);
         self.point_popup(&self.note_popup);
@@ -389,13 +398,15 @@ impl Ui {
         let Some((position, index)) = self.note_target.borrow().clone() else {
             return Ok(());
         };
-        // Read the latest annotation before saving so a concurrent mark is retained.
-        let rows=self.core.call(json!({"op":"chapter","edition":position.edition,"book":position.book,"chapter":position.chapter})).await?;
-        let mut annotation: Annotation =
-            serde_json::from_value(rows[index]["annotation"].clone()).map_err(|e| e.to_string())?;
         let b = self.note_input.buffer();
-        annotation.note = b.text(&b.start_iter(), &b.end_iter(), false).to_string();
-        let value=self.core.call(json!({"op":"annotate","edition":position.edition,"book":position.book,"chapter":position.chapter,"verse":index,"annotation":annotation})).await?;
+        let text = b.text(&b.start_iter(), &b.end_iter(), false).to_string();
+        let color = ["yellow", "green", "blue", "pink"][self.note_color.selected().min(3) as usize];
+        let style = if self.note_style.selected() == 1 {
+            "sticky"
+        } else {
+            "plain"
+        };
+        let value=self.core.call(json!({"op":"note","edition":position.edition,"book":position.book,"chapter":position.chapter,"verse":index,"text":text,"color":color,"style":style})).await?;
         self.note_popup.popdown();
         self.update_annotation(&position, index, value)
     }
