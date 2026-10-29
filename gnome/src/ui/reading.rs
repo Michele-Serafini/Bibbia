@@ -155,6 +155,24 @@ impl Ui {
     pub(super) fn connect_reading(self: &Rc<Self>) {
         let page = gtk::Box::new(gtk::Orientation::Vertical, 12);
         margin(&page, 20);
+        self.stack.add_titled_with_icon(
+            &scroll(&page),
+            Some("plans"),
+            &self.t("Piani di lettura", "Reading plans"),
+            "x-office-calendar-symbolic",
+        );
+        let initialized = Cell::new(false);
+        let weak = self.weak();
+        self.stack.connect_visible_child_name_notify(move |stack| {
+            if stack.visible_child_name().as_deref() == Some("plans")
+                && !initialized.replace(true)
+                && let Some(ui) = weak.upgrade()
+            {
+                ui.build_reading(&page);
+            }
+        });
+    }
+    fn build_reading(self: &Rc<Self>, page: &gtk::Box) {
         let picker = gtk::DropDown::from_strings(&[]);
         let calendar = gtk::Calendar::new();
         calendar.set_halign(gtk::Align::Center);
@@ -179,12 +197,6 @@ impl Ui {
         help.set_wrap(true);
         help.add_css_class("dim-label");
         page.append(&help);
-        self.stack.add_titled_with_icon(
-            &scroll(&page),
-            Some("plans"),
-            &self.t("Piani di lettura", "Reading plans"),
-            "x-office-calendar-symbolic",
-        );
         let p = Rc::new(Plans {
             ui: self.weak(),
             picker,
@@ -293,5 +305,6 @@ impl Ui {
             box_.append(&gtk::Label::new(Some(&ui.t("Capitoli al giorno","Chapters per day"))));let daily=gtk::SpinButton::with_range(1.0,12.0,1.0);daily.set_value(3.0);box_.append(&daily);
             let save=gtk::Button::with_label(&ui.t("Crea piano","Create plan"));box_.append(&save);let p=this.clone();let pop=popup.downgrade();let target=ui.position();save.connect_clicked(move |_|{if let Some(ui)=p.ui.upgrade(){let request=json!({"op":"reading","action":"create","edition":target.edition,"title":title.text().as_str(),"start":start.text().as_str(),"daily":daily.value_as_int(),"book":if scope.is_active(){Some(target.book)}else{None}});let p=p.clone();let u=ui.clone();let pop=pop.clone();ui.launch(async move{u.core.call(request).await?;if let Some(pop)=pop.upgrade(){pop.popdown()}p.reload().await});}});popup.set_child(Some(&box_));popup.popup();
         }});
+        self.launch(async move { p.reload().await });
     }
 }
