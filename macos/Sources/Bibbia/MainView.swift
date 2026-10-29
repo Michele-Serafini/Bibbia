@@ -5,10 +5,11 @@ struct MainView: View {
     @ObservedObject var model: AppModel
     @FocusState private var searchFocused: Bool
     @State private var columns: NavigationSplitViewVisibility = .automatic
+    @State private var previousColumns: NavigationSplitViewVisibility = .automatic
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        NavigationSplitView(columnVisibility: Binding(get: { model.preferences.focusMode ? .detailOnly : columns }, set: { if model.preferences.focusMode { model.toggleFocus() }; columns = $0 })) {
+        NavigationSplitView(columnVisibility: $columns) {
             sidebar.navigationSplitViewColumnWidth(min: 230, ideal: 270, max: 340)
         } detail: {
             reader
@@ -70,6 +71,13 @@ struct MainView: View {
         .sheet(isPresented: $model.showReadingPlans) { ReadingPlansView(model:model) }
         .sheet(item: $model.editingNote) { hit in SavedNoteEditor(model:model,hit:hit) }
         .sheet(isPresented: $model.showCollections) { NoteCollectionsSheet(model: model) }
+        .onChange(of: model.preferences.focusMode) { active in
+            if active { previousColumns=columns; columns = .detailOnly }
+            else { columns=previousColumns }
+        }
+        .onChange(of: columns) { value in
+            if model.preferences.focusMode && value != .detailOnly { model.toggleFocus() }
+        }
         .onChange(of: model.noteFilter) { _ in model.loadSaved(reset: true) }
         .onChange(of: model.panel) { panel in
             if model.preferences.focusMode { model.toggleFocus() }
