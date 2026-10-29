@@ -4,16 +4,18 @@ import BibleKit
 struct MainView: View {
     @ObservedObject var model: AppModel
     @FocusState private var searchFocused: Bool
+    @State private var columns: NavigationSplitViewVisibility = .automatic
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: Binding(get: { model.preferences.focusMode ? .detailOnly : columns }, set: { if model.preferences.focusMode { model.toggleFocus() }; columns = $0 })) {
             sidebar.navigationSplitViewColumnWidth(min: 230, ideal: 270, max: 340)
         } detail: {
             reader
         }
         .navigationTitle(model.title)
         .toolbar {
+            if !model.preferences.focusMode {
             ToolbarItemGroup(placement: .navigation) {
                 Button { model.step(-1) } label: { Image(systemName: "chevron.left") }
                     .buttonStyle(BookButtonStyle())
@@ -51,6 +53,12 @@ struct MainView: View {
                 } label: { Image(systemName: "ellipsis.circle") }
                 .help(model.t("Altre opzioni", "More options"))
             }
+            }
+            ToolbarItem {
+                Button { model.toggleFocus() } label: { Image(systemName: model.preferences.focusMode ? "arrow.down.right.and.arrow.up.left" : "viewfinder") }
+                    .help(model.t("Concentrazione · ⇧⌘F · Esc per uscire", "Focus · ⇧⌘F · Esc to leave"))
+                    .accessibilityIdentifier("focusToggle")
+            }
         }
         .alert(model.t("Impossibile completare l’operazione", "Unable to complete the operation"),
                isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
@@ -64,6 +72,7 @@ struct MainView: View {
         .sheet(isPresented: $model.showCollections) { NoteCollectionsSheet(model: model) }
         .onChange(of: model.noteFilter) { _ in model.loadSaved(reset: true) }
         .onChange(of: model.panel) { panel in
+            if model.preferences.focusMode { model.toggleFocus() }
             if panel == .search { searchFocused = true }
             if panel == .saved { model.loadSaved(reset: true) }
         }
@@ -158,6 +167,7 @@ struct MainView: View {
 
     private var reader: some View {
         VStack(spacing: 0) {
+            if !model.preferences.focusMode {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(model.title).font(.system(size: 30, weight: .semibold, design: .serif))
@@ -168,10 +178,12 @@ struct MainView: View {
                 if model.loading { ProgressView().controlSize(.small) }
             }.padding(.horizontal, 32).padding(.top, 26).padding(.bottom, 16)
                 .frame(maxWidth: 820)
+            }
             Group {
                 if model.comparing { ComparisonView(model: model) }
                 else { ChapterTextView(model: model).accessibilityIdentifier("chapterText") }
             }.frame(maxWidth: 1600, maxHeight: .infinity)
+            if !model.preferences.focusMode {
             Divider()
             HStack {
                 Text(model.t("Capitolo \(model.position.chapter + 1) di \(model.chapterCount)", "Chapter \(model.position.chapter + 1) of \(model.chapterCount)"))
@@ -183,6 +195,7 @@ struct MainView: View {
                     .onChange(of: model.bookMode) { _ in model.bookModeChanged() }
                 Text(model.t("Seleziona una frase per annotarla", "Select a phrase to annotate it"))
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24).padding(.vertical, 10)
+            }
             if model.position.edition == "CEI 2008" || (model.comparing && model.preferences.comparisonEdition == "CEI 2008") {
                 Button { model.showNotices = true } label: {
                     Text("CEI 2008 · © Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena · " + model.t("uso didattico non commerciale", "non-commercial educational use"))
@@ -190,7 +203,7 @@ struct MainView: View {
                 }.buttonStyle(.plain).padding(.horizontal, 16).padding(.bottom, 8)
             }
         }.frame(maxWidth: 1640, maxHeight: .infinity)
-            .background(Color(nsColor: BookSurface.paperColor))
+            .background(Color(nsColor: BookSurface.paperColor(sepia: model.sepia)))
             .clipShape(RoundedRectangle(cornerRadius: 7))
             .overlay(alignment: .leading) {
                 LinearGradient(colors: [.black.opacity(0.08), .clear], startPoint: .leading, endPoint: .trailing)
@@ -200,7 +213,16 @@ struct MainView: View {
             .shadow(color: .black.opacity(0.10), radius: 12, y: 5)
             .padding(.horizontal, 20).padding(.vertical, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(Color(nsColor: model.windowColor))
+            .overlay(alignment: .bottomTrailing) {
+                if model.preferences.focusMode {
+                    HStack(spacing: 10) {
+                        Button { model.step(-1) } label: { Image(systemName:"chevron.left") }.help(model.t("Pagina precedente","Previous page"))
+                        Button { model.step(1) } label: { Image(systemName:"chevron.right") }.help(model.t("Pagina successiva","Next page"))
+                        Button { model.toggleFocus() } label: { Image(systemName:"xmark") }.help(model.t("Esci dalla concentrazione · Esc","Leave focus · Esc")).keyboardShortcut(.cancelAction)
+                    }.buttonStyle(.borderless).padding(10).background(Color(nsColor:model.windowColor),in:Capsule()).padding(22)
+                }
+            }
     }
 }
 

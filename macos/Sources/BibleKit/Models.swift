@@ -125,6 +125,8 @@ public struct Preferences: Codable, Sendable, Equatable {
     public var language = "it"
     public var theme = "Default"
     public var fontSize = 22
+    public var readingMargin = 24
+    public var focusMode = false
     public var bibleLanguage = "all"
     public var comparisonEdition = "CEI 2008"
     public init() {}
@@ -156,7 +158,7 @@ public struct ReadingLayout: Sendable {
         var spans: [NSRange] = []
         var offset = 0
         for verse in verses {
-            let prefix = "\(verse.annotation.bookmark ? "★" : " ") \(verse.label)\t"
+            let prefix = "\(verse.annotation.bookmark ? "★" : " ")\(verse.annotation.note.isEmpty ? " " : "✎") \(verse.label)\t"
             text += prefix
             offset += prefix.utf16.count
             let length = verse.text.utf16.count

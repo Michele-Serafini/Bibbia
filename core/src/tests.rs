@@ -989,3 +989,49 @@ fn portable_backup_restore_is_atomic_and_keeps_a_safety_copy() {
         1
     );
 }
+
+#[test]
+fn reading_appearance_is_validated_persistent_and_portable() {
+    let dir = tempfile::tempdir().unwrap();
+    let archive_dir = tempfile::tempdir().unwrap();
+    let archive = archive_dir.path().join("reading.bibbia-backup");
+    let mut engine = Engine::open(dir.path()).unwrap();
+    for (key, value) in [
+        ("theme", json!("Sepia")),
+        ("readingMargin", json!(64)),
+        ("focusMode", json!(true)),
+    ] {
+        engine
+            .request(json!({"op":"settings","key":key,"value":value}))
+            .unwrap();
+    }
+    for (key, value) in [
+        ("readingMargin", json!(15)),
+        ("readingMargin", json!(97)),
+        ("readingMargin", json!(24.5)),
+        ("readingMargin", json!("24")),
+        ("focusMode", json!(1)),
+        ("focusMode", json!("true")),
+    ] {
+        assert!(
+            engine
+                .request(json!({"op":"settings","key":key,"value":value}))
+                .is_err()
+        );
+    }
+    engine
+        .request(json!({"op":"transfer","action":"backup","path":archive}))
+        .unwrap();
+    engine
+        .request(json!({"op":"settings","key":"theme","value":"Dark"}))
+        .unwrap();
+    engine
+        .request(json!({"op":"transfer","action":"restore","path":archive}))
+        .unwrap();
+    drop(engine);
+    let mut engine = Engine::open(dir.path()).unwrap();
+    let boot = engine.request(json!({"op":"bootstrap"})).unwrap();
+    assert_eq!(boot["settings"]["theme"], "Sepia");
+    assert_eq!(boot["settings"]["readingMargin"], 64);
+    assert_eq!(boot["settings"]["focusMode"], true);
+}

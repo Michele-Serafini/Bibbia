@@ -31,3 +31,9 @@
 .sticky-note.note-green { background-color: alpha(#97cf91, .24); }
 .sticky-note.note-blue { background-color: alpha(#8ec0ed, .24); }
 .sticky-note.note-pink { background-color: alpha(#eca8c3, .24); }
+/* Paper palette also covers the native header so chrome and page stay coherent. */
+.sepia.bibbia, .sepia headerbar { background-color: #eee0c4; color: #493927; }
+.sepia .book-paper { background-color: #f4e7cd; color: #493927; border-color: #cdbb98; }
+.sepia .bible-text, .sepia .bible-text text { color: #493927; }
+.focus-tools { border-radius: 18px; padding: 3px; background: @window_bg_color; box-shadow: 0 2px 8px alpha(black,.12); }
+.sepia .focus-tools { background-color: #eee0c4; }

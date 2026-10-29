@@ -17,6 +17,7 @@ mod annotations;
 mod book;
 mod book_math;
 mod comparison;
+mod focus;
 mod organization;
 mod paging;
 pub mod performance;
@@ -33,6 +34,9 @@ struct State {
     language: String,
     filter: String,
     font_size: f64,
+    theme: String,
+    reading_margin: i32,
+    focus_mode: bool,
     editions: Vec<Edition>,
     books: Rc<Vec<Book>>,
     catalogs: HashMap<String, Rc<Vec<Book>>>,
@@ -65,9 +69,16 @@ pub struct Ui {
     context_click: Cell<bool>,
     selection_source: RefCell<Option<glib::SourceId>>,
     font_source: RefCell<Option<glib::SourceId>>,
+    margin_source: RefCell<Option<glib::SourceId>>,
     toast: adw::ToastOverlay,
     stack: adw::ViewStack,
     header_title: adw::ViewSwitcherTitle,
+    header: adw::HeaderBar,
+    switcher: adw::ViewSwitcherBar,
+    controls: gtk::Box,
+    footer: gtk::Box,
+    focus: gtk::ToggleButton,
+    focus_bar: gtk::Box,
     menu: gtk::MenuButton,
     verse_menu: gtk::MenuButton,
     edition: gtk::DropDown,
@@ -294,15 +305,21 @@ impl Ui {
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root.append(&header);
         let toast = adw::ToastOverlay::new();
-        toast.set_child(Some(&stack));
+        let reading_overlay = gtk::Overlay::new();
+        reading_overlay.set_child(Some(&stack));
+        let focus_bar = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+        focus_bar.add_css_class("focus-tools");
+        focus_bar.set_halign(gtk::Align::End);
+        focus_bar.set_valign(gtk::Align::End);
+        margin(&focus_bar, 14);
+        focus_bar.set_visible(false);
+        reading_overlay.add_overlay(&focus_bar);
+        toast.set_child(Some(&reading_overlay));
         toast.set_vexpand(true);
         root.append(&toast);
         let switcher = adw::ViewSwitcherBar::builder().stack(&stack).build();
         root.append(&switcher);
-        header_title
-            .bind_property("title-visible", &switcher, "reveal")
-            .sync_create()
-            .build();
+
         window.set_content(Some(&root));
 
         let read = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -318,6 +335,11 @@ impl Ui {
         chapter.set_tooltip_text(Some("Capitolo"));
         controls.append(&book);
         controls.append(&chapter);
+        let focus = gtk::ToggleButton::builder()
+            .icon_name("view-fullscreen-symbolic")
+            .tooltip_text("Concentrazione · Ctrl+Shift+F")
+            .build();
+        controls.append(&focus);
         let top_clamp = adw::Clamp::builder()
             .maximum_size(1640)
             .child(&controls)
@@ -361,6 +383,13 @@ impl Ui {
         let table = reader.buffer().tag_table();
         table.add(&body_tag);
         table.add(&number_tag);
+        table.add(
+            &gtk::TextTag::builder()
+                .name("note-link")
+                .foreground("#91621c")
+                .underline(pango::Underline::Single)
+                .build(),
+        );
         let underline_tag = gtk::TextTag::builder()
             .name("underline")
             .underline(pango::Underline::Single)
@@ -608,6 +637,9 @@ impl Ui {
                 language: "it".into(),
                 filter: "it".into(),
                 font_size: 22.0,
+                theme: "Default".into(),
+                reading_margin: 24,
+                focus_mode: false,
                 editions: vec![],
                 books: Rc::new(vec![]),
                 catalogs: HashMap::new(),
@@ -635,9 +667,16 @@ impl Ui {
             context_click: Cell::new(false),
             selection_source: RefCell::new(None),
             font_source: RefCell::new(None),
+            margin_source: RefCell::new(None),
             toast,
             stack,
             header_title,
+            header,
+            switcher,
+            controls,
+            footer,
+            focus,
+            focus_bar,
             menu,
             verse_menu: verse_menu.clone(),
             edition,
@@ -774,6 +813,7 @@ impl Ui {
             glib::Propagation::Proceed
         });
         ui.book_surface.add_controller(keys);
+        ui.connect_focus(app);
         ui.connect(app, &verse_menu);
         ui.relabel();
         ui.window.set_sensitive(false);
@@ -893,6 +933,7 @@ impl Ui {
         self.stack.connect_visible_child_name_notify(move |stack| {
             if let Some(ui) = w.upgrade() {
                 ui.popup.popdown();
+                ui.apply_focus();
                 if stack.visible_child_name().as_deref() == Some("saved") && ui.ready.get() {
                     ui.saved_offset.set(0);
                     let u = ui.clone();
@@ -1003,9 +1044,17 @@ impl Ui {
                 .as_f64()
                 .unwrap_or(22.0)
                 .clamp(14.0, 32.0);
-            set_theme(settings["theme"].as_str().unwrap_or("Default"));
+            s.theme = settings["theme"].as_str().unwrap_or("Default").into();
+            s.reading_margin = settings["readingMargin"]
+                .as_i64()
+                .unwrap_or(24)
+                .clamp(16, 96) as i32;
+            s.focus_mode = settings["focusMode"].as_bool().unwrap_or(false);
         }
         self.relabel();
+        self.apply_reading_theme();
+        self.apply_margins();
+        self.apply_focus();
         self.refresh_editions();
         self.ready.set(true);
         self.window.set_sensitive(true);
@@ -1252,7 +1301,7 @@ impl Ui {
             .verses
             .iter()
             .map(|v| {
-                layout.set_text(&format!("★ {} ", v.label));
+                layout.set_text(&format!("★✎ {} ", v.label));
                 layout.pixel_size().0
             })
             .max()
@@ -1274,6 +1323,12 @@ impl Ui {
         let b = buffer.iter_at_offset(span.end);
         let prefix = buffer.iter_at_offset(span.prefix);
         buffer.apply_tag(&self.number_tag, &prefix, &a);
+        let note = buffer.iter_at_offset(span.prefix + 1);
+        let after_note = buffer.iter_at_offset(span.prefix + 2);
+        buffer.remove_tag_by_name("note-link", &note, &after_note);
+        if !v.annotation.note.is_empty() {
+            buffer.apply_tag_by_name("note-link", &note, &after_note);
+        }
         for name in ["underline", "yellow", "green", "blue", "pink"] {
             buffer.remove_tag_by_name(name, &a, &b);
         }
@@ -1303,6 +1358,7 @@ impl Ui {
         self.relabel_notes();
         self.relabel_annotations();
         self.relabel_book();
+        self.relabel_focus();
         self.comparison.set_label(&self.t("Confronta", "Compare"));
         self.comparison_edition
             .set_tooltip_text(Some(&self.t("Seconda traduzione", "Second translation")));
@@ -1458,6 +1514,9 @@ impl Ui {
         }
         self.cancel_selection();
         self.book_surface.cancel();
+        if let Some(source) = self.margin_source.borrow_mut().take() {
+            source.remove();
+        }
         if let Some(source) = self.font_source.borrow_mut().take() {
             source.remove();
         }
@@ -1466,6 +1525,7 @@ impl Ui {
                 self.save_book();
             }
             self.save_position();
+            self.core.post(json!({"op":"settings","key":"readingMargin","value":self.state.borrow().reading_margin}));
             self.core.post(json!({"op":"settings","key":"fontSize","value":self.state.borrow().font_size as i64}));
         }
         self.core.shutdown();
@@ -1480,7 +1540,7 @@ impl Ui {
 fn set_theme(value: &str) {
     adw::StyleManager::default().set_color_scheme(match value {
         "Dark" => adw::ColorScheme::ForceDark,
-        "Light" => adw::ColorScheme::ForceLight,
+        "Light" | "Sepia" => adw::ColorScheme::ForceLight,
         _ => adw::ColorScheme::Default,
     });
 }

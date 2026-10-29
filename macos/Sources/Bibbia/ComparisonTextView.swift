@@ -75,12 +75,13 @@ final class ComparisonDocumentView: NSView, NSTextViewDelegate {
             let label = model.t("Apri e annota il versetto selezionato", "Open and annotate the selected verse")
             buttons[i].toolTip = label; buttons[i].setAccessibilityLabel(label)
         }
-        let next = "\(comparison.edition)/\(comparison.other)/\(model.position.book)/\(model.position.chapter)/\(model.preferences.fontSize)/\(model.preferences.language)"
+        let next = "\(comparison.edition)/\(comparison.other)/\(model.position.book)/\(model.position.chapter)/\(model.preferences.fontSize)/\(model.preferences.language)/\(model.preferences.readingMargin)/\(model.preferences.theme)"
         guard key != next else { return }
         let changedChapter = key.split(separator: "/").prefix(4) != next.split(separator: "/").prefix(4)
         rebuilding = true; defer { rebuilding = false }
+        for view in documents { view.textContainerInset.width=CGFloat(model.preferences.readingMargin) }
         bodyStyle = NSMutableParagraphStyle(); bodyStyle.lineHeightMultiple = 1.2
-        let attributes: [NSAttributedString.Key: Any] = [.font: ReadingTextView.readingFont(CGFloat(model.preferences.fontSize)), .foregroundColor: NSColor.textColor, .paragraphStyle: bodyStyle]
+        let attributes: [NSAttributedString.Key: Any] = [.font: ReadingTextView.readingFont(CGFloat(model.preferences.fontSize)), .foregroundColor: model.readingColor, .paragraphStyle: bodyStyle]
         for side in 0..<2 {
             let content = NSMutableAttributedString(string: "")
             segments[side].removeAll(keepingCapacity: true); rows[side].removeAll(keepingCapacity: true)
@@ -143,7 +144,7 @@ final class ComparisonDocumentView: NSView, NSTextViewDelegate {
         for side in 0..<2 {
             let view = documents[side]
             view.setFrameSize(NSSize(width: column, height: max(height, view.frame.height)))
-            view.textContainer?.containerSize = NSSize(width: max(20, column-24), height: CGFloat.greatestFiniteMagnitude)
+            view.textContainer?.containerSize = NSSize(width: max(20, column-2*view.textContainerInset.width), height: CGFloat.greatestFiniteMagnitude)
             view.textStorage?.beginEditing()
             for i in rows[side].indices { gap(side, i, 0) }
             view.textStorage?.endEditing()

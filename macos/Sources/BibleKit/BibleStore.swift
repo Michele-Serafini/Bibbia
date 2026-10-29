@@ -95,11 +95,13 @@ public actor BibleStore {
         var preferences = Preferences()
         preferences.language = try database.setting("language", as: String.self) ?? "it"
         preferences.theme = try database.setting("theme", as: String.self) ?? "Default"
+        preferences.readingMargin = min(96, max(16, try database.setting("readingMargin", as: Int.self) ?? 24))
+        preferences.focusMode = try database.setting("focusMode", as: Bool.self) ?? false
         preferences.fontSize = try database.setting("fontSize", as: Int.self) ?? 22
         preferences.bibleLanguage = try database.setting("bibleLanguage", as: String.self) ?? "all"
         preferences.comparisonEdition = try database.setting("comparisonEdition", as: String.self) ?? "CEI 2008"
         if !["it", "en"].contains(preferences.language) { preferences.language = "it" }
-        if !["Default", "Light", "Dark"].contains(preferences.theme) { preferences.theme = "Default" }
+        if !["Default", "Light", "Dark", "Sepia"].contains(preferences.theme) { preferences.theme = "Default" }
         preferences.fontSize = min(32, max(14, preferences.fontSize))
         var position = try database.setting("position", as: Position.self) ?? Position()
         if (try? corpus(position.edition).verse(position.book, position.chapter, position.verse)) == nil { position = Position() }
@@ -114,8 +116,8 @@ public actor BibleStore {
     }
 
     public func savePreferences(_ preferences: Preferences) throws {
-        guard ["it", "en"].contains(preferences.language), (14...32).contains(preferences.fontSize),
-              ["Default", "Light", "Dark"].contains(preferences.theme),
+        guard ["it", "en"].contains(preferences.language), (14...32).contains(preferences.fontSize), (16...96).contains(preferences.readingMargin),
+              ["Default", "Light", "Dark", "Sepia"].contains(preferences.theme),
               ["all", "it", "en"].contains(preferences.bibleLanguage) else {
             throw BibleError.invalid("Preferenze non valide / Invalid preferences")
         }
@@ -123,6 +125,8 @@ public actor BibleStore {
             try database.set("language", preferences.language)
             try database.set("theme", preferences.theme)
             try database.set("fontSize", preferences.fontSize)
+            try database.set("readingMargin", preferences.readingMargin)
+            try database.set("focusMode", preferences.focusMode)
             try database.set("bibleLanguage", preferences.bibleLanguage)
             try database.set("comparisonEdition", preferences.comparisonEdition)
         }

@@ -78,6 +78,7 @@ public sealed partial class MainWindow
     private global::Windows.UI.Color? appliedSurface;
     private void UpdateWindowTheme()
     {
+        ApplyPaperPalette();
         var background = WindowBackground();
         if (appliedSurface == background) return;
         appliedSurface = background;

@@ -486,7 +486,7 @@ impl Engine {
             }
             "settings" => {
                 let key = field(&request, "key")?;
-                if !["position", "fontSize", "theme", "language", "bibleLanguage", "comparisonEdition"].contains(&key) {
+                if !["position", "fontSize", "theme", "language", "bibleLanguage", "comparisonEdition", "readingMargin", "focusMode"].contains(&key) {
                     return Err("Impostazione sconosciuta".into());
                 }
                 let value = request.get("value").ok_or("Valore mancante")?;
@@ -509,9 +509,15 @@ impl Engine {
                 if key == "theme"
                     && !value
                         .as_str()
-                        .is_some_and(|s| ["Default", "Light", "Dark"].contains(&s))
+                        .is_some_and(|s| ["Default", "Light", "Dark", "Sepia"].contains(&s))
                 {
                     return Err("Tema non valido".into());
+                }
+                if key == "readingMargin" && !value.as_u64().is_some_and(|n| (16..=96).contains(&n)) {
+                    return Err("Margini non validi".into());
+                }
+                if key == "focusMode" && !value.is_boolean() {
+                    return Err("Modalità concentrazione non valida".into());
                 }
                 if key == "position" {
                     let e = field(value, "edition")?;

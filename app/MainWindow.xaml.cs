@@ -15,14 +15,20 @@ public sealed class BookRow
     public required int[] ChapterNumbers { get; init; }
 }
 
-public sealed class VerseRow
+public sealed class VerseRow : System.ComponentModel.INotifyPropertyChanged
 {
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    private JsonElement annotation;
+    public Visibility NoteVisibility => Annotation.TryGetProperty("note",out var note) && note.GetString() is {Length:>0} ? Visibility.Visible : Visibility.Collapsed;
+    public string NoteHint => NoteVisibility==Visibility.Visible ? NoteLabel + " · " + Annotation.GetProperty("note").GetString()![..Math.Min(120,Annotation.GetProperty("note").GetString()!.Length)] : NoteLabel;
+    public string NoteLabel {get;set;}="Apri nota";
+    public string NoteId => $"VerseNote_{Index}";
     public int Index { get; init; }
     public required string Number { get; init; }
     public string MenuId => $"VerseMenu_{Index}";
     public required string Text { get; init; }
     public double TextSize {get;set;}
-    public required JsonElement Annotation { get; set; }
+    public required JsonElement Annotation { get => annotation; set { annotation=value; PropertyChanged?.Invoke(this,new(nameof(NoteVisibility))); PropertyChanged?.Invoke(this,new(nameof(NoteHint))); } }
 }
 
 public sealed class SearchRow
@@ -63,6 +69,7 @@ public sealed partial class MainWindow : Window
         InitializeReadingPlans();
         InitializeTransfer();
         InitializeBookPagination();
+        InitializeFocus();
         ConfigureWindowCaption();
         Navigation.IsEnabled = false;
         var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
@@ -89,6 +96,7 @@ public sealed partial class MainWindow : Window
             notesTimer?.Stop();notesGeneration++;
             try {
                 BibleEngine.Call(new {op="settings",key="fontSize",value=(int)fontSize});
+                BibleEngine.Call(new {op="settings",key="readingMargin",value=readingMargin});
                 BibleEngine.Call(new { op = "close" });
             }
             catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); }
@@ -131,11 +139,12 @@ public sealed partial class MainWindow : Window
                     if (p.TryGetProperty("verse", out var v)) currentVerse = v.GetInt32();
                 }
                 if (settings.TryGetProperty("fontSize", out var f)) fontSize = f.GetDouble();
-                if (settings.TryGetProperty("theme", out var t))
-                {
-                    Root.RequestedTheme = Enum.Parse<ElementTheme>(t.GetString()!);
-                    ThemePicker.SelectedIndex = Root.RequestedTheme == ElementTheme.Light ? 1 : Root.RequestedTheme == ElementTheme.Dark ? 2 : 0;
-                }
+                readingTheme = settings.TryGetProperty("theme",out var t)?t.GetString()!:"Default";
+                SetReadingTheme();
+                ThemePicker.SelectedIndex=Array.IndexOf(new[]{"Default","Light","Dark","Sepia"},readingTheme);
+                readingMargin=settings.TryGetProperty("readingMargin",out var m)?m.GetInt32():24;
+                focusMode=settings.TryGetProperty("focusMode",out var fm)&&fm.GetBoolean();
+                MarginSlider.Value=readingMargin;
                 FontSlider.Value = fontSize;
                 InitializeLanguages(boot);
             }
@@ -144,6 +153,8 @@ public sealed partial class MainWindow : Window
             UpdateWindowTheme();
             LoadBooks();
             ready = true;
+            ApplyReadingMargins();
+            ApplyFocus();
             LoadChapter(currentVerse);
             Navigation.IsEnabled = true;
             await TransferSmoke();
@@ -223,6 +234,7 @@ public sealed partial class MainWindow : Window
         var option = editionOptions.First(x => x.Id == edition);
         var detail = edition == "Raccolta estesa (83 sezioni)" ? T("83 sezioni in inglese: WEB ecumenica, 1 Enoc e Giubilei. Comprende 1–2 Esdra, 3–4 Maccabei, Salmo 151 e Preghiera di Manasse. È una raccolta di più canoni; non esiste un canone universale di tutti i libri.") : T("{0} libri · {1}",option.Books,option.Language == "it" ? "Italiano" : option.Language == "en" ? "English" : T("Tutte"));
         var attribution = edition == "CEI 2008" ? T("CEI 2008 · © 2008–2024 Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena. Uso formativo e didattico non commerciale. Fonte: BibbiaEDU. Ester: G = greco, E = ebraico.") : "";
+        ApplyFocus();
         EditionDetails.Text = detail + (attribution.Length > 0 ? "\n" + attribution : "");
         StatusLabel.Text = T("Offline · {0} · {1} versetti · Seleziona parole o frasi per annotarle", edition, count) + (attribution.Length > 0 ? "\n" + attribution : "");
     }
@@ -294,6 +306,7 @@ public sealed partial class MainWindow : Window
         if(tag=="plans" && ready)_=GuardAsync(LoadReadingPlans);
         SearchBar.Visibility = tag == "search" ? Visibility.Visible : Visibility.Collapsed;
         UpdatePageTitle();
+        ApplyFocus();
         if (tag == "search")
         {
             ResultList.ItemsSource = null;
@@ -376,7 +389,8 @@ public sealed partial class MainWindow : Window
         {
             var theme = ((ComboBoxItem)ThemePicker.SelectedItem).Tag.ToString()!;
             BibleEngine.Call(new { op = "settings", key = "theme", value = theme });
-            Root.RequestedTheme = Enum.Parse<ElementTheme>(theme);
+            readingTheme=theme;
+            SetReadingTheme();
             UpdateWindowTheme();
         });
     }

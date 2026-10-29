@@ -67,7 +67,9 @@ mod imp {
             if width < 1.0 || height < 1.0 {
                 return;
             }
-            let paper = if adw::StyleManager::default().is_dark() {
+            let paper = if obj.has_css_class("sepia") {
+                gdk::RGBA::new(0.957, 0.906, 0.804, 1.0)
+            } else if adw::StyleManager::default().is_dark() {
                 gdk::RGBA::new(0.141, 0.137, 0.125, 1.0)
             } else {
                 gdk::RGBA::new(1.0, 0.992, 0.969, 1.0)

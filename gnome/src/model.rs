@@ -85,8 +85,13 @@ pub fn layout(verses: &[Verse]) -> (String, Vec<Span>) {
     let mut offset = 0;
     for v in verses {
         let prefix = format!(
-            "{} {}\t",
+            "{}{} {}\t",
             if v.annotation.bookmark { '★' } else { ' ' },
+            if v.annotation.note.is_empty() {
+                ' '
+            } else {
+                '✎'
+            },
             v.label
         );
         let start = offset + prefix.chars().count() as i32;
@@ -137,7 +142,11 @@ mod tests {
                 verse: 0,
                 label: "4a".into(),
                 text: "Luce 🌅 e pace".into(),
-                annotation: Annotation::default(),
+                annotation: Annotation {
+                    note: "Nota 🌅".into(),
+                    bookmark: true,
+                    ..Default::default()
+                },
             },
             Verse {
                 verse: 1,
@@ -146,7 +155,8 @@ mod tests {
                 annotation: Annotation::default(),
             },
         ];
-        let (_, spans) = layout(&verses);
+        let (text, spans) = layout(&verses);
+        assert!(text.starts_with("★✎ "));
         let result = selections(&verses, &spans, spans[0].start + 5, spans[1].start + 3);
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].start, 5);

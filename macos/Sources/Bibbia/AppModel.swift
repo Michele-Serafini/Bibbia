@@ -249,9 +249,18 @@ final class AppModel: ObservableObject {
         }
     }
 
+    var sepia: Bool { preferences.theme == "Sepia" && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast }
+    var windowColor: NSColor { sepia ? NSColor(srgbRed:238/255,green:224/255,blue:196/255,alpha:1) : .windowBackgroundColor }
+    var readingColor: NSColor { sepia ? NSColor(srgbRed:73/255,green:57/255,blue:39/255,alpha:1) : .textColor }
+    func toggleFocus() {
+        readingSurface?.cancelTurn(); readingSurface?.pager.save()
+        preferences.focusMode.toggle(); preferencesChanged()
+    }
     private func applyTheme() {
-        NSApp.appearance = preferences.theme == "Light" ? NSAppearance(named: .aqua)
+        NSApp.appearance = ["Light","Sepia"].contains(preferences.theme) ? NSAppearance(named: .aqua)
             : preferences.theme == "Dark" ? NSAppearance(named: .darkAqua) : nil
+        for window in NSApp.windows { window.titlebarAppearsTransparent = true; window.backgroundColor = windowColor }
+        readingSurface?.cancelTurn()
     }
 
     func flush() async {

@@ -16,7 +16,7 @@ pub(super) struct Views {
     rows: [Vec<(i32, i32)>; 2],
     gaps: [Vec<gtk::TextTag>; 2],
     content_key: String,
-    stamp: Option<(i32, i32, u64)>,
+    pub(super) stamp: Option<(i32, i32, u64)>,
     row_y: Vec<i32>,
     focus: Option<usize>,
 }
@@ -30,8 +30,8 @@ impl Ui {
                 .editable(false)
                 .cursor_visible(true)
                 .wrap_mode(gtk::WrapMode::WordChar)
-                .left_margin(12)
-                .right_margin(12)
+                .left_margin(self.state.borrow().reading_margin)
+                .right_margin(self.state.borrow().reading_margin)
                 .top_margin(8)
                 .bottom_margin(16)
                 .css_classes(["bible-text"])

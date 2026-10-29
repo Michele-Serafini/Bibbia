@@ -28,9 +28,10 @@ impl Ui {
             })
             .build();
         appearance.add(&language);
-        let theme_value = match adw::StyleManager::default().color_scheme() {
-            adw::ColorScheme::ForceLight => 1,
-            adw::ColorScheme::ForceDark => 2,
+        let theme_value = match self.state.borrow().theme.as_str() {
+            "Light" => 1,
+            "Dark" => 2,
+            "Sepia" => 3,
             _ => 0,
         };
         let theme = adw::ComboRow::builder()
@@ -39,6 +40,7 @@ impl Ui {
                 &self.t("Come GNOME", "Follow GNOME"),
                 &self.t("Chiaro", "Light"),
                 &self.t("Scuro", "Dark"),
+                &self.t("Carta seppia", "Sepia paper"),
             ]))
             .selected(theme_value)
             .build();
@@ -53,6 +55,41 @@ impl Ui {
         scale.set_size_request(180, -1);
         size.add_suffix(&scale);
         appearance.add(&size);
+        let margins = adw::ActionRow::builder()
+            .title(self.t("Margini della pagina", "Page margins"))
+            .build();
+        let margin_scale = gtk::Scale::with_range(gtk::Orientation::Horizontal, 16.0, 96.0, 1.0);
+        margin_scale.set_value(f64::from(self.state.borrow().reading_margin));
+        margin_scale.set_draw_value(true);
+        margin_scale.set_size_request(180, -1);
+        margins.add_suffix(&margin_scale);
+        appearance.add(&margins);
+        let weak = self.weak();
+        margin_scale.connect_value_changed(move |scale| {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_margins(scale.value() as i32);
+            }
+        });
+        let focus_row = adw::ActionRow::builder()
+            .title(self.t("Modalità concentrazione", "Focus mode"))
+            .subtitle(self.t(
+                "Nascondi gli strumenti · Ctrl+Shift+F · Esc per uscire",
+                "Hide tools · Ctrl+Shift+F · Esc to leave",
+            ))
+            .build();
+        let focus_switch = gtk::Switch::builder()
+            .active(self.state.borrow().focus_mode)
+            .valign(gtk::Align::Center)
+            .build();
+        focus_row.add_suffix(&focus_switch);
+        focus_row.set_activatable_widget(Some(&focus_switch));
+        appearance.add(&focus_row);
+        let weak = self.weak();
+        focus_switch.connect_active_notify(move |switch| {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_focus(switch.is_active());
+            }
+        });
         let translations=adw::PreferencesGroup::builder().title(self.t("Traduzioni","Translations")).description(self.t("La lingua dell’app è indipendente dal testo. La raccolta estesa contiene 83 libri/sezioni in inglese, inclusi 1 Enoc e Giubilei. Non è un canone universale.","App language is independent of the text. The extended collection has 83 English books/sections, including 1 Enoch and Jubilees. It is not a universal canon.")).build();
         page.add(&translations);
         let filter_value = match self.state.borrow().filter.as_str() {
@@ -142,8 +179,9 @@ impl Ui {
             if !theme_changing.get()
                 && let Some(ui) = weak.upgrade()
             {
-                let value = ["Default", "Light", "Dark"][row.selected() as usize];
-                set_theme(value);
+                let value = ["Default", "Light", "Dark", "Sepia"][row.selected() as usize];
+                ui.state.borrow_mut().theme = value.into();
+                ui.apply_reading_theme();
                 ui.core
                     .post(json!({"op":"settings","key":"theme","value":value}));
             }
@@ -183,7 +221,7 @@ impl Ui {
                 if ui.comparison.is_active(){ui.refresh_comparison();}
                 changing.set(true);
                 let selected_theme=theme_row.selected();
-                theme_row.set_model(Some(&gtk::StringList::new(&[&ui.t("Come GNOME","Follow GNOME"),&ui.t("Chiaro","Light"),&ui.t("Scuro","Dark")])));
+                theme_row.set_model(Some(&gtk::StringList::new(&[&ui.t("Come GNOME","Follow GNOME"),&ui.t("Chiaro","Light"),&ui.t("Scuro","Dark"),&ui.t("Carta seppia","Sepia paper")])));
                 theme_row.set_selected(selected_theme);
                 let selected_filter=filter_row.selected();
                 filter_row.set_model(Some(&gtk::StringList::new(&["Italiano","English",&ui.t("Tutte","All")])));

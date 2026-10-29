@@ -87,6 +87,7 @@ impl Ui {
         self.reader_right.set_extra_menu(Some(&menu));
         verse_menu.set_menu_model(Some(&menu));
         for (reader, is_right) in [(&self.reader, false), (&self.reader_right, true)] {
+            self.connect_note_indicator(reader, is_right);
             let events = gtk::EventControllerLegacy::new();
             events.set_propagation_phase(gtk::PropagationPhase::Capture);
             let w = self.weak();
@@ -330,16 +331,27 @@ impl Ui {
         }
         let annotation: Annotation = serde_json::from_value(value).map_err(|e| e.to_string())?;
         self.changing.set(true);
-        let (prefix, bookmark) = {
+        let (prefix, bookmark, has_note) = {
             let mut s = self.state.borrow_mut();
             s.verses[index].annotation = annotation;
-            (s.spans[index].prefix, s.verses[index].annotation.bookmark)
+            (
+                s.spans[index].prefix,
+                s.verses[index].annotation.bookmark,
+                !s.verses[index].annotation.note.is_empty(),
+            )
         };
         let buffer = self.reader.buffer();
         let mut a = buffer.iter_at_offset(prefix);
-        let mut b = buffer.iter_at_offset(prefix + 1);
+        let mut b = buffer.iter_at_offset(prefix + 2);
         buffer.delete(&mut a, &mut b);
-        buffer.insert(&mut a, if bookmark { "★" } else { " " });
+        buffer.insert(
+            &mut a,
+            &format!(
+                "{}{}",
+                if bookmark { '★' } else { ' ' },
+                if has_note { '✎' } else { ' ' }
+            ),
+        );
         self.style_verse(index);
         self.changing.set(false);
         Ok(())
@@ -363,7 +375,7 @@ impl Ui {
         self.popup.popdown();
         self.update_annotation(&position, index, value)
     }
-    fn show_note(&self) {
+    pub(super) fn show_note(&self) {
         let s = self.state.borrow();
         let index = s
             .selection

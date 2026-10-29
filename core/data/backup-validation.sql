@@ -11,9 +11,11 @@ SELECT 'annotations' FROM annotations WHERE
  (json_extract(payload,'$.noteStyle') IS NOT NULL AND json_extract(payload,'$.noteStyle') NOT IN ('plain','sticky'))
 UNION ALL
 SELECT 'settings' FROM settings WHERE
- (key='theme' AND (json_type(payload) IS NOT 'text' OR json_extract(payload,'$') NOT IN ('Default','Light','Dark'))) OR
+ (key='theme' AND (json_type(payload) IS NOT 'text' OR json_extract(payload,'$') NOT IN ('Default','Light','Dark','Sepia'))) OR
  (key='language' AND (json_type(payload) IS NOT 'text' OR json_extract(payload,'$') NOT IN ('it','en'))) OR
  (key='bibleLanguage' AND (json_type(payload) IS NOT 'text' OR json_extract(payload,'$') NOT IN ('it','en','all'))) OR
+ (key='readingMargin' AND (json_type(payload) IS NOT 'integer' OR json_extract(payload,'$') NOT BETWEEN 16 AND 96)) OR
+ (key='focusMode' AND (json_type(payload) IS NULL OR json_type(payload) NOT IN ('true','false'))) OR
  (key='fontSize' AND (json_type(payload) IS NOT 'integer' OR json_extract(payload,'$') NOT BETWEEN 14 AND 32)) OR
  (key='position' AND (json_type(payload,'$.edition') IS NOT 'text' OR json_type(payload,'$.book') IS NOT 'integer' OR json_extract(payload,'$.book')<0 OR json_type(payload,'$.chapter') IS NOT 'integer' OR json_extract(payload,'$.chapter')<0 OR (json_type(payload,'$.verse') IS NOT NULL AND (json_type(payload,'$.verse')<>'integer' OR json_extract(payload,'$.verse')<0))))
 UNION ALL

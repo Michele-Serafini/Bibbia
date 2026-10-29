@@ -41,6 +41,8 @@ struct BibbiaApp: App {
                 Button(model.t("Capitolo successivo", "Next chapter")) { model.step(1) }
                     .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
                 Divider()
+                Button(model.t("Modalità concentrazione", "Focus mode")) { model.toggleFocus() }
+                    .keyboardShortcut("f",modifiers:[.command,.shift])
                 Button(model.t("Testi e licenze…", "Texts and licenses…")) { model.showNotices = true }
             }
             CommandGroup(replacing: .appInfo) {

@@ -59,6 +59,7 @@ public sealed partial class MainWindow
     private void BindVerseEditor(object sender)
     {
         if (sender is not RichTextBlock editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
+        row.NoteLabel=N("Apri nota","Open note");
         liveEditors.Add(editor);
         if (ReferenceEquals(editor.Tag,row)) return;
         editor.Tag = row;
@@ -179,6 +180,10 @@ public sealed partial class MainWindow
         if (!lazy) { BuildCommands(); builtLanguage=language; }
         return flyout;
     }
+    private void NoteIndicatorClick(object sender,RoutedEventArgs e)
+    {
+        if(sender is Button button && button.Parent is Grid parent && parent.Children.OfType<RichTextBlock>().FirstOrDefault() is {} editor && editor.DataContext is VerseRow row) { currentVerse=row.Index; Guard(SavePosition); ShowNote(editor,row); }
+    }
     private void VerseMenuClick(object sender, RoutedEventArgs e)
     {
         if (sender is not Button button || button.Parent is not Grid parent || parent.Children.OfType<RichTextBlock>().FirstOrDefault() is not { } editor || editor.DataContext is not VerseRow row) return;
@@ -197,6 +202,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetAutomationId(save,"SaveNote");
         save.Click += (_,_) => Guard(() => {
             row.Annotation=BibleEngine.Call(new {op="note",edition=targetEdition,book=targetBook,chapter=targetChapter,verse=row.Index,text=input.Text,color=NoteColors[Math.Max(0,noteColor.SelectedIndex)],style=noteStyle.SelectedIndex==1?"sticky":"plain"});
+            if(edition==targetEdition && book==targetBook && chapter==targetChapter)ApplyTextStyles(editor,row);
             flyout.Hide();
         }); content.Children.Add(save); flyout.Content=content;
         DispatcherQueue.TryEnqueue(() => flyout.ShowAt(editor));

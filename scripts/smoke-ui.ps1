@@ -226,6 +226,16 @@ try {
     if ($note.Current.BoundingRectangle.Width -gt 380 -or $note.Current.BoundingRectangle.Height -gt 200) { throw 'Note editor is not a compact popup.' }
     $note.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue('Nota UI: parole selezionate')
     Invoke-Control (Wait-Control $window 'SaveNote' -Popup)
+    Invoke-Control (Wait-Control $window 'VerseNote_0')
+    $restoredNote = (Wait-Control $window 'NoteText' -Popup).GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).Current.Value
+    if ($restoredNote -ne 'Nota UI: parole selezionate') { throw 'Paragraph marker opened the wrong note.' }
+    Invoke-Control (Wait-Control $window 'SaveNote' -Popup)
+    (Wait-Control $window 'FocusToggle').GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Start-Sleep -Milliseconds 350
+    Save-WindowImage 'windows-focus.png'
+    Invoke-Control (Wait-Control $window 'FocusExit')
+    Wait-Control $window 'BookPicker' | Out-Null
+    Write-Host 'WinUI: persistent note marker reopens its note and focus mode exits correctly.'
     Invoke-Control (Wait-Control $window 'VerseMenu_0')
     Invoke-Control (Wait-Control $window 'BookmarkVerse' -Popup)
     Write-Host 'WinUI: compact note popup and bookmark actions invoked.'
@@ -238,6 +248,15 @@ try {
     Write-Host 'WinUI: Catholic Italian search verified.'
 
     Select-Page 'SettingsNavigation'
+    Select-Option 'ThemePicker' 'Carta seppia'
+    $margin = Wait-Control $window 'MarginSlider'
+    $margin.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern).SetValue(64)
+    Start-Sleep -Milliseconds 250
+    Select-Page 'ReadNavigation'
+    Save-WindowImage 'windows-sepia.png'
+    Select-Page 'SettingsNavigation'
+    $margin = Wait-Control $window 'MarginSlider'
+    $margin.GetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern).SetValue(24)
     Select-Option 'ThemePicker' 'Chiaro'
     Check-TitleTheme 0
     Select-Page 'ReadNavigation'

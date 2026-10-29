@@ -29,6 +29,7 @@ struct ChapterTextView: NSViewRepresentable {
         let captureGeneration = surface.generation
         let captureSize = surface.bounds.size
         if !changed && (view.readingSize != model.preferences.fontSize || view.readingDark != (colorScheme == .dark)) { surface.cancelTurn() }
+        surface.sepia = model.sepia
         surface.position = targetPosition
         view.model = model
         view.render(revision: model.revision, size: model.preferences.fontSize, dark: colorScheme == .dark)
@@ -60,12 +61,14 @@ struct ChapterTextView: NSViewRepresentable {
 }
 
 @MainActor
-final class ReadingTextView: NSTextView {
+final class ReadingTextView: NSTextView, NSTextViewDelegate {
     weak var model: AppModel?
     private(set) var readingLayout = ReadingLayout(verses: [])
     private var revision = -1
     private var size = 0
     private var dark = false
+    private var sepia = false
+    private var margin = 24
     private(set) var layoutRevision=0
     private var annotations=[Annotation]()
     private var baseAttributes=[NSAttributedString.Key:Any]()
@@ -77,6 +80,7 @@ final class ReadingTextView: NSTextView {
     private var capturedPosition = Position()
 
     func configureForReading() {
+        delegate = self
         isEditable = false; isSelectable = true; isRichText = true
         importsGraphics = false; allowsUndo = false
         isAutomaticLinkDetectionEnabled = false
@@ -92,7 +96,8 @@ final class ReadingTextView: NSTextView {
     }
     func adoptContext(_ source: ReadingTextView) {
         model = source.model; readingLayout = source.readingLayout; renderedPosition = source.renderedPosition
-        size = source.size; dark = source.dark; revision = source.revision
+        size = source.size; dark = source.dark; sepia = source.sepia; margin = source.margin; revision = source.revision
+        textContainerInset.width = CGFloat(margin)
         layoutRevision=source.layoutRevision
     }
     override func scrollWheel(with event: NSEvent) {
@@ -109,13 +114,13 @@ final class ReadingTextView: NSTextView {
     func render(revision: Int, size: Int, dark: Bool) {
         guard let model else { return }
         setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
-        guard self.revision != revision || self.size != size || self.dark != dark else { return }
+        guard self.revision != revision || self.size != size || self.dark != dark || self.margin != model.preferences.readingMargin || self.sepia != model.sepia else { return }
         let chapterChanged = renderedPosition?.edition != model.position.edition
             || renderedPosition?.book != model.position.book || renderedPosition?.chapter != model.position.chapter
         if chapterChanged { closePopover() }
-        let geometryChanged=chapterChanged || self.size != size || readingLayout.spans.count != model.verses.count
+        let geometryChanged=chapterChanged || self.size != size || self.margin != model.preferences.readingMargin || readingLayout.spans.count != model.verses.count
         if geometryChanged{layoutRevision+=1}
-        if !chapterChanged,self.size==size,self.dark==dark,annotations.count==model.verses.count,!baseAttributes.isEmpty {
+        if !chapterChanged,self.size==size,self.dark==dark,self.margin==model.preferences.readingMargin,self.sepia==model.sepia,annotations.count==model.verses.count,!baseAttributes.isEmpty {
             let changed=model.verses.indices.filter {annotations[$0] != model.verses[$0].annotation}
             if !changed.isEmpty,let storage=textStorage {
                 storage.beginEditing()
@@ -123,6 +128,8 @@ final class ReadingTextView: NSTextView {
                     let verse=model.verses[index],span=readingLayout.spans[index]
                     storage.setAttributes(baseAttributes,range:span)
                     applyAnnotation(verse.annotation,to:storage,range:span,text:verse.text,dark:dark)
+                    let notePrefix=index==0 ? 0:NSMaxRange(readingLayout.spans[index-1])+1
+                    applyNoteIndicator(verse.annotation,to:storage,at:notePrefix+1,index:index)
                     if annotations[index].bookmark != verse.annotation.bookmark {
                         let prefix=index==0 ? 0:NSMaxRange(readingLayout.spans[index-1])+1
                         storage.replaceCharacters(in:NSRange(location:prefix,length:1),with:verse.annotation.bookmark ? "★":" ")
@@ -133,7 +140,8 @@ final class ReadingTextView: NSTextView {
             annotations=model.verses.map(\.annotation);self.revision=revision
             return
         }
-        self.revision = revision; self.size = size; self.dark = dark
+        self.revision = revision; self.size = size; self.dark = dark; self.sepia = model.sepia; self.margin = model.preferences.readingMargin
+        textContainerInset.width = CGFloat(margin)
         let selected = selectedRange()
         let scrollOrigin = enclosingScrollView?.contentView.bounds.origin
         let oldString = string
@@ -141,7 +149,7 @@ final class ReadingTextView: NSTextView {
         readingLayout = ReadingLayout(verses: model.verses)
         let paragraph = NSMutableParagraphStyle()
         let numberFont = NSFont.monospacedDigitSystemFont(ofSize: CGFloat(size) * 0.56, weight: .medium)
-        let widestLabel = model.verses.map { "★ \($0.label)" as NSString }
+        let widestLabel = model.verses.map { "★✎ \($0.label)" as NSString }
             .map { $0.size(withAttributes: [.font: numberFont]).width }.max() ?? 24
         let gutter = ceil(widestLabel + 12)
         paragraph.headIndent = gutter; paragraph.firstLineHeadIndent = 0
@@ -149,7 +157,7 @@ final class ReadingTextView: NSTextView {
         paragraph.defaultTabInterval = gutter
         paragraph.lineHeightMultiple = 1.22; paragraph.paragraphSpacing = 13
         baseAttributes=[
-            .font: Self.readingFont(CGFloat(size)), .foregroundColor: NSColor.textColor,
+            .font: Self.readingFont(CGFloat(size)), .foregroundColor: model.readingColor,
             .paragraphStyle: paragraph
         ]
         let content = NSMutableAttributedString(string: readingLayout.text, attributes:baseAttributes)
@@ -158,6 +166,7 @@ final class ReadingTextView: NSTextView {
             let prefixStart = index == 0 ? 0 : NSMaxRange(readingLayout.spans[index - 1]) + 1
             content.addAttributes([.font: numberFont, .foregroundColor: NSColor.secondaryLabelColor],
                                   range: NSRange(location: prefixStart, length: span.location - prefixStart))
+            applyNoteIndicator(verse.annotation,to:content,at:prefixStart+1,index:index)
             applyAnnotation(verse.annotation,to:content,range:span,text:verse.text,dark:dark)
         }
         textStorage?.beginEditing()
@@ -178,6 +187,21 @@ final class ReadingTextView: NSTextView {
             }
         }
         setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
+    }
+
+    private func applyNoteIndicator(_ annotation: Annotation, to content: NSMutableAttributedString, at location: Int, index: Int) {
+        let range=NSRange(location:location,length:1)
+        content.replaceCharacters(in:range,with:annotation.note.isEmpty ? " " : "✎")
+        content.removeAttribute(.link,range:range); content.removeAttribute(.toolTip,range:range)
+        if !annotation.note.isEmpty {
+            content.addAttributes([.link:"bibbia-note:\(index)", .toolTip:(model?.t("Apri nota", "Open note") ?? "Note")+" · "+String(annotation.note.prefix(120))],range:range)
+        }
+    }
+    func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+        let value=(link as? URL)?.absoluteString ?? (link as? String) ?? ""
+        guard value.hasPrefix("bibbia-note:"),let index=Int(value.dropFirst("bibbia-note:".count)),let model,model.verses.indices.contains(index),!model.verses[index].annotation.note.isEmpty else { return false }
+        capturedSelection=[];capturedPosition=model.position;capturedPosition.verse=index
+        model.selectedVerse(index);setSelectedRange(NSRange(location:charIndex,length:0));showNote();return true
     }
 
     private func applyAnnotation(_ annotation:Annotation,to content:NSMutableAttributedString,range:NSRange,text:String,dark:Bool) {

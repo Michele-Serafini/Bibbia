@@ -87,7 +87,7 @@ final class BookPager {
             // we have measured the page breaks.
             view.textContainer?.widthTracksTextView = !mode
             view.setFrameSize(NSSize(width: width, height: max(height, view.frame.height)))
-            view.textContainer?.containerSize = NSSize(width: max(20,width-56), height: CGFloat.greatestFiniteMagnitude)
+            view.textContainer?.containerSize = NSSize(width: max(20,width-2*view.textContainerInset.width), height: CGFloat.greatestFiniteMagnitude)
             view.layoutManager?.ensureLayout(for: view.textContainer!)
         }
         guard mode, let manager = primary.layoutManager, let container = primary.textContainer else {

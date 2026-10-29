@@ -10,12 +10,21 @@ struct PreferencesView: View {
                     Text(model.t("Come il Mac", "Follow Mac appearance")).tag("Default")
                     Text(model.t("Chiaro", "Light")).tag("Light")
                     Text(model.t("Scuro", "Dark")).tag("Dark")
+                    Text(model.t("Carta seppia", "Sepia paper")).tag("Sepia")
                 }
                 HStack {
                     Text(model.t("Dimensione del testo", "Text size"))
                     Slider(value: Binding(get: { Double(model.preferences.fontSize) }, set: { model.preferences.fontSize = Int($0) }), in: 14...32, step: 1)
                     Text("\(model.preferences.fontSize)").monospacedDigit().frame(width: 28)
                 }
+                HStack {
+                    Text(model.t("Margini della pagina", "Page margins"))
+                    Slider(value: Binding(get: { Double(model.preferences.readingMargin) }, set: { model.preferences.readingMargin = Int($0) }), in: 16...96, step: 1)
+                        .accessibilityIdentifier("readingMargins")
+                    Text("\(model.preferences.readingMargin)").monospacedDigit().frame(width:28)
+                }
+                Toggle(model.t("Modalità concentrazione", "Focus mode"),isOn:$model.preferences.focusMode)
+                Text(model.t("Nascondi gli strumenti · ⇧⌘F · Esc per uscire", "Hide tools · ⇧⌘F · Esc to leave")).font(.caption).foregroundStyle(.secondary)
                 Text(model.t("Caratteri di sistema Apple: San Francisco per i controlli, disegno serif per la lettura.", "Apple system fonts: San Francisco for controls, serif design for reading."))
                     .font(.caption).foregroundStyle(.secondary)
             }

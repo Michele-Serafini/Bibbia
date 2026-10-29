@@ -403,6 +403,76 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         "Note action failed",
     )
     .await?;
+    let marker = ui.state.borrow().spans[0].prefix + 1;
+    let rect = ui
+        .reader
+        .iter_location(&ui.reader.buffer().iter_at_offset(marker));
+    let (x, y) = ui.reader.buffer_to_window_coords(
+        gtk::TextWindowType::Widget,
+        rect.x() + rect.width() / 2,
+        rect.y() + rect.height() / 2,
+    );
+    let bounds = ui
+        .reader
+        .compute_bounds(&ui.window)
+        .ok_or("Note marker has no native bounds")?;
+    let id = command(&[
+        "xdotool".into(),
+        "search".into(),
+        "--onlyvisible".into(),
+        "--pid".into(),
+        std::process::id().to_string(),
+        "--name".into(),
+        "^Bibbia$".into(),
+    ])
+    .await?;
+    command(&[
+        "xdotool".into(),
+        "mousemove".into(),
+        "--window".into(),
+        id.lines().next().ok_or("No note window")?.into(),
+        (x + bounds.x() as i32).to_string(),
+        (y + bounds.y() as i32).to_string(),
+        "click".into(),
+        "1".into(),
+    ])
+    .await?;
+    until(
+        || ui.note_popup.is_visible(),
+        "Clicking the paragraph note marker did not reopen its editor",
+    )
+    .await?;
+    check(
+        ui.note_input.buffer().text(
+            &ui.note_input.buffer().start_iter(),
+            &ui.note_input.buffer().end_iter(),
+            false,
+        ) == "Nota GNOME: luce 🌅",
+        "Note marker opened a different note",
+    )?;
+    ui.note_popup.popdown();
+    ui.state.borrow_mut().theme = "Sepia".into();
+    ui.apply_reading_theme();
+    ui.set_margins(64);
+    ui.set_focus(true);
+    glib::timeout_future(Duration::from_millis(300)).await;
+    check(
+        ui.focus_bar.is_visible()
+            && !ui.header.is_visible()
+            && !ui.controls.is_visible()
+            && ui.reader.left_margin() == 64,
+        "Focus mode or adjustable margins were not applied",
+    )?;
+    screenshot(&ui, "gnome-focus-sepia.png").await?;
+    ui.set_focus(false);
+    ui.set_margins(24);
+    ui.state.borrow_mut().theme = "Light".into();
+    ui.apply_reading_theme();
+    glib::timeout_future(Duration::from_millis(200)).await;
+    check(
+        ui.header.is_visible() && ui.controls.is_visible(),
+        "Focus mode did not restore tools",
+    )?;
     let old_height = ui
         .reader
         .iter_location(&ui.reader.buffer().iter_at_offset(start))

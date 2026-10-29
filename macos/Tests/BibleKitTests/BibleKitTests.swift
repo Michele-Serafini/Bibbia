@@ -325,3 +325,24 @@ private struct Fixture {
     _ = try await restored.writeNote("Aggiornata Swift 🌅",color:"green",style:"sticky",at:notes[0].position)
     try await restored.createBackup(to:root.appendingPathComponent("swift.bibbia-backup"))
 }
+
+@Test func readingAppearanceAndNoteMarkersPreservePortableData() async throws {
+    let f=try Fixture();defer{f.cleanup()}
+    var prefs=Preferences();prefs.theme="Sepia";prefs.readingMargin=64;prefs.focusMode=true
+    try await f.store.savePreferences(prefs)
+    _ = try await f.store.writeNote("Nota ritrovabile 🌅",color:"pink",style:"sticky",at:Position())
+    _ = try await f.store.toggleBookmark(at:Position())
+    let verses=try await f.store.chapter(Position()), layout=ReadingLayout(verses:verses)
+    #expect(layout.text.hasPrefix("★✎ "))
+    #expect(layout.selection(NSRange(location:0,length:layout.spans[0].location)).isEmpty)
+    #expect(layout.selection(NSRange(location:layout.spans[0].location,length:4)) == [SelectedSpan(verse:0,start:0,length:4)])
+    let archive=f.directory.appendingPathComponent("appearance.bibbia-backup")
+    try await f.store.createBackup(to:archive)
+    var invalid=prefs;invalid.readingMargin=97
+    await #expect(throws:BibleError.self){try await f.store.savePreferences(invalid)}
+    try await f.store.savePreferences(Preferences())
+    _ = try await f.store.restoreBackup(archive)
+    let reopened=try BibleStore(directory:f.directory), snapshot=try await reopened.bootstrap()
+    #expect(snapshot.preferences == prefs)
+    #expect(snapshot.verses[0].annotation.note == "Nota ritrovabile 🌅")
+}

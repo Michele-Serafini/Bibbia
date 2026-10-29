@@ -34,8 +34,11 @@ final class BookSurface: NSView {
     }
 
     override var isFlipped: Bool { true }
-    static var paperColor: NSColor {
-        NSColor(name: nil) { appearance in
+    var sepia = false { didSet { if sepia != oldValue { cancelTurn() } } }
+    static let sepiaPaper = NSColor(srgbRed: 244/255, green: 231/255, blue: 205/255, alpha: 1)
+    static func paperColor(sepia: Bool = false) -> NSColor {
+        if sepia { return sepiaPaper }
+        return NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
                 ? NSColor(srgbRed: 0.141, green: 0.137, blue: 0.125, alpha: 1)
                 : NSColor(srgbRed: 1, green: 0.992, blue: 0.969, alpha: 1)
@@ -47,7 +50,7 @@ final class BookSurface: NSView {
     }
     private var paperCGColor: CGColor {
         var color = CGColor(gray: 1, alpha: 1)
-        effectiveAppearance.performAsCurrentDrawingAppearance { color = Self.paperColor.cgColor }
+        effectiveAppearance.performAsCurrentDrawingAppearance { color = Self.paperColor(sepia: sepia).cgColor }
         return color
     }
 

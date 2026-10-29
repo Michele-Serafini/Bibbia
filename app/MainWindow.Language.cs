@@ -17,6 +17,7 @@ public sealed partial class MainWindow
     private string T(string text, params object[] args) { var value = language == "en" ? English.GetValueOrDefault(text, text) : text; return args.Length == 0 ? value : string.Format(value,args); }
     private static readonly Dictionary<string, string> English = new()
     {
+        ["Carta seppia"]="Sepia paper",
         ["Confronta"]="Compare", ["Seconda traduzione"]="Second translation", ["Caricamento confronto…"]="Loading comparison…",
         ["Apri e annota"]="Open and annotate",
         ["Nessun versetto corrispondente verificato."]="No verified matching verse.",
@@ -109,6 +110,7 @@ public sealed partial class MainWindow
     private void ApplyLanguage()
     {
         RelabelTransfer();
+        RelabelFocus();
         for (int i=0;i<3;i++) ((NavigationViewItem)Navigation.MenuItems[i]).Content = T(new[]{"Leggi","Cerca","La mia raccolta"}[i]);
         ((NavigationViewItem)Navigation.FooterMenuItems[0]).Content = T("Aspetto e traduzioni");
         if(Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i=>i.Tag as string=="plans") is {} plansNav)plansNav.Content=N("Piani di lettura","Reading plans");
@@ -116,7 +118,7 @@ public sealed partial class MainWindow
         AppLanguagePicker.Header = T("Lingua dell’app"); BibleLanguagePicker.Header = T("Lingua della Bibbia");
         ((ComboBoxItem)BibleLanguagePicker.Items[2]).Content = T("Tutte");
         ThemePicker.Header = T("Tema");
-        for (int i=0;i<3;i++) ((ComboBoxItem)ThemePicker.Items[i]).Content = T(new[]{"Come Windows","Chiaro","Scuro"}[i]);
+        for (int i=0;i<4;i++) ((ComboBoxItem)ThemePicker.Items[i]).Content = T(new[]{"Come Windows","Chiaro","Scuro","Carta seppia"}[i]);
         var wasChanging = changing; changing = true;
         try {
             // ComboBox caches its selection display when item content changes.

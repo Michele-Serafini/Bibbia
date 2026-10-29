@@ -28,12 +28,12 @@
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem Content="Aspetto e traduzioni" Tag="settings" AutomationProperties.AutomationId="SettingsNavigation" Icon="Setting" />
             </NavigationView.FooterMenuItems>
-            <Grid Padding="28,20,28,16" RowSpacing="16" Background="{ThemeResource WindowSurfaceBrush}">
+            <Grid x:Name="ReaderChrome" Padding="28,20,28,16" RowSpacing="16" Background="{ThemeResource WindowSurfaceBrush}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                     <RowDefinition Height="*" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <StackPanel Spacing="5" MaxWidth="1600" HorizontalAlignment="Stretch">
+                <StackPanel x:Name="ReaderHeading" Spacing="5" MaxWidth="1600" HorizontalAlignment="Stretch">
                     <TextBlock x:Name="EyebrowLabel" Text="UNO SPAZIO PER LA PAROLA" FontSize="11" CharacterSpacing="180"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock x:Name="PageTitle" Text="Leggi con calma." Style="{ThemeResource TitleTextBlockStyle}" />
@@ -42,18 +42,19 @@
                 <Grid x:Name="ContentPanels" Grid.Row="2">
                     <Grid x:Name="ReadPanel" RowSpacing="14">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid ColumnSpacing="10" MaxWidth="1600" HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Grid x:Name="ReaderControls" ColumnSpacing="10" MaxWidth="1600" HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <ComboBox x:Name="BookPicker" HorizontalAlignment="Stretch" DisplayMemberPath="Name" SelectionChanged="BookChanged" AutomationProperties.Name="Libro" AutomationProperties.AutomationId="BookPicker" />
                             <ComboBox x:Name="ChapterPicker" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="ChapterChanged" AutomationProperties.Name="Capitolo" />
                             <Button Grid.Column="2" Content="Aa" Click="AppearanceClick" AutomationProperties.Name="Aspetto della lettura" ToolTipService.ToolTip="Dimensione del testo e tema" />
                             <ToggleButton x:Name="BookModeToggle" Grid.Column="3" Content="Libro" IsChecked="True" Checked="BookModeChanged" Unchecked="BookModeChanged" AutomationProperties.AutomationId="BookModeToggle" />
                             <ToggleButton x:Name="ComparisonToggle" Grid.Column="4" Content="Confronta" Checked="ComparisonChanged" Unchecked="ComparisonChanged" AutomationProperties.AutomationId="ComparisonToggle" />
+                            <ToggleButton x:Name="FocusToggle" Grid.Column="5" Content="◎" Checked="FocusChanged" Unchecked="FocusChanged" AutomationProperties.AutomationId="FocusToggle" />
                         </Grid>
                         <Grid x:Name="BookStage" Grid.Row="1" MaxWidth="1600" HorizontalAlignment="Stretch" Margin="0,3,0,8" AutomationProperties.AutomationId="BookStage">
-                          <Border Background="{ThemeResource BookEdgeBrush}" CornerRadius="7" Margin="5,7,0,-5" />
-                          <Border Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7" Margin="2,3,2,-2" />
-                          <Border Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7">
+                          <Border x:Name="PaperEdge" Background="{ThemeResource BookEdgeBrush}" CornerRadius="7" Margin="5,7,0,-5" />
+                          <Border x:Name="PaperBack" Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7" Margin="2,3,2,-2" />
+                          <Border x:Name="PaperFace" Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" CornerRadius="7">
                             <Grid x:Name="BookViewport" Background="{ThemeResource BookPaperBrush}" CornerRadius="7">
                               <Border Width="16" HorizontalAlignment="Left" IsHitTestVisible="False">
                                 <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#14000000" Offset="0" /><GradientStop Color="#00000000" Offset="1" /></LinearGradientBrush></Border.Background>
@@ -68,11 +69,12 @@
                                 <DataTemplate x:DataType="local:VerseRow">
                                     <Border Padding="12,8" Margin="0,3" CornerRadius="6">
                                         <Grid ColumnSpacing="10">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             <RichTextBlock Grid.Column="1" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged"
                                                 IsTextSelectionEnabled="True" FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" />
-                                            <Button Grid.Column="2" Content="⋯" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
+                                            <Button Grid.Column="2" Content="✎" Visibility="{x:Bind NoteVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.Name="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.AutomationId="{x:Bind NoteId}" Click="NoteIndicatorClick" Padding="5" MinWidth="28" VerticalAlignment="Top" Background="Transparent" BorderThickness="0" />
+                                            <Button Grid.Column="3" Content="⋯" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
                                                 Padding="6" MinWidth="28" Background="Transparent" BorderThickness="0" />
                                         </Grid>
                                     </Border>
@@ -104,7 +106,7 @@
                             </ListView>
                           </Grid>
                         </Border>
-                        <Grid Grid.Row="2">
+                        <Grid x:Name="ReaderFooter" Grid.Row="2">
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <StackPanel HorizontalAlignment="Center" Spacing="4" Margin="0,0,0,8">
                                 <TextBlock x:Name="BookPageLabel" HorizontalAlignment="Center" FontSize="12" AutomationProperties.AutomationId="BookPageLabel" />
@@ -149,8 +151,10 @@
                             <TextBlock x:Name="AppearanceLabel" Text="Il tuo modo di leggere" Style="{ThemeResource SubtitleTextBlockStyle}" />
                             <ComboBox x:Name="AppLanguagePicker" Header="Lingua dell’app" Width="280" SelectionChanged="AppLanguageChanged" AutomationProperties.AutomationId="AppLanguagePicker"><ComboBoxItem Content="Italiano" Tag="it" /><ComboBoxItem Content="English" Tag="en" /></ComboBox>
                             <ComboBox x:Name="ThemePicker" AutomationProperties.AutomationId="ThemePicker" Header="Tema" Width="240" SelectedIndex="0" SelectionChanged="ThemeChanged">
-                                <ComboBoxItem Content="Come Windows" Tag="Default" /><ComboBoxItem Content="Chiaro" Tag="Light" /><ComboBoxItem Content="Scuro" Tag="Dark" />
+                                <ComboBoxItem Content="Come Windows" Tag="Default" /><ComboBoxItem Content="Chiaro" Tag="Light" /><ComboBoxItem Content="Scuro" Tag="Dark" /><ComboBoxItem Content="Carta seppia" Tag="Sepia" />
                             </ComboBox>
+                            <Slider x:Name="MarginSlider" Header="Margini della pagina" Minimum="16" Maximum="96" Value="24" StepFrequency="1" ValueChanged="MarginChanged" AutomationProperties.AutomationId="MarginSlider" />
+                            <ToggleSwitch x:Name="FocusSetting" Header="Modalità concentrazione" Toggled="FocusSettingChanged" AutomationProperties.AutomationId="FocusSetting" />
                             <Slider x:Name="FontSlider" AutomationProperties.AutomationId="FontSlider" Header="Dimensione del testo" Minimum="14" Maximum="32" Value="20"
                                 StepFrequency="1" SnapsTo="StepValues" Width="300" ValueChanged="FontChanged" />
                             <ComboBox x:Name="BibleLanguagePicker" AutomationProperties.AutomationId="BibleLanguagePicker" Header="Lingua della Bibbia" Width="280" SelectionChanged="BibleLanguageChanged"><ComboBoxItem Content="Italiano" Tag="it" /><ComboBoxItem Content="English" Tag="en" /><ComboBoxItem Content="Tutte" Tag="all" /></ComboBox>
@@ -169,6 +173,11 @@
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
+                <StackPanel x:Name="FocusBar" Grid.Row="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Visibility="Collapsed" Background="{ThemeResource BookPaperBrush}" CornerRadius="16" Padding="4" Margin="8">
+                    <Button x:Name="FocusPrevious" Content="←" Click="PreviousClick" />
+                    <Button x:Name="FocusNext" Content="→" Click="NextClick" />
+                    <Button x:Name="FocusExit" Content="✕" Click="FocusExitClick" AutomationProperties.AutomationId="FocusExit" />
+                </StackPanel>
                 <TextBlock x:Name="StatusLabel" Grid.Row="3" FontSize="12" Text="Caricamento della Bibbia…" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </Grid>
         </NavigationView>
