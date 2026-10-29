@@ -19,6 +19,9 @@ public sealed class VerseRow : System.ComponentModel.INotifyPropertyChanged
 {
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     private JsonElement annotation;
+    private bool focused;
+    public bool Focused {get=>focused;set{if(focused==value)return;focused=value;PropertyChanged?.Invoke(this,new(nameof(MenuVisibility)));}}
+    public Visibility MenuVisibility=>focused?Visibility.Collapsed:Visibility.Visible;
     public Visibility NoteVisibility => Annotation.TryGetProperty("note",out var note) && note.GetString() is {Length:>0} ? Visibility.Visible : Visibility.Collapsed;
     public string NoteHint => NoteVisibility==Visibility.Visible ? NoteLabel + " · " + Annotation.GetProperty("note").GetString()![..Math.Min(120,Annotation.GetProperty("note").GetString()!.Length)] : NoteLabel;
     private string noteLabel="Apri nota";
@@ -199,7 +202,7 @@ public sealed partial class MainWindow : Window
         var animate = !comparing && section=="read" && displayedChapter!=null && displayedChapter!=target;
         var rows = BibleEngine.Call(new { op = "chapter", edition, book, chapter }).EnumerateArray().Select(x =>
             new VerseRow { Index = x.GetProperty("verse").GetInt32(), Number=x.GetProperty("label").GetString()!, Text = x.GetProperty("text").GetString()!,
-                TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
+                Focused=focusApplied, TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
         VerseList.IsHitTestVisible=false;
         if (animate) BookPicker.Focus(FocusState.Programmatic);
         var snapshot=animate ? await CaptureBookPage() : null;

@@ -80,6 +80,7 @@ public sealed partial class MainWindow
             if(active&&!focusApplied)paneBeforeFocus=Navigation.IsPaneOpen;
             var leaving=focusApplied&&!active;
             focusApplied=active;
+            foreach(var row in readerRows)row.Focused=active;
             Navigation.IsPaneVisible=!active;Navigation.IsPaneToggleButtonVisible=!active;
             if(active)Navigation.IsPaneOpen=false;else if(leaving)Navigation.IsPaneOpen=paneBeforeFocus;
             ReaderHeading.Visibility=ReaderControls.Visibility=ReaderFooter.Visibility=active?Visibility.Collapsed:Visibility.Visible;

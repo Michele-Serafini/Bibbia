@@ -74,7 +74,7 @@
                                             <RichTextBlock Grid.Column="1" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged"
                                                 IsTextSelectionEnabled="True" FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" />
                                             <Button Grid.Column="2" Content="✎" Visibility="{x:Bind NoteVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.Name="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.AutomationId="{x:Bind NoteId}" Click="NoteIndicatorClick" Padding="5" MinWidth="28" VerticalAlignment="Top" Background="Transparent" BorderThickness="0" />
-                                            <Button Grid.Column="3" Content="⋯" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
+                                            <Button Grid.Column="3" Content="⋯" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
                                                 Padding="6" MinWidth="28" Background="Transparent" BorderThickness="0" />
                                         </Grid>
                                     </Border>
