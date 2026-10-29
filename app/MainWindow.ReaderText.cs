@@ -50,7 +50,7 @@ public sealed partial class MainWindow {
         try {
         editor.Blocks.Clear();editor.TextHighlighters.Clear();readerRuns.Remove(editor);
         editor.FontSize=row.TextSize;editor.LineHeight=row.TextSize*1.35;
-        editor.Foreground=new SolidColorBrush(readingTheme=="Sepia"&&!IsHighContrast?global::Windows.UI.Color.FromArgb(255,73,57,39):Root.ActualTheme==ElementTheme.Dark?Colors.White:Colors.Black);
+        editor.Foreground=new SolidColorBrush(IsHighContrast?ContrastColor(8):readingTheme=="Sepia"?global::Windows.UI.Color.FromArgb(255,73,57,39):Root.ActualTheme==ElementTheme.Dark?Colors.White:Colors.Black);
         var paragraph=new Paragraph {Margin=new Thickness(0)};
         var pieces=new List<ReaderRun>();
         var boundaries=new SortedSet<int>{0,row.Text.Length};

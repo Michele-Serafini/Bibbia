@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Automation;
 using Windows.System;
+using System.Runtime.InteropServices;
 
 namespace Bibbia.Windows;
 
@@ -13,18 +14,31 @@ public sealed partial class MainWindow
     private int readingMargin=24;
     private bool focusMode,applyingFocus,focusApplied,paneBeforeFocus;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? marginTimer;
-    private readonly global::Windows.UI.ViewManagement.AccessibilitySettings accessibilitySettings=new();
-    private bool IsHighContrast=>accessibilitySettings.HighContrast;
+    private readonly global::Windows.UI.ViewManagement.UISettings colorSettings=new();
+    private bool colorsSubscribed;
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ContrastInfo {public uint Size,Flags;public IntPtr Scheme;}
+    [DllImport("user32.dll",EntryPoint="SystemParametersInfoW")]
+    [return:MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ReadContrast(uint action,uint parameter,ref ContrastInfo value,uint flags);
+    [DllImport("user32.dll")]
+    private static extern uint GetSysColor(int index);
+    private bool IsHighContrast {get{var info=new ContrastInfo{Size=(uint)Marshal.SizeOf<ContrastInfo>()};return ReadContrast(0x42,info.Size,ref info,0)&&(info.Flags&1)!=0;}}
+    private static global::Windows.UI.Color ContrastColor(int index){var value=GetSysColor(index);return global::Windows.UI.Color.FromArgb(255,(byte)value,(byte)(value>>8),(byte)(value>>16));}
     private void InitializeFocus()
     {
         var shortcut=new KeyboardAccelerator{Key=VirtualKey.F,Modifiers=VirtualKeyModifiers.Control|VirtualKeyModifiers.Shift};
         shortcut.Invoked+=(_,e)=>Guard(()=>{if(!ready)return;Navigation.SelectedItem=Navigation.MenuItems[0];SetFocus(!focusMode);e.Handled=true;});
         Root.KeyboardAccelerators.Add(shortcut);
         Root.KeyDown+=(_,e)=>{if(e.Key==VirtualKey.Escape && focusApplied && !e.Handled){SetFocus(false);e.Handled=true;}};
-        accessibilitySettings.HighContrastChanged+=HighContrastChanged;
-        Closed+=(_,_)=>{marginTimer?.Stop();accessibilitySettings.HighContrastChanged-=HighContrastChanged;};
+        // AccessibilitySettings.HighContrastChanged requires services absent on
+        // some desktop/Server sessions. Color notifications are optional;
+        // contrast itself is read with the supported Win32 desktop API.
+        try {colorSettings.ColorValuesChanged+=ReadingColorsChanged;colorsSubscribed=true;}
+        catch(COMException error){System.Diagnostics.Debug.WriteLine(error);}
+        Closed+=(_,_)=>{marginTimer?.Stop();if(colorsSubscribed){try{colorSettings.ColorValuesChanged-=ReadingColorsChanged;}catch(COMException error){System.Diagnostics.Debug.WriteLine(error);}}};
     }
-    private void HighContrastChanged(global::Windows.UI.ViewManagement.AccessibilitySettings sender,object args)=>DispatcherQueue.TryEnqueue(()=>{if(!closed){appliedSurface=null;UpdateWindowTheme();}});
+    private void ReadingColorsChanged(global::Windows.UI.ViewManagement.UISettings sender,object args)=>DispatcherQueue.TryEnqueue(()=>{if(!closed){appliedSurface=null;UpdateWindowTheme();}});
     private void SetReadingTheme()
     {
         CancelBookTurn();
@@ -39,7 +53,7 @@ public sealed partial class MainWindow
         var window=sepia?global::Windows.UI.Color.FromArgb(255,238,224,196):dark?global::Windows.UI.Color.FromArgb(255,32,32,32):global::Windows.UI.Color.FromArgb(255,248,248,248);
         var paper=sepia?global::Windows.UI.Color.FromArgb(255,244,231,205):dark?global::Windows.UI.Color.FromArgb(255,36,35,32):global::Windows.UI.Color.FromArgb(255,255,253,247);
         var edge=sepia?global::Windows.UI.Color.FromArgb(255,205,187,152):dark?global::Windows.UI.Color.FromArgb(255,72,70,63):global::Windows.UI.Color.FromArgb(255,221,216,203);
-        if(IsHighContrast){var colors=new global::Windows.UI.ViewManagement.UISettings();window=colors.GetColorValue(global::Windows.UI.ViewManagement.UIColorType.Background);paper=window;edge=colors.GetColorValue(global::Windows.UI.ViewManagement.UIColorType.Foreground);}
+        if(IsHighContrast){window=ContrastColor(5);paper=window;edge=ContrastColor(8);}
         void Surface(DependencyObject element,DependencyProperty property,global::Windows.UI.Color color){if(element.GetValue(property) is SolidColorBrush brush && brush.Color==color)return;element.SetValue(property,new SolidColorBrush(color));}
         Surface(Root,Panel.BackgroundProperty,window);Surface(ReaderChrome,Panel.BackgroundProperty,window);
         Surface(Navigation,Control.BackgroundProperty,window);
