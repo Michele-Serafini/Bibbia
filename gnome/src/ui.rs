@@ -583,8 +583,12 @@ impl Ui {
             "Rosa / Pink",
         ]);
         let note_style = gtk::DropDown::from_strings(&["Nota / Note", "Post-it"]);
-        notes.append(&note_color);
-        notes.append(&note_style);
+        let note_choices = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        note_color.set_hexpand(true);
+        note_style.set_hexpand(true);
+        note_choices.append(&note_color);
+        note_choices.append(&note_style);
+        notes.append(&note_choices);
         let note_save = gtk::Button::with_label("Salva nota");
         note_save.add_css_class("suggested-action");
         notes.append(&note_save);

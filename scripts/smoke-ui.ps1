@@ -287,6 +287,10 @@ try {
     }
     Select-Page 'ReadingPlansNavigation'
     Wait-Control $window 'PlanCalendar' | Out-Null
+    Invoke-Control (Wait-Control $window 'NewPlan')
+    Invoke-Control (Wait-Control $window 'CreatePlan' -Popup)
+    Wait-Text (Wait-Control $window 'PlanSummary') '0/' | Out-Null
+    Wait-Text $window 'Genesi 1' | Out-Null
     Save-WindowImage 'windows-plans.png'
     Select-Page 'SavedNavigation'
     Wait-Text (Wait-Control $window 'ResultList') 'Genesi 1:1' | Out-Null

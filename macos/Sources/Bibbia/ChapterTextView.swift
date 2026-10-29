@@ -299,7 +299,7 @@ final class ReadingTextView: NSTextView {
             save: { [weak self, weak model] text,color,style in
                 Task { do {if let verses=try await model?.store?.writeNote(text,color:color,style:style,at:target){model?.apply(verses,at:target)}}catch{model?.error=error.localizedDescription} }; self?.closePopover() },
             cancel: { [weak self] in self?.closePopover() }))
-        popover.contentSize = NSSize(width: 380, height: 270)
+        popover.contentSize = NSSize(width: 380, height: 240)
         annotationPopover = popover
         popover.show(relativeTo: selectionAnchor(), of: self, preferredEdge: .maxY)
     }
@@ -362,6 +362,6 @@ private struct NoteEditor: View {
                 Button(saveTitle) { save(text,color,style) }.keyboardShortcut(.defaultAction)
                     .disabled(text.utf8.count > 32768)
             }
-        }.padding(14).frame(width: 380, height: 270).task { focused = true }
+        }.padding(14).frame(width: 380, height: 240).task { focused = true }
     }
 }

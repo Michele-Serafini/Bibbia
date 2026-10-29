@@ -191,7 +191,7 @@ async fn native_drag(
 }
 
 pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
-    let plan=ui.core.call(json!({"op":"reading","action":"create","title":"Native calendar","edition":"CEI 2008","start":"2024-02-28","daily":2,"book":0})).await?;
+    let plan=ui.core.call(json!({"op":"reading","action":"create","title":"Native calendar","edition":"CEI 2008","start":glib::DateTime::now_local().unwrap().format("%F").unwrap().as_str(),"daily":2,"book":0})).await?;
     ui.stack.set_visible_child_name("plans");
     glib::timeout_future(Duration::from_millis(400)).await;
     check(

@@ -28,7 +28,7 @@ extension AppModel {
             guard directory.lastPathComponent.hasPrefix("bibbia-macos-smoke-"),
                   FileManager.default.fileExists(atPath: directory.appendingPathComponent(".bibbia-test-fixture").path),
                   let store else { throw BibleError.invalid("UI tests require a marked isolated --data-dir") }
-            let readingID=try await store.createReadingPlan(title:"Native calendar",edition:position.edition,start:"2024-02-28",daily:2,book:0)
+            let readingID=try await store.createReadingPlan(title:"Native calendar",edition:position.edition,start:ReadingDates.key(Date()),daily:2,book:0)
             showReadingPlans=true
             try await Task.sleep(for:.milliseconds(400))
             showReadingPlans=false
