@@ -121,8 +121,8 @@ fn snapshot(source: &Connection, path: &Path) -> Result<()> {
 }
 fn inspect(path: &Path) -> Result<(Connection, Value)> {
     let len = fs::metadata(path).map_err(error)?.len();
-    if !(100..=1_073_741_824).contains(&len) {
-        return Err("Dimensione backup non valida (massimo 1 GiB)".into());
+    if len < 100 {
+        return Err("Dimensione backup non valida".into());
     }
     let db = Connection::open_with_flags(
         path,

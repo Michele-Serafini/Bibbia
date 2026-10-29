@@ -30,8 +30,8 @@ private func values(_ db:OpaquePointer?,_ sql:String) throws -> [[String]] {
 }
 private func copyDatabase(_ source:OpaquePointer?,_ target:OpaquePointer?) throws {
     guard let job=sqlite3_backup_init(target,"main",source,"main") else{throw sqlError(target)}
-    var code:Int32=SQLITE_OK;let deadline=Date().addingTimeInterval(5)
-    repeat {code=sqlite3_backup_step(job,256);if code==SQLITE_BUSY || code==SQLITE_LOCKED{Thread.sleep(forTimeInterval:0.01)}} while (code==SQLITE_OK || code==SQLITE_BUSY || code==SQLITE_LOCKED) && Date()<deadline
+    var code:Int32=SQLITE_OK;var deadline=Date().addingTimeInterval(5)
+    repeat {code=sqlite3_backup_step(job,256);if code==SQLITE_OK{deadline=Date().addingTimeInterval(5)};if code==SQLITE_BUSY || code==SQLITE_LOCKED{Thread.sleep(forTimeInterval:0.01)}} while (code==SQLITE_OK || code==SQLITE_BUSY || code==SQLITE_LOCKED) && Date()<deadline
     let finish=sqlite3_backup_finish(job);guard code==SQLITE_DONE,finish==SQLITE_OK else{throw sqlError(target)}
 }
 private func publish(_ temp:URL,_ target:URL) throws {guard rename(temp.path,target.path)==0 else{throw BibleError.invalid(String(cString:strerror(errno)))}}
@@ -46,7 +46,7 @@ private func snapshot(_ source:OpaquePointer?,to target:URL) throws {
 }
 private func inspect(_ file:URL) throws -> (OpaquePointer,BackupSummary) {
     let size=(try FileManager.default.attributesOfItem(atPath:file.path)[.size] as? NSNumber)?.int64Value ?? 0
-    guard (100...1_073_741_824).contains(size) else{throw BibleError.invalid("Dimensione backup non valida (massimo 1 GiB) / Invalid backup size (1 GiB maximum)")}
+    guard size>=100 else{throw BibleError.invalid("Dimensione backup non valida / Invalid backup size")}
     var db:OpaquePointer?;guard sqlite3_open_v2(file.path,&db,SQLITE_OPEN_READONLY|SQLITE_OPEN_NOMUTEX,nil)==SQLITE_OK,let db else{sqlite3_close(db);throw BibleError.invalid("Backup non leggibile / Cannot read backup")}
     do {
         try exec(db,"PRAGMA trusted_schema=OFF;PRAGMA query_only=ON;BEGIN;")
