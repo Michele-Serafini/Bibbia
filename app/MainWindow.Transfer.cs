@@ -23,6 +23,7 @@ public sealed partial class MainWindow {
             if(await dialog.ShowAsync()!=ContentDialogResult.Primary)return;await Task.Run(()=>BibleEngine.Call(new{op="transfer",action="restore",path}));Close();return;
         }
         var extension=action=="markdown"?".md":action=="pdf"?".pdf":".bibbia-backup";var save=new FileSavePicker{SuggestedFileName="Bibbia-"+DateTime.Now.ToString("yyyy-MM-dd")};save.FileTypeChoices.Add(action,new List<string>{extension});WinRT.Interop.InitializeWithWindow.Initialize(save,handle);var target=await save.PickSaveFileAsync();if(target==null)return;path=target.Path;
+        if(action=="pdf")await Task.Run(()=>BibleEngine.Call(new{op="transfer",action="check_destination",path}));
         var busy=new ContentDialog{XamlRoot=Root.XamlRoot,RequestedTheme=Root.RequestedTheme,Title=N("Preparazione del file…","Preparing file…"),Content=new ProgressRing{IsActive=true,Width=40,Height=40}};var shown=busy.ShowAsync();
         try{await Task.Run(()=>{
             if(action=="pdf") {var temp=Path.Combine(dataDirectory,".export-"+Guid.NewGuid()+".txt");try{BibleEngine.Call(new{op="export",format="text",path=temp});NotesPdf.Write(temp,path);}finally{File.Delete(temp);}}

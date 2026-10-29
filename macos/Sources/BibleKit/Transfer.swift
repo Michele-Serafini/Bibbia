@@ -78,13 +78,14 @@ extension Database {
     func checkDestination(_ file:URL) throws {
         let url=file.resolvingSymlinksInPath(),parent=url.deletingLastPathComponent().standardizedFileURL
         let reserved=["bible.sqlite3","bible.sqlite3-wal","bible.sqlite3-shm",pendingName,"reader.json"]
-        guard !(parent==directory.resolvingSymlinksInPath().standardizedFileURL && reserved.contains(url.lastPathComponent)) else{throw BibleError.invalid("Scegli un file diverso dai dati dell’app / Choose another destination")}
+        guard !(parent==directory.resolvingSymlinksInPath().standardizedFileURL && reserved.contains(url.lastPathComponent.lowercased())) else{throw BibleError.invalid("Scegli un file diverso dai dati dell’app / Choose another destination")}
     }
     func backup(to url:URL) throws {try checkDestination(url);try snapshot(handle,to:url)}
     func backupInfo(_ url:URL) throws -> BackupSummary {let(db,summary)=try inspect(url);sqlite3_close(db);return summary}
     func stageRestore(_ url:URL) throws -> BackupSummary {let(db,summary)=try inspect(url);defer{sqlite3_close(db)};try snapshot(db,to:directory.appendingPathComponent(pendingName));return summary}
 }
 extension BibleStore {
+    public func validateExportDestination(_ url:URL) throws {try database.checkDestination(url)}
     public func createBackup(to url:URL) throws {try database.backup(to:url)}
     public func inspectBackup(_ url:URL) throws -> BackupSummary {try database.backupInfo(url)}
     public func restoreBackup(_ url:URL) throws -> BackupSummary {try database.stageRestore(url)}
@@ -95,7 +96,12 @@ extension BibleStore {
         defer{try? FileManager.default.removeItem(at:temp)}
         let out=try FileHandle(forWritingTo:temp);defer{try? out.close()}
         func write(_ s:String) throws {try out.write(contentsOf:Data(s.utf8))}
-        func render(_ s:String)->String {markdown ? String(s.flatMap{"\\`*_{}[]<>()#+-.!|~".contains($0) ? [Character("\\"),$0]:[$0]}):s}
+        func render(_ s:String)->String {
+            guard markdown else{return s}
+            var result=String();result.reserveCapacity(s.utf8.count)
+            for c in s {if "\\`*_{}[]<>()#+-.!|~&".contains(c){result.append("\\")};result.append(c)}
+            return result
+        }
         try write("\(markdown ? "# ":"")Bibbia · Appunti\n\n")
         var count=0,cei=false
         try database.scan("SELECT a.edition,a.book,a.chapter,a.verse,a.payload,COALESCE(o.folder,''),COALESCE(o.tags,'[]') FROM annotations a LEFT JOIN note_organization o USING(edition,book,chapter,verse) ORDER BY a.edition,a.book,a.chapter,a.verse") {row in

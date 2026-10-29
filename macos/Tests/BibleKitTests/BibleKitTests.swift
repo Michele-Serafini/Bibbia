@@ -285,7 +285,7 @@ private struct Fixture {
 @Test func portableBackupRestoresAllPersonalDataAndKeepsSafetyCopy() async throws {
     let f=try Fixture();defer{f.cleanup()}
     let position=Position(edition:"KJV")
-    _ = try await f.store.writeNote("Perché Ω 🌅\n# nota <script>",color:"blue",style:"sticky",at:position)
+    _ = try await f.store.writeNote("Perché Ω 🌅\n# nota <script> &copy;",color:"blue",style:"sticky",at:position)
     _ = try await f.store.organize(position,folder:"Studio",tags:["speranza"])
     _ = try await f.store.mark(position,selection:[SelectedSpan(verse:0,start:0,length:2)],action:"underline")
     let id=try await f.store.createReadingPlan(title:"Lettura",edition:"KJV",start:"2026-10-29",daily:2,book:0)
@@ -294,7 +294,7 @@ private struct Fixture {
     try await f.store.createBackup(to:archive)
     #expect(try await f.store.inspectBackup(archive).annotations==1)
     let markdown=f.directory.appendingPathComponent("note.md");_ = try await f.store.exportNotes(to:markdown,markdown:true)
-    let text=try String(contentsOf:markdown,encoding:.utf8);#expect(text.contains("Perché Ω 🌅") && text.contains("\\# nota \\<script\\>") && text.contains("Studio"))
+    let text=try String(contentsOf:markdown,encoding:.utf8);#expect(text.contains("Perché Ω 🌅") && text.contains("\\# nota \\<script\\>") && text.contains("Studio") && text.contains("\\&copy;"))
     let target=try Fixture();defer{target.cleanup()}
     _ = try await target.store.writeNote("Originale",color:nil,style:"plain",at:position)
     try Data("stale".utf8).write(to:target.directory.appendingPathComponent("reader.json"))

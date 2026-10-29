@@ -43,7 +43,8 @@ fn reserved(path: &Path, directory: &Path) -> Result<()> {
     let name = path
         .file_name()
         .ok_or("Percorso non valido")?
-        .to_string_lossy();
+        .to_string_lossy()
+        .to_lowercase();
     let current = directory.canonicalize().map_err(error)?;
     if (parent == current
         && [
@@ -241,6 +242,7 @@ impl Engine {
         let path = Path::new(field(r, "path")?);
         reserved(path, &self.directory)?;
         match field(r, "action")? {
+            "check_destination" => Ok(json!(true)),
             "backup" => {
                 snapshot(&self.db, path)?;
                 Ok(json!(true))
@@ -392,15 +394,14 @@ impl Engine {
     }
 }
 fn escape(s: &str) -> String {
-    s.chars()
-        .flat_map(|c| {
-            if "\\`*_{}[]<>()#+-.!|~".contains(c) {
-                vec!['\\', c]
-            } else {
-                vec![c]
-            }
-        })
-        .collect()
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if "\\`*_{}[]<>()#+-.!|~&".contains(c) {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
 }
 #[cfg(test)]
 pub(super) fn test_inspect(path: &Path) -> Result<(Connection, Value)> {

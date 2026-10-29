@@ -906,7 +906,7 @@ fn portable_backup_restore_is_atomic_and_keeps_a_safety_copy() {
     let output = tempfile::tempdir().unwrap();
     let backup = output.path().join("Appunti perché.bibbia-backup");
     let mut e = Engine::open(source.path()).unwrap();
-    e.request(json!({"op":"note","edition":"KJV","book":0,"chapter":0,"verse":0,"text":"Perché Ω 🌅\n# nota <script>","color":"blue","style":"sticky"})).unwrap();
+    e.request(json!({"op":"note","edition":"KJV","book":0,"chapter":0,"verse":0,"text":"Perché Ω 🌅\n# nota <script> &copy;","color":"blue","style":"sticky"})).unwrap();
     e.request(json!({"op":"organize","edition":"KJV","book":0,"chapter":0,"verse":0,"folder":"Studio","tags":["speranza"]})).unwrap();
     e.request(json!({"op":"mark","edition":"KJV","book":0,"chapter":0,"verse":0,"start":0,"length":2,"action":"underline"})).unwrap();
     e.request(json!({"op":"reading","action":"create","edition":"KJV","title":"Lettura","start":"2026-10-29","daily":2,"book":0})).unwrap();
@@ -921,6 +921,7 @@ fn portable_backup_restore_is_atomic_and_keeps_a_safety_copy() {
     assert!(
         md.contains("Perché Ω 🌅")
             && md.contains("\\# nota \\<script\\>")
+            && md.contains("\\&copy;")
             && md.contains("Studio")
             && md.contains("Post\\-it")
     );
@@ -930,6 +931,7 @@ fn portable_backup_restore_is_atomic_and_keeps_a_safety_copy() {
         )
         .is_err()
     );
+    assert!(e.request(json!({"op":"transfer","action":"check_destination","path":source.path().join("BIBLE.SQLITE3")})).is_err());
     let mut destination = Engine::open(target.path()).unwrap();
     destination.request(json!({"op":"note","edition":"KJV","book":0,"chapter":0,"verse":1,"text":"Originale","color":"yellow","style":"plain"})).unwrap();
     std::fs::write(target.path().join("reader.json"), "stale").unwrap();

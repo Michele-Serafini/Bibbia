@@ -70,6 +70,10 @@ impl Ui {
                 && let Some(ui) = weak.upgrade()
                 && let Some(path) = chooser.file().and_then(|f| f.path())
             {
+                let mut path = path;
+                if action != "restore" && path.extension().is_none() {
+                    path.set_extension(ext);
+                }
                 let u = ui.clone();
                 ui.launch(async move { u.perform_transfer(action, path).await });
             }
@@ -121,6 +125,11 @@ impl Ui {
             });
             dialog.present();
             return Ok(());
+        }
+        if action == "pdf" {
+            self.core
+                .call(json!({"op":"transfer","action":"check_destination","path":path}))
+                .await?;
         }
         let busy = adw::MessageDialog::new(
             Some(&self.transfer_parent()),

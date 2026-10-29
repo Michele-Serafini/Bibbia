@@ -45,6 +45,7 @@ struct TransferView:View {
             if action=="backup" {try await store.createBackup(to:url)}
             else if action=="markdown" {_ = try await store.exportNotes(to:url,markdown:true)}
             else {
+                try await store.validateExportDestination(url)
                 let text=FileManager.default.temporaryDirectory.appendingPathComponent("bibbia-export-\(UUID().uuidString).txt")
                 defer{try? FileManager.default.removeItem(at:text)}
                 _ = try await store.exportNotes(to:text,markdown:false)
