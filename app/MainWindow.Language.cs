@@ -108,6 +108,7 @@ public sealed partial class MainWindow
         : T(section switch {"search"=>"Trova le parole.","saved"=>"Portale con te.","settings"=>"Come piace a te.","plans"=>N("Piani di lettura","Reading plans"),_=>"Leggi con calma."});
     private void ApplyLanguage()
     {
+        RelabelTransfer();
         for (int i=0;i<3;i++) ((NavigationViewItem)Navigation.MenuItems[i]).Content = T(new[]{"Leggi","Cerca","La mia raccolta"}[i]);
         ((NavigationViewItem)Navigation.FooterMenuItems[0]).Content = T("Aspetto e traduzioni");
         if(Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i=>i.Tag as string=="plans") is {} plansNav)plansNav.Content=N("Piani di lettura","Reading plans");

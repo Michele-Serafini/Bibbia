@@ -22,6 +22,7 @@ def prepare(destination):
     notices = destination / 'Notices'
     corpora.mkdir(parents=True, exist_ok=True)
     notices.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(ROOT / 'core/data/backup-validation.sql', corpora / 'backup-validation.sql')
     editions = []
     for file, name, language, canon in EDITIONS:
         raw = (ROOT / 'core/data' / f'{file}.json').read_bytes()

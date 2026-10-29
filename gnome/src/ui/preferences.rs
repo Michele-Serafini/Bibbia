@@ -157,6 +157,9 @@ impl Ui {
         let weak = self.weak();
         let privacy=adw::PreferencesGroup::builder().title(self.t("Sul tuo dispositivo","On your device")).description(self.t("Note, segnalibri e posizione sono salvati localmente. Nessun account o tracciamento. Il testo CEI è per uso formativo e didattico non commerciale.","Notes, bookmarks and reading position stay on your device. No account or tracking. CEI text is for educational noncommercial use.")).build();
         page.add(&privacy);
+        let transfers=adw::PreferencesGroup::builder().title(self.t("Esportazione e backup","Export and backup")).description(self.t("Tutti gli appunti in PDF o Markdown. Un unico backup trasferisce dati, traduzioni importate e piani tra Windows, Linux e macOS.","Export all annotations as PDF or Markdown. One backup transfers data, imported editions and plans between Windows, Linux and macOS.")).build();
+        self.transfer_controls(&transfers);
+        page.add(&transfers);
         let cei = gtk::LinkButton::with_label(
             "https://www.bibbiaedu.it/site/twig/templates/v3/html/notelegali/",
             "CEI 2008 · BibbiaEDU",

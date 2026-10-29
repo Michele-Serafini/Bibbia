@@ -9,6 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 scripts/check-versions.py
+      - run: python3 -m pip install --break-system-packages pypdf==6.10.0
       - run: swift --version
       - run: python3 scripts/prepare-macos.py
       - name: Test the pure Swift engine and SQLite compatibility
@@ -42,6 +43,7 @@ jobs:
         with:
           name: Bibbia-macOS-Universal
           path: artifacts/macos/
+      - run: python3 -m pip install --break-system-packages pypdf==6.10.0
       - name: Verify and exercise the same Universal DMG on Intel
         run: python3 scripts/test-macos.py --dmg "artifacts/macos/Bibbia-$(cat VERSION)-universal.dmg"
       - uses: actions/upload-artifact@v4

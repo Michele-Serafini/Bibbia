@@ -20,6 +20,7 @@ final class AppModel: ObservableObject {
     @Published var organizingNote: Hit?
     @Published var showCollections = false
     @Published var showReadingPlans = false
+    @Published var showTransfer = false
     @Published var editingNote: Hit?
     private var savedTask: Task<Void,Never>?
     private var savedGeneration = 0
@@ -60,7 +61,7 @@ final class AppModel: ObservableObject {
             directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("Bibbia", isDirectory: true)
         }
-        if let data = try? Data(contentsOf: directory.appendingPathComponent("reader.json")),
+        if !FileManager.default.fileExists(atPath:directory.appendingPathComponent("pending-restore.sqlite3").path), let data = try? Data(contentsOf: directory.appendingPathComponent("reader.json")),
            let place = try? JSONDecoder().decode(ReaderPlace.self, from: data) { bookMode = place.bookMode }
     }
 

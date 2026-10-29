@@ -9,11 +9,13 @@ enum SQLValue {
 
 /// Confined to BibleStore's actor. Prepared statements are reused and finalized on close.
 final class Database {
-    private var handle: OpaquePointer?
+    var handle: OpaquePointer?
     private var statements: [String: OpaquePointer] = [:]
     private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+    let directory:URL
     init(directory: URL) throws {
+        self.directory=directory
         let fm = FileManager.default
         if !fm.fileExists(atPath: directory.path) {
             try fm.createDirectory(at: directory, withIntermediateDirectories: true,
@@ -28,6 +30,7 @@ final class Database {
         }
         if !existed { try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path) }
         sqlite3_busy_timeout(handle, 3000)
+        try applyPendingRestore()
         try executeBatch("""
             PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-1024;
             CREATE TABLE IF NOT EXISTS annotations (

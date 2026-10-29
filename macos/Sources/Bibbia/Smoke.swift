@@ -28,6 +28,11 @@ extension AppModel {
             guard directory.lastPathComponent.hasPrefix("bibbia-macos-smoke-"),
                   FileManager.default.fileExists(atPath: directory.appendingPathComponent(".bibbia-test-fixture").path),
                   let store else { throw BibleError.invalid("UI tests require a marked isolated --data-dir") }
+            let exportText=directory.appendingPathComponent("pdf-fixture.txt")
+            try (0..<360).map{String(format:"Riga %03d · perché · Ω · luce 🌅\n",$0)}.joined().write(to:exportText,atomically:true,encoding:.utf8)
+            try NotesPDF.write(text:exportText,to:directory.appendingPathComponent("notes.pdf"))
+            _ = try await store.exportNotes(to:directory.appendingPathComponent("notes.md"),markdown:true)
+            try await store.createBackup(to:directory.appendingPathComponent("fixture.bibbia-backup"))
             let readingID=try await store.createReadingPlan(title:"Native calendar",edition:position.edition,start:ReadingDates.key(Date()),daily:2,book:0)
             showReadingPlans=true
             try await Task.sleep(for:.milliseconds(400))

@@ -44,6 +44,7 @@ struct MainView: View {
             ToolbarItem {
                 Menu {
                     Button(model.t("Importa traduzione…", "Import edition…")) { model.importEdition() }
+                    Button(model.t("Esportazione e backup…","Export and backup…")){model.showTransfer=true}
                     Button(model.t("Mostra cartella degli appunti", "Show notes folder")) { NSWorkspace.shared.open(model.directory) }
                     Divider()
                     Button(model.t("Testi e licenze…", "Texts and licenses…")) { model.showNotices = true }
@@ -57,6 +58,7 @@ struct MainView: View {
         } message: { Text(model.error ?? "") }
         .sheet(isPresented: $model.showNotices) { NoticesView(model: model) }
         .sheet(item: $model.organizingNote) { hit in NoteOrganizationSheet(model: model, hit: hit) }
+        .sheet(isPresented: $model.showTransfer){TransferView(model:model)}
         .sheet(isPresented: $model.showReadingPlans) { ReadingPlansView(model:model) }
         .sheet(item: $model.editingNote) { hit in SavedNoteEditor(model:model,hit:hit) }
         .sheet(isPresented: $model.showCollections) { NoteCollectionsSheet(model: model) }

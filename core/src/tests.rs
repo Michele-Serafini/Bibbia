@@ -898,3 +898,92 @@ fn reading_calendar_progress_and_colored_notes_survive_reopen() {
         0
     );
 }
+
+#[test]
+fn portable_backup_restore_is_atomic_and_keeps_a_safety_copy() {
+    let source = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let output = tempfile::tempdir().unwrap();
+    let backup = output.path().join("Appunti perché.bibbia-backup");
+    let mut e = Engine::open(source.path()).unwrap();
+    e.request(json!({"op":"note","edition":"KJV","book":0,"chapter":0,"verse":0,"text":"Perché Ω 🌅\n# nota <script>","color":"blue","style":"sticky"})).unwrap();
+    e.request(json!({"op":"organize","edition":"KJV","book":0,"chapter":0,"verse":0,"folder":"Studio","tags":["speranza"]})).unwrap();
+    e.request(json!({"op":"mark","edition":"KJV","book":0,"chapter":0,"verse":0,"start":0,"length":2,"action":"underline"})).unwrap();
+    e.request(json!({"op":"reading","action":"create","edition":"KJV","title":"Lettura","start":"2026-10-29","daily":2,"book":0})).unwrap();
+    e.request(json!({"op":"reading","action":"complete","id":1,"index":0,"complete":true}))
+        .unwrap();
+    e.request(json!({"op":"transfer","action":"backup","path":backup}))
+        .unwrap();
+    let markdown = output.path().join("note.md");
+    e.request(json!({"op":"export","format":"markdown","path":markdown}))
+        .unwrap();
+    let md = std::fs::read_to_string(&markdown).unwrap();
+    assert!(
+        md.contains("Perché Ω 🌅")
+            && md.contains("\\# nota \\<script\\>")
+            && md.contains("Studio")
+            && md.contains("Post\\-it")
+    );
+    assert!(
+        e.request(
+            json!({"op":"export","format":"markdown","path":source.path().join("bible.sqlite3")})
+        )
+        .is_err()
+    );
+    let mut destination = Engine::open(target.path()).unwrap();
+    destination.request(json!({"op":"note","edition":"KJV","book":0,"chapter":0,"verse":1,"text":"Originale","color":"yellow","style":"plain"})).unwrap();
+    std::fs::write(target.path().join("reader.json"), "stale").unwrap();
+    assert_eq!(
+        destination
+            .request(json!({"op":"transfer","action":"inspect","path":backup}))
+            .unwrap()["annotations"],
+        1
+    );
+    destination
+        .request(json!({"op":"transfer","action":"restore","path":backup}))
+        .unwrap();
+    assert_eq!(
+        destination
+            .request(json!({"op":"saved","edition":"KJV"}))
+            .unwrap()[0]["annotation"]["note"],
+        "Originale"
+    );
+    drop(destination);
+    let mut destination = Engine::open(target.path()).unwrap();
+    let rows = destination
+        .request(json!({"op":"saved","edition":"KJV"}))
+        .unwrap();
+    assert_eq!(rows[0]["annotation"]["noteColor"], "blue");
+    assert_eq!(rows[0]["organization"]["folder"], "Studio");
+    assert_eq!(rows[0]["annotation"]["ranges"][0]["length"], 2);
+    assert_eq!(destination.request(json!({"op":"reading","action":"detail","id":1,"from":"2026-10-29","selected":"2026-10-29"})).unwrap()["completed"],1);
+    assert!(!target.path().join("reader.json").exists());
+    assert!(!target.path().join("pending-restore.sqlite3").exists());
+    let safety = std::fs::read_dir(target.path())
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .find(|p| p.extension().is_some_and(|e| e == "bibbia-backup"))
+        .unwrap();
+    let (old, _) = transfer::test_inspect(&safety).unwrap();
+    assert!(
+        old.query_row("SELECT payload FROM annotations", [], |r| r
+            .get::<_, String>(0))
+            .unwrap()
+            .contains("Originale")
+    );
+    std::fs::write(&backup, b"not a backup").unwrap();
+    assert!(
+        destination
+            .request(json!({"op":"transfer","action":"restore","path":backup}))
+            .is_err()
+    );
+    assert_eq!(
+        destination
+            .request(json!({"op":"saved","edition":"KJV"}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}

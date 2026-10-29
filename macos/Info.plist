@@ -6,8 +6,8 @@
   <key>CFBundleDisplayName</key><string>Bibbia</string>
   <key>CFBundleExecutable</key><string>Bibbia</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.11.0</string>
-  <key>CFBundleVersion</key><string>11</string>
+  <key>CFBundleShortVersionString</key><string>0.12.0</string>
+  <key>CFBundleVersion</key><string>12</string>
   <key>CFBundleIconFile</key><string>Bibbia</string>
   <key>CFBundleDevelopmentRegion</key><string>it</string>
   <key>CFBundleLocalizations</key><array><string>it</string><string>en</string></array>

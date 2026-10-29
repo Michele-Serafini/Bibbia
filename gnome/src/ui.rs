@@ -23,6 +23,7 @@ pub mod performance;
 mod preferences;
 mod reading;
 pub mod smoke;
+mod transfer;
 
 pub const APP_ID: &str = "io.github.MicheleSerafini.Bibbia";
 const CEI: &str = "CEI 2008 · © 2008–2024 Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena. Uso formativo e didattico non commerciale · BibbiaEDU. Ester: G = greco, E = ebraico.";
@@ -404,7 +405,8 @@ impl Ui {
             directory: directory.clone(),
             ..Default::default()
         };
-        if let Ok(data) = std::fs::read(directory.join("reader.json"))
+        if !directory.join("pending-restore.sqlite3").exists()
+            && let Ok(data) = std::fs::read(directory.join("reader.json"))
             && let Ok(place) = serde_json::from_slice(&data)
         {
             pager.place = place;

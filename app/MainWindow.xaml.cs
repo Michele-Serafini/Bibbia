@@ -61,6 +61,7 @@ public sealed partial class MainWindow : Window
         InitializeBookMotion();
         InitializeOrganization();
         InitializeReadingPlans();
+        InitializeTransfer();
         InitializeBookPagination();
         ConfigureWindowCaption();
         Navigation.IsEnabled = false;
@@ -145,6 +146,7 @@ public sealed partial class MainWindow : Window
             ready = true;
             LoadChapter(currentVerse);
             Navigation.IsEnabled = true;
+            await TransferSmoke();
             if(PerformanceProfile() is {} profile)_=GuardAsync(async()=>{
                 try {await RunPerformance(profile);}catch(Exception error){File.WriteAllText(Path.Combine(profile,"error.txt"),error.ToString());Close();}
             });

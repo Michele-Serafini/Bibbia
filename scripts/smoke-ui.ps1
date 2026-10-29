@@ -141,10 +141,21 @@ function Check-TitleTheme([int]$expected) {
     } while ([DateTime]::UtcNow -lt $deadline)
     throw "Caption appearance does not follow the theme: dark=$expected, brightness=$brightness caption=$caption surface=$surface"
 }
+$transferFixture = Join-Path ([IO.Path]::GetTempPath()) ('bibbia-transfer-' + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $transferFixture | Out-Null
+Set-Content (Join-Path $transferFixture '.bibbia-transfer-fixture') 'owned disposable fixture'
+$env:BIBBIA_TRANSFER_SMOKE_DIR = $transferFixture
 $env:BIBBIA_UI_DIAGNOSTICS = '1'
 $env:BIBBIA_UI_TEST_MOTION = '1'
 $process = Start-Process (Resolve-Path $Executable).Path -PassThru
 try {
+    $pdfDeadline = [DateTime]::UtcNow.AddSeconds(45)
+    while (-not (Test-Path (Join-Path $transferFixture 'passed.txt')) -and [DateTime]::UtcNow -lt $pdfDeadline) { Start-Sleep -Milliseconds 200 }
+    if (-not (Test-Path (Join-Path $transferFixture 'passed.txt'))) { throw 'Native PDF export fixture failed.' }
+    python "$PSScriptRoot/check-export-pdf.py" (Join-Path $transferFixture 'notes.pdf')
+    if ($LASTEXITCODE -ne 0) { throw 'PDF content validation failed.' }
+    New-Item (Join-Path $PSScriptRoot '../artifacts/diagnostics') -ItemType Directory -Force | Out-Null
+    Copy-Item (Join-Path $transferFixture 'notes.pdf') (Join-Path $PSScriptRoot '../artifacts/diagnostics/notes-export.pdf') -Force
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
     do {
         $process.Refresh()

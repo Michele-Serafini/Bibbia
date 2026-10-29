@@ -203,6 +203,24 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
     ui.core
         .call(json!({"op":"reading","action":"delete","id":plan}))
         .await?;
+    let output = ui.pager.borrow().directory.clone();
+    let text = output.join("pdf-fixture.txt");
+    std::fs::write(
+        &text,
+        (0..360)
+            .map(|i| format!("Riga {i:03} · perché · Ω · luce 🌅\n"))
+            .collect::<String>(),
+    )
+    .map_err(|e| e.to_string())?;
+    super::transfer::write_pdf(&text, &output.join("notes.pdf"))?;
+    ui.core
+        .call(json!({"op":"export","format":"markdown","path":output.join("notes.md")}))
+        .await?;
+    ui.core
+        .call(
+            json!({"op":"transfer","action":"backup","path":output.join("fixture.bibbia-backup")}),
+        )
+        .await?;
     ui.set_book_mode(false);
     glib::timeout_future(Duration::from_millis(400)).await;
     check(

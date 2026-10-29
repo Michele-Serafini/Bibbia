@@ -281,3 +281,47 @@ private struct Fixture {
     #expect(try ReadingDates.day("2024-03-01")-ReadingDates.day("2024-02-28")==2)
     #expect(throws: BibleError.self){try ReadingDates.day("2023-02-29")}
 }
+
+@Test func portableBackupRestoresAllPersonalDataAndKeepsSafetyCopy() async throws {
+    let f=try Fixture();defer{f.cleanup()}
+    let position=Position(edition:"KJV")
+    _ = try await f.store.writeNote("Perché Ω 🌅\n# nota <script>",color:"blue",style:"sticky",at:position)
+    _ = try await f.store.organize(position,folder:"Studio",tags:["speranza"])
+    _ = try await f.store.mark(position,selection:[SelectedSpan(verse:0,start:0,length:2)],action:"underline")
+    let id=try await f.store.createReadingPlan(title:"Lettura",edition:"KJV",start:"2026-10-29",daily:2,book:0)
+    try await f.store.completeReadingChapter(id,index:0,complete:true)
+    let archive=f.directory.appendingPathComponent("Perché.bibbia-backup")
+    try await f.store.createBackup(to:archive)
+    #expect(try await f.store.inspectBackup(archive).annotations==1)
+    let markdown=f.directory.appendingPathComponent("note.md");_ = try await f.store.exportNotes(to:markdown,markdown:true)
+    let text=try String(contentsOf:markdown,encoding:.utf8);#expect(text.contains("Perché Ω 🌅") && text.contains("\\# nota \\<script\\>") && text.contains("Studio"))
+    let target=try Fixture();defer{target.cleanup()}
+    _ = try await target.store.writeNote("Originale",color:nil,style:"plain",at:position)
+    try Data("stale".utf8).write(to:target.directory.appendingPathComponent("reader.json"))
+    _ = try await target.store.restoreBackup(archive)
+    #expect(try await target.store.saved(edition:"KJV")[0].annotation.note=="Originale")
+    let restored=try BibleStore(directory:target.directory)
+    let notes=try await restored.saved(edition:"KJV")
+    #expect(notes.count==1 && notes[0].annotation.noteColor=="blue" && notes[0].organization.folder=="Studio" && notes[0].annotation.ranges[0].length==2)
+    #expect(try await restored.readingDetail(id,from:"2026-10-29",selected:"2026-10-29").completed==1)
+    let safety=try #require(FileManager.default.contentsOfDirectory(at:target.directory,includingPropertiesForKeys:nil).first{$0.pathExtension=="bibbia-backup"})
+    #expect(try await restored.inspectBackup(safety).annotations==1)
+    #expect(!FileManager.default.fileExists(atPath:target.directory.appendingPathComponent("reader.json").path))
+    try Data("bad".utf8).write(to:archive)
+    await #expect(throws:BibleError.self){try await restored.restoreBackup(archive)}
+}
+
+@Test func crossEnginePortableBackupFixture() async throws {
+    guard let path=ProcessInfo.processInfo.environment["BIBBIA_TRANSFER_COMPAT_DIR"] else{return}
+    let root=URL(fileURLWithPath:path,isDirectory:true)
+    guard root.lastPathComponent.hasPrefix("bibbia-transfer-"),FileManager.default.fileExists(atPath:root.appendingPathComponent(".bibbia-transfer-fixture").path) else{throw BibleError.invalid("An owned fixture directory is required")}
+    let target=root.appendingPathComponent("swift-destination",isDirectory:true)
+    let old=try BibleStore(directory:target)
+    _ = try await old.restoreBackup(root.appendingPathComponent("rust.bibbia-backup"))
+    let restored=try BibleStore(directory:target)
+    let notes=try await restored.saved(edition:"Traduzione personale")
+    #expect(notes.count==1 && notes[0].annotation.note=="Perché Ω 🌅" && notes[0].annotation.noteColor=="blue")
+    #expect(notes[0].organization.folder=="Studio" && notes[0].annotation.ranges[0].start==5 && notes[0].annotation.ranges[0].length==2 && notes[0].annotation.bookmark)
+    _ = try await restored.writeNote("Aggiornata Swift 🌅",color:"green",style:"sticky",at:notes[0].position)
+    try await restored.createBackup(to:root.appendingPathComponent("swift.bibbia-backup"))
+}

@@ -14,6 +14,7 @@ import shutil
 import sqlite3
 import stat
 import subprocess
+import sys
 import tempfile
 import tomllib
 
@@ -52,6 +53,8 @@ def native_ui(prefix, work, name):
     binary = prefix / 'bin/bibbia'
     with (OUT / f'{name}-smoke.log').open('w') as log:
         run(binary, '--smoke-test', '--data-dir', data, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=90)
+    run(sys.executable, ROOT / 'scripts/check-export-pdf.py', data / 'notes.pdf')
+    shutil.copyfile(data / 'notes.pdf', OUT / 'notes-export.pdf')
     with (OUT / f'{name}-reopen.log').open('w') as log:
         run(binary, '--smoke-reopen', '--data-dir', data, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=45)
     # Reopen the actual closed database independently of the GUI/worker.

@@ -29,7 +29,7 @@ final class BookPager {
     func configure(_ surface: BookSurface, _ primary: ReadingTextView, _ model: AppModel, target: Int?) {
         self.surface = surface; self.model = model; model.readingSurface = surface
         if !loaded {
-            if let data = try? Data(contentsOf: model.directory.appendingPathComponent("reader.json")),
+            if !FileManager.default.fileExists(atPath:model.directory.appendingPathComponent("pending-restore.sqlite3").path), let data = try? Data(contentsOf: model.directory.appendingPathComponent("reader.json")),
                let value = try? JSONDecoder().decode(ReaderPlace.self, from: data) { place = value }
             loaded = true
         }

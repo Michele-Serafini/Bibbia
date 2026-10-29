@@ -15,6 +15,7 @@ mod corpus;
 mod organization;
 mod reading;
 mod selection;
+mod transfer;
 use corpus::{BookRef, Chapter, Edition};
 use selection::TextMark;
 #[cfg(test)]
@@ -49,6 +50,7 @@ pub struct Annotation {
 }
 
 pub struct Engine {
+    directory: std::path::PathBuf,
     db: Connection,
     editions: BTreeMap<String, Edition>,
 }
@@ -71,7 +73,8 @@ fn index(v: &Value, name: &str) -> Result<usize> {
 impl Engine {
     pub fn open(directory: &Path) -> Result<Self> {
         std::fs::create_dir_all(directory).map_err(error)?;
-        let db = Connection::open(directory.join("bible.sqlite3")).map_err(error)?;
+        let mut db = Connection::open(directory.join("bible.sqlite3")).map_err(error)?;
+        transfer::apply_pending(&mut db, directory)?;
         db.execute_batch(
             "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-1024;
             CREATE TABLE IF NOT EXISTS annotations (
@@ -165,7 +168,11 @@ impl Engine {
                 editions.insert(id, Edition::imported(count));
             }
         }
-        Ok(Self { db, editions })
+        Ok(Self {
+            directory: directory.into(),
+            db,
+            editions,
+        })
     }
 
     fn save_annotation(
@@ -459,6 +466,8 @@ impl Engine {
                 self.save_annotation(edition, book, chapter, verse, &annotation)?;
                 Ok(json!(annotation))
             }
+            "transfer" => self.transfer(&request),
+            "export" => self.export_notes(&request),
             "reading" => self.reading(&request),
             "note" => self.write_note(&request,edition),
             "saved" => self.saved_notes(&request,edition),

@@ -10,6 +10,7 @@ import shutil
 import sqlite3
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -125,6 +126,8 @@ def exercise(app):
             ui_process(binary, profile, '--ui-smoke', 'ui.log', 60)
         finally:
             print((DIAGNOSTICS / 'ui.log').read_text())
+            run(sys.executable, ROOT / 'scripts/check-export-pdf.py', profile / 'notes.pdf')
+            shutil.copyfile(profile / 'notes.pdf', DIAGNOSTICS / 'notes-export.pdf')
             for screenshot in (profile / 'screenshots').glob('*.png'):
                 shutil.copyfile(screenshot, DIAGNOSTICS / screenshot.name)
         assert (profile / 'ui-passed.txt').exists()

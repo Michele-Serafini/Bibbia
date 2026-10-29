@@ -36,7 +36,7 @@ public sealed partial class MainWindow
         }
     }
     private void InitializeBookPagination() {
-        try { readerPlace=JsonSerializer.Deserialize<ReaderPlace>(File.ReadAllText(Path.Combine(dataDirectory,"reader.json")),
+        try { if(!File.Exists(Path.Combine(dataDirectory,"pending-restore.sqlite3")))readerPlace=JsonSerializer.Deserialize<ReaderPlace>(File.ReadAllText(Path.Combine(dataDirectory,"reader.json")),
             new JsonSerializerOptions{PropertyNameCaseInsensitive=true})??new(); } catch(IOException){} catch(JsonException){}
         bookMode=readerPlace.BookMode; BookModeToggle.IsChecked=bookMode;
         VerseRight.ItemTemplate=VerseList.ItemTemplate;
