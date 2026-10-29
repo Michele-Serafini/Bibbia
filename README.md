@@ -413,8 +413,8 @@ seconda pagina soltanto quando serve e riusa l'impaginazione. Le annotazioni
 macOS aggiornano soltanto i versetti cambiati. L'indice delle corrispondenze
 comune ai motori occupa 20 KB invece di 146 KB, senza perdere riferimenti.
 
-Rapporti grezzi della 0.11.0: [Windows](docs/performance/v0.11.0-windows.json),
-[Linux](docs/performance/v0.11.0-linux.json), [macOS](docs/performance/v0.11.0-macos.json).
+Rapporti grezzi della 0.12.0: [Windows](docs/performance/v0.12.0-windows.json),
+[Linux](docs/performance/v0.12.0-linux.json), [macOS](docs/performance/v0.12.0-macos.json).
 Riguardano la normale lettura e il confronto delle traduzioni; non misurano il costo delle schermate del calendario aperte.
 
 Le pipeline native eseguono anche un confronto A/B con la 0.9.0, compilata sulla
