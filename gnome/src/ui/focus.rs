@@ -3,6 +3,12 @@ use super::*;
 impl Ui {
     pub(super) fn connect_focus(self: &Rc<Self>, app: &adw::Application) {
         let weak = self.weak();
+        adw::StyleManager::default().connect_high_contrast_notify(move |_| {
+            if let Some(ui) = weak.upgrade() {
+                ui.apply_reading_theme();
+            }
+        });
+        let weak = self.weak();
         self.focus.connect_toggled(move |button| {
             if let Some(ui) = weak.upgrade() {
                 ui.set_focus(button.is_active());

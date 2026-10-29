@@ -11,7 +11,7 @@ public sealed partial class MainWindow
 {
     private string readingTheme="Default";
     private int readingMargin=24;
-    private bool focusMode,applyingFocus,focusApplied;
+    private bool focusMode,applyingFocus,focusApplied,paneBeforeFocus;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? marginTimer;
     private readonly global::Windows.UI.ViewManagement.AccessibilitySettings accessibilitySettings=new();
     private bool IsHighContrast=>accessibilitySettings.HighContrast;
@@ -63,9 +63,11 @@ public sealed partial class MainWindow
         try {
             FocusToggle.IsChecked=FocusSetting.IsOn=focusMode;
             var active=focusMode&&section=="read";
+            if(active&&!focusApplied)paneBeforeFocus=Navigation.IsPaneOpen;
+            var leaving=focusApplied&&!active;
             focusApplied=active;
             Navigation.IsPaneVisible=!active;Navigation.IsPaneToggleButtonVisible=!active;
-            if(active)Navigation.IsPaneOpen=false;
+            if(active)Navigation.IsPaneOpen=false;else if(leaving)Navigation.IsPaneOpen=paneBeforeFocus;
             ReaderHeading.Visibility=ReaderControls.Visibility=ReaderFooter.Visibility=active?Visibility.Collapsed:Visibility.Visible;
             FocusBar.Visibility=active?Visibility.Visible:Visibility.Collapsed;
             // The CEI copyright remains available while concentrating.
