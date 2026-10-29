@@ -116,7 +116,7 @@ struct NoteCollectionsSheet: View {
     }
 }
 
-func noteTint(_ color:String?) -> Color { Color(nsColor:ReadingTextView.highlightColor(color ?? "yellow") ?? .systemYellow) }
+@MainActor func noteTint(_ color:String?) -> Color { Color(nsColor:ReadingTextView.highlightColor(color ?? "yellow") ?? .systemYellow) }
 struct SavedNoteEditor: View {
     @ObservedObject var model:AppModel
     let hit:Hit

@@ -47,7 +47,7 @@ public sealed partial class MainWindow {
     }
     private async Task LoadReadingDetail(){
         var generation=++readingGeneration;planChapters.Children.Clear();
-        if(readingPlanPicker.SelectedItem is not PlanChoice p){planSummary.Text=N("Crea un piano per iniziare.","Create a plan to start.");planProgress.Value=0;return;}
+        if(readingPlanPicker.SelectedItem is not PlanChoice p){completedPlanDays.Clear();foreach(var day in Descendants<CalendarViewDayItem>(planCalendar))day.SetDensityColors(Array.Empty<global::Windows.UI.Color>());planSummary.Text=N("Crea un piano per iniziare.","Create a plan to start.");planProgress.Value=0;return;}
         var date=planDay;var first=new DateTimeOffset(date.Year,date.Month,1,0,0,0,date.Offset);
         var detail=await Task.Run(()=>BibleEngine.Call(new{op="reading",action="detail",id=p.Id,from=first.ToString("yyyy-MM-dd"),selected=date.ToString("yyyy-MM-dd")}));if(closed||section!="plans"||generation!=readingGeneration)return;
         var total=detail.GetProperty("total").GetInt32();var done=detail.GetProperty("completed").GetInt32();planProgress.Value=100.0*done/Math.Max(1,total);
