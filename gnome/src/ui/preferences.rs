@@ -209,6 +209,8 @@ impl Ui {
         let prefs_window = window.downgrade();
         let theme_row = theme.clone();
         let font_row = size.clone();
+        let margin_row = margins.clone();
+        let focus_preference = focus_row.clone();
         let filter_row = filter.clone();
         let edition_row = edition.clone();
         language.connect_selected_notify(move |row| {
@@ -233,6 +235,9 @@ impl Ui {
                 row.set_title(&ui.t("Lingua dell’app", "App language"));
                 theme_row.set_title(&ui.t("Tema", "Theme"));
                 font_row.set_title(&ui.t("Dimensione del testo", "Text size"));
+                margin_row.set_title(&ui.t("Margini della pagina", "Page margins"));
+                focus_preference.set_title(&ui.t("Modalità concentrazione", "Focus mode"));
+                focus_preference.set_subtitle(&ui.t("Nascondi gli strumenti · Ctrl+Shift+F · Esc per uscire", "Hide tools · Ctrl+Shift+F · Esc to leave"));
                 filter_row.set_title(&ui.t("Lingua della Bibbia", "Bible language"));
                 edition_row.set_title(&ui.t("Traduzione", "Translation"));
                 if let Some(window) = prefs_window.upgrade() {

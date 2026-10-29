@@ -305,16 +305,13 @@ impl Ui {
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root.append(&header);
         let toast = adw::ToastOverlay::new();
-        let reading_overlay = gtk::Overlay::new();
-        reading_overlay.set_child(Some(&stack));
         let focus_bar = gtk::Box::new(gtk::Orientation::Horizontal, 4);
         focus_bar.add_css_class("focus-tools");
         focus_bar.set_halign(gtk::Align::End);
         focus_bar.set_valign(gtk::Align::End);
         margin(&focus_bar, 14);
         focus_bar.set_visible(false);
-        reading_overlay.add_overlay(&focus_bar);
-        toast.set_child(Some(&reading_overlay));
+        toast.set_child(Some(&stack));
         toast.set_vexpand(true);
         root.append(&toast);
         let switcher = adw::ViewSwitcherBar::builder().stack(&stack).build();
@@ -506,6 +503,7 @@ impl Ui {
                 .child(&footer)
                 .build(),
         );
+        read.append(&focus_bar);
         let attribution = gtk::Label::builder()
             .wrap(true)
             .css_classes(["caption", "dim-label"])

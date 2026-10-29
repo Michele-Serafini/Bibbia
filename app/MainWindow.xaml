@@ -118,6 +118,11 @@
                             <Button x:Name="PreviousButton" AutomationProperties.AutomationId="PreviousChapter" Grid.Row="1" Content="← Precedente" Click="PreviousClick" HorizontalAlignment="Left" />
                             <Button x:Name="NextButton" AutomationProperties.AutomationId="NextChapter" Grid.Row="1" Content="Successivo →" Click="NextClick" HorizontalAlignment="Right" />
                         </Grid>
+                <StackPanel x:Name="FocusBar" Grid.Row="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Visibility="Collapsed" Background="{ThemeResource BookPaperBrush}" CornerRadius="16" Padding="4" Margin="8">
+                    <Button x:Name="FocusPrevious" Content="←" Click="PreviousClick" />
+                    <Button x:Name="FocusNext" Content="→" Click="NextClick" />
+                    <Button x:Name="FocusExit" Content="✕" Click="FocusExitClick" AutomationProperties.AutomationId="FocusExit" />
+                </StackPanel>
                     </Grid>
                     <Grid x:Name="ResultsPanel" Visibility="Collapsed" RowSpacing="16">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
@@ -173,11 +178,7 @@
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
-                <StackPanel x:Name="FocusBar" Grid.Row="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Visibility="Collapsed" Background="{ThemeResource BookPaperBrush}" CornerRadius="16" Padding="4" Margin="8">
-                    <Button x:Name="FocusPrevious" Content="←" Click="PreviousClick" />
-                    <Button x:Name="FocusNext" Content="→" Click="NextClick" />
-                    <Button x:Name="FocusExit" Content="✕" Click="FocusExitClick" AutomationProperties.AutomationId="FocusExit" />
-                </StackPanel>
+
                 <TextBlock x:Name="StatusLabel" Grid.Row="3" FontSize="12" Text="Caricamento della Bibbia…" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </Grid>
         </NavigationView>

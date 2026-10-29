@@ -21,7 +21,8 @@ public sealed class VerseRow : System.ComponentModel.INotifyPropertyChanged
     private JsonElement annotation;
     public Visibility NoteVisibility => Annotation.TryGetProperty("note",out var note) && note.GetString() is {Length:>0} ? Visibility.Visible : Visibility.Collapsed;
     public string NoteHint => NoteVisibility==Visibility.Visible ? NoteLabel + " · " + Annotation.GetProperty("note").GetString()![..Math.Min(120,Annotation.GetProperty("note").GetString()!.Length)] : NoteLabel;
-    public string NoteLabel {get;set;}="Apri nota";
+    private string noteLabel="Apri nota";
+    public string NoteLabel {get=>noteLabel;set{if(noteLabel==value)return;noteLabel=value;PropertyChanged?.Invoke(this,new(nameof(NoteHint)));}}
     public string NoteId => $"VerseNote_{Index}";
     public int Index { get; init; }
     public required string Number { get; init; }

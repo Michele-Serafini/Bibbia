@@ -196,6 +196,13 @@ struct MainView: View {
                 Text(model.t("Seleziona una frase per annotarla", "Select a phrase to annotate it"))
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24).padding(.vertical, 10)
             }
+                if model.preferences.focusMode {
+                    HStack(spacing: 10) {
+                        Button { model.step(-1) } label: { Image(systemName:"chevron.left") }.help(model.t("Pagina precedente","Previous page"))
+                        Button { model.step(1) } label: { Image(systemName:"chevron.right") }.help(model.t("Pagina successiva","Next page"))
+                        Button { model.toggleFocus() } label: { Image(systemName:"xmark") }.help(model.t("Esci dalla concentrazione · Esc","Leave focus · Esc")).keyboardShortcut(.cancelAction)
+                    }.buttonStyle(.borderless).padding(10).background(Color(nsColor:model.windowColor),in:Capsule()).padding(.horizontal,22).padding(.vertical,8).frame(maxWidth:.infinity,alignment:.trailing)
+                }
             if model.position.edition == "CEI 2008" || (model.comparing && model.preferences.comparisonEdition == "CEI 2008") {
                 Button { model.showNotices = true } label: {
                     Text("CEI 2008 · © Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena · " + model.t("uso didattico non commerciale", "non-commercial educational use"))
@@ -214,15 +221,7 @@ struct MainView: View {
             .padding(.horizontal, 20).padding(.vertical, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: model.windowColor))
-            .overlay(alignment: .bottomTrailing) {
-                if model.preferences.focusMode {
-                    HStack(spacing: 10) {
-                        Button { model.step(-1) } label: { Image(systemName:"chevron.left") }.help(model.t("Pagina precedente","Previous page"))
-                        Button { model.step(1) } label: { Image(systemName:"chevron.right") }.help(model.t("Pagina successiva","Next page"))
-                        Button { model.toggleFocus() } label: { Image(systemName:"xmark") }.help(model.t("Esci dalla concentrazione · Esc","Leave focus · Esc")).keyboardShortcut(.cancelAction)
-                    }.buttonStyle(.borderless).padding(10).background(Color(nsColor:model.windowColor),in:Capsule()).padding(22)
-                }
-            }
+
     }
 }
 

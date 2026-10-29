@@ -141,9 +141,9 @@ extension AppModel {
             note("Nota macOS 😀", at: position)
             try await waitUntil { self.verses.first?.annotation.note == "Nota macOS 😀" }
             try await Task.sleep(for:.milliseconds(150))
-            let marker=text.readingLayout.spans[0].location-String(verses[0].label).utf16.count-3
-            try check(text.textStorage?.attribute(.link,at:marker,effectiveRange:nil) != nil,"Persistent note marker is a native accessible link")
-            try check(text.textView(text,clickedOnLink:"bibbia-note:0",at:marker),"Note marker resolves its verse")
+            let noteMarker=text.readingLayout.spans[0].location-String(verses[0].label).utf16.count-3
+            try check(text.textStorage?.attribute(.link,at:noteMarker,effectiveRange:nil) != nil,"Persistent note marker is a native accessible link")
+            try check(text.textView(text,clickedOnLink:"bibbia-note:0",at:noteMarker),"Note marker resolves its verse")
             try check(text.annotationPopover?.isShown == true,"Note marker reopens the compact note editor")
             text.closePopover()
             preferences.theme="Sepia";preferences.readingMargin=64;preferencesChanged()
