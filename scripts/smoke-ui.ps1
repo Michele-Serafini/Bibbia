@@ -289,7 +289,10 @@ try {
     Wait-Control $window 'PlanCalendar' | Out-Null
     Invoke-Control (Wait-Control $window 'NewPlan')
     Invoke-Control (Wait-Control $window 'CreatePlan' -Popup)
-    Wait-Text (Wait-Control $window 'PlanSummary') '0/' | Out-Null
+    $planSummary = Wait-Control $window 'PlanSummary'
+    $planDeadline = [DateTime]::UtcNow.AddSeconds(20)
+    while (-not $planSummary.Current.Name.Contains('0/') -and [DateTime]::UtcNow -lt $planDeadline) { Start-Sleep -Milliseconds 200 }
+    if (-not $planSummary.Current.Name.Contains('0/')) { throw 'New plan did not show zero completed chapters.' }
     Wait-Text $window 'Genesi 1' | Out-Null
     Save-WindowImage 'windows-plans.png'
     Select-Page 'SavedNavigation'
