@@ -81,6 +81,7 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
 
     func configureForReading() {
         delegate = self
+        linkTextAttributes=[.underlineStyle:NSUnderlineStyle.single.rawValue]
         isEditable = false; isSelectable = true; isRichText = true
         importsGraphics = false; allowsUndo = false
         isAutomaticLinkDetectionEnabled = false
@@ -130,10 +131,7 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
                     applyAnnotation(verse.annotation,to:storage,range:span,text:verse.text,dark:dark)
                     let notePrefix=index==0 ? 0:NSMaxRange(readingLayout.spans[index-1])+1
                     applyNoteIndicator(verse.annotation,to:storage,at:notePrefix+1,index:index)
-                    if annotations[index].bookmark != verse.annotation.bookmark {
-                        let prefix=index==0 ? 0:NSMaxRange(readingLayout.spans[index-1])+1
-                        storage.replaceCharacters(in:NSRange(location:prefix,length:1),with:verse.annotation.bookmark ? "★":" ")
-                    }
+                    applyBookmarkIndicator(verse.annotation,to:storage,at:notePrefix,index:index)
                 }
                 storage.endEditing()
             }
@@ -149,9 +147,10 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
         readingLayout = ReadingLayout(verses: model.verses)
         let paragraph = NSMutableParagraphStyle()
         let numberFont = NSFont.monospacedDigitSystemFont(ofSize: CGFloat(size) * 0.56, weight: .medium)
-        let widestLabel = model.verses.map { "★✎ \($0.label)" as NSString }
+        let widestLabel = model.verses.map { " \($0.label)" as NSString }
             .map { $0.size(withAttributes: [.font: numberFont]).width }.max() ?? 24
-        let gutter = ceil(widestLabel + 12)
+        let icons=("★✎" as NSString).size(withAttributes:[.font:markerFont]).width
+        let gutter = ceil(widestLabel + icons + 12)
         paragraph.headIndent = gutter; paragraph.firstLineHeadIndent = 0
         paragraph.tabStops = [NSTextTab(textAlignment: .left, location: gutter)]
         paragraph.defaultTabInterval = gutter
@@ -166,6 +165,7 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
             let prefixStart = index == 0 ? 0 : NSMaxRange(readingLayout.spans[index - 1]) + 1
             content.addAttributes([.font: numberFont, .foregroundColor: NSColor.secondaryLabelColor],
                                   range: NSRange(location: prefixStart, length: span.location - prefixStart))
+            applyBookmarkIndicator(verse.annotation,to:content,at:prefixStart,index:index)
             applyNoteIndicator(verse.annotation,to:content,at:prefixStart+1,index:index)
             applyAnnotation(verse.annotation,to:content,range:span,text:verse.text,dark:dark)
         }
@@ -189,22 +189,40 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
         setAccessibilityLabel(model.t("Testo del capitolo", "Chapter text"))
     }
 
+    private var markerFont:NSFont { .systemFont(ofSize:max(14,CGFloat(size)*0.78),weight:.semibold) }
     private func applyNoteIndicator(_ annotation: Annotation, to content: NSMutableAttributedString, at location: Int, index: Int) {
         let range=NSRange(location:location,length:1)
         content.replaceCharacters(in:range,with:annotation.note.isEmpty ? " " : "✎")
         content.removeAttribute(.link,range:range); content.removeAttribute(.toolTip,range:range)
+        content.addAttributes([.font:markerFont,.foregroundColor:NSColor.labelColor],range:range)
         if !annotation.note.isEmpty {
             content.addAttributes([.link:"bibbia-note:\(index)", .toolTip:(model?.t("Apri nota", "Open note") ?? "Note")+" · "+String(annotation.note.prefix(120))],range:range)
         }
     }
     func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
         let value=(link as? URL)?.absoluteString ?? (link as? String) ?? ""
-        guard value.hasPrefix("bibbia-note:"),let index=Int(value.dropFirst("bibbia-note:".count)),let model,model.verses.indices.contains(index),!model.verses[index].annotation.note.isEmpty else { return false }
+        let bookmark=value.hasPrefix("bibbia-bookmark:")
+        let prefix=bookmark ? "bibbia-bookmark:":"bibbia-note:"
+        guard value.hasPrefix(prefix),let index=Int(value.dropFirst(prefix.count)),let model,model.verses.indices.contains(index),bookmark ? model.verses[index].annotation.bookmark : !model.verses[index].annotation.note.isEmpty else { return false }
         capturedSelection=[];capturedPosition=model.position;capturedPosition.verse=index
-        model.selectedVerse(index);setSelectedRange(NSRange(location:charIndex,length:0));showNote();return true
+        model.selectedVerse(index);setSelectedRange(NSRange(location:charIndex,length:0))
+        if bookmark {showBookmark()}else{showNote()};return true
     }
 
+    private func applyBookmarkIndicator(_ annotation:Annotation,to content:NSMutableAttributedString,at location:Int,index:Int){
+        let range=NSRange(location:location,length:1)
+        content.replaceCharacters(in:range,with:annotation.bookmark ? "★":" ")
+        content.removeAttribute(.link,range:range);content.removeAttribute(.toolTip,range:range)
+        content.addAttributes([.font:markerFont,.foregroundColor:NSColor.controlAccentColor],range:range)
+        if annotation.bookmark {content.addAttributes([.link:"bibbia-bookmark:\(index)",.toolTip:model?.t("Segnalibro salvato · premi per gestirlo","Saved bookmark · click to manage") ?? "Bookmark"],range:range)}
+    }
+    private func showBookmark(){
+        guard let model else{return};let target=capturedPosition;closePopover()
+        let popover=NSPopover();popover.behavior = .semitransient;popover.contentViewController=NSHostingController(rootView:BookmarkActions(model:model,target:target,close:{[weak self] in self?.closePopover()}));popover.contentSize=NSSize(width:280,height:116);annotationPopover=popover
+        popover.show(relativeTo:selectionAnchor(),of:self,preferredEdge:.maxY)
+    }
     private func applyAnnotation(_ annotation:Annotation,to content:NSMutableAttributedString,range:NSRange,text:String,dark:Bool) {
+        if !annotation.note.isEmpty {content.addAttribute(.backgroundColor,value:(Self.highlightColor(annotation.noteColor ?? "yellow") ?? .systemYellow).withAlphaComponent(dark ? 0.13:0.10),range:range)}
         func highlight(_ name:String,_ span:NSRange){if let color=Self.highlightColor(name){content.addAttributes([.backgroundColor:color.withAlphaComponent(dark ? 0.28:0.35),.foregroundColor:NSColor.textColor],range:span)}}
         if annotation.underline{content.addAttribute(.underlineStyle,value:NSUnderlineStyle.single.rawValue,range:range)}
         if let color=annotation.highlight{highlight(color,range)}
@@ -280,7 +298,7 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
         closePopover()
         let popover = NSPopover()
         popover.behavior = .semitransient; popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let toolbar = SelectionToolbar(model: model, mark: { [weak self] in self?.performAnnotation($0) },
+        let toolbar = SelectionToolbar(model: model, bookmarked:model.verses[capturedPosition.verse].annotation.bookmark, mark: { [weak self] in self?.performAnnotation($0) },
                                        bookmark: { [weak self] in self?.performBookmark() },
                                        note: { [weak self] in self?.showNote() },
                                        copy: { [weak self] in self?.copy(nil); self?.closePopover() })
@@ -321,7 +339,7 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
             model:model, text: value, color:annotation.noteColor ?? "yellow", style:annotation.noteStyle ?? "plain", title: model.t("Nota", "Note"), saveTitle: model.t("Salva", "Save"),
             cancelTitle: model.t("Annulla", "Cancel"),
             save: { [weak self, weak model] text,color,style in
-                Task { do {if let verses=try await model?.store?.writeNote(text,color:color,style:style,at:target){model?.apply(verses,at:target)}}catch{model?.error=error.localizedDescription} }; self?.closePopover() },
+                Task { do {if let verses=try await model?.store?.writeNote(text,color:color,style:style,at:target){model?.apply(verses,at:target);model?.announceAnnotation(text.isEmpty ? model?.t("Nota rimossa.","Note removed.") ?? "" : model?.t("Nota salvata · Premi la matita accanto al versetto per riaprirla.","Note saved · Click the pencil beside the verse to reopen it.") ?? "")}}catch{model?.error=error.localizedDescription} }; self?.closePopover() },
             cancel: { [weak self] in self?.closePopover() }))
         popover.contentSize = NSSize(width: 380, height: 240)
         annotationPopover = popover
@@ -333,6 +351,7 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
 
 private struct SelectionToolbar: View {
     @ObservedObject var model: AppModel
+    let bookmarked:Bool
     let mark: (String) -> Void
     let bookmark: () -> Void
     let note: () -> Void
@@ -347,7 +366,7 @@ private struct SelectionToolbar: View {
             }
             Divider().frame(height: 20)
             Button { mark("underline") } label: { Image(systemName: "underline") }.help(model.t("Sottolinea", "Underline"))
-            Button(action: bookmark) { Image(systemName: "bookmark") }.help(model.t("Segnalibro", "Bookmark"))
+            Button(action: bookmark) { Image(systemName: bookmarked ? "bookmark.fill":"bookmark") }.help(bookmarked ? model.t("Rimuovi segnalibro", "Remove bookmark") : model.t("Aggiungi segnalibro", "Add bookmark"))
             Button(action: note) { Image(systemName: "square.and.pencil") }.help(model.t("Nota", "Note"))
             Button(action: copy) { Image(systemName: "doc.on.doc") }.help(model.t("Copia", "Copy"))
             Button { mark("clear") } label: { Image(systemName: "eraser") }.help(model.t("Rimuovi segni", "Clear marks"))

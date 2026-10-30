@@ -14,6 +14,7 @@ struct ReadingPlansView: View {
     @State private var title = ""
     @State private var error = ""
     @State private var deleting = false
+    @State private var exporting=false
     private var calendar: Calendar { Calendar.current }
     private var first: Date { calendar.date(from:calendar.dateComponents([.year,.month],from:date))! }
     private var calendarStart:Date { let offset=(calendar.component(.weekday,from:first)+5)%7;return calendar.date(byAdding:.day,value:-offset,to:first)! }
@@ -23,6 +24,7 @@ struct ReadingPlansView: View {
             detail=selected==0 ? nil:try await store.readingDetail(selected,from:ReadingDates.key(calendarStart),selected:ReadingDates.key(date));error=""
         } catch {self.error=error.localizedDescription}
     }
+    private func exportCalendar(save:Bool){let id=selected;exporting=true;Task{do{try await model.importPlanCalendar(id,save:save)}catch{self.error=error.localizedDescription};exporting=false}}
     var body: some View {
         ScrollView { VStack(alignment:.leading,spacing:14) {
             HStack { Text(model.t("Piani di lettura","Reading plans")).font(.title2.bold());Spacer();Button(model.t("Chiudi","Close")){dismiss()} }
@@ -37,6 +39,12 @@ struct ReadingPlansView: View {
                     Button(model.t("Riprendi","Resume")) { Task { do {if let p=try await model.store?.resumeReadingPlan(selected){model.navigate(p);dismiss()}}catch{self.error=error.localizedDescription} } }.accessibilityIdentifier("resumePlan")
                     Button(role:.destructive){deleting=true}label:{Image(systemName:"trash")}
                 }
+                HStack {
+                    Button(model.t("Apri nel calendario di sistema","Open in system calendar")){exportCalendar(save:false)}.accessibilityIdentifier("openPlanCalendar")
+                    Button(model.t("Salva calendario .ics…","Save calendar .ics…")){exportCalendar(save:true)}.accessibilityIdentifier("savePlanCalendar")
+                    if exporting {ProgressView().controlSize(.small)}
+                }.disabled(exporting)
+                Text(model.t("Conferma l’importazione nella tua app calendario. È una copia del piano con i progressi attuali; puoi importarla di nuovo quando il piano cambia.","Confirm the import in your calendar app. This is a snapshot of the plan and current progress; import it again when the plan changes.")).font(.caption).foregroundStyle(.secondary)
                 ProgressView(value:Double(detail.completed),total:Double(max(1,detail.total)))
                 HStack { Button{date=calendar.date(byAdding:.month,value:-1,to:date)!}label:{Image(systemName:"chevron.left")};Spacer();Text(first,format:.dateTime.month(.wide).year());Spacer();Button{date=calendar.date(byAdding:.month,value:1,to:date)!}label:{Image(systemName:"chevron.right")} }
                 LazyVGrid(columns:Array(repeating:GridItem(.flexible()),count:7),spacing:5){

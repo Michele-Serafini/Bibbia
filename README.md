@@ -1,7 +1,7 @@
 # Bibbia per Windows, GNOME e macOS
 
-**Versione 0.13.0 su Windows, Linux e macOS**, pubblicata in un’unica release.
-Modalità concentrazione, margini regolabili, carta seppia e indicatori cliccabili delle note. Piani di lettura, appunti organizzati, PDF/Markdown e backup trasferibili restano disponibili offline.
+**Versione 0.14.0 su Windows, Linux e macOS**, pubblicata in un’unica release.
+Note e segnalibri più riconoscibili, eliminazione selettiva da Organizza e importazione dei piani nel calendario di sistema. Lettura, appunti, PDF/Markdown e backup restano disponibili offline.
 
 Lettura su una superficie carta con margini, dorso e ombre; al cambio di capitolo
 l’angolo superiore si solleva e la piega scende diagonalmente, trascinando
@@ -10,10 +10,10 @@ accompagnano la curvatura.
 La modalità Libro impagina anche i capitoli lunghi e il testo conserva selezione e annotazioni native.
 Le preferenze di sistema per ridurre le animazioni sono rispettate.
 
-[EXE Windows](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.13.0/Bibbia-Setup-0.13.0-x64.exe) ·
-[DEB Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.13.0/bibbia_0.13.0-1_amd64.deb) ·
-[RPM Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.13.0/bibbia-0.13.0-1.x86_64.rpm) ·
-[DMG macOS Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.13.0/Bibbia-0.13.0-universal.dmg).
+[EXE Windows](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/Bibbia-Setup-0.14.0-x64.exe) ·
+[DEB Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/bibbia_0.14.0-1_amd64.deb) ·
+[RPM Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/bibbia-0.14.0-1.x86_64.rpm) ·
+[DMG macOS Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/Bibbia-0.14.0-universal.dmg).
 
 macOS è sviluppato interamente in **Swift**, motore compreso, con **SwiftUI e AppKit**.
 Usa gli strumenti e i font Apple di sistema e il disegno serif per la lettura.
@@ -69,6 +69,20 @@ Su Windows aprire **Aspetto e traduzioni**, su GNOME le **Preferenze**, su macOS
 
 PDF/Markdown sono documenti da consultare o condividere; per conservare e trasferire tutti i dati usare il backup.
 
+## Segnalibri e appunti visibili
+
+Un **segnalibro** conserva un versetto per riaprirlo in seguito: se ne possono salvare più di uno.
+Selezionare il versetto e scegliere **Aggiungi segnalibro**; compare subito una stella accanto al numero,
+anche in concentrazione. Premere la stella per gestirlo oppure aprire **Segnalibri** dalla navigazione
+Windows o dal pulsante nella barra GNOME/macOS. La lista riguarda la traduzione aperta e riapre il riferimento
+esatto. **Rimuovi segnalibro** conserva nota, sottolineature e colori.
+
+Le note hanno un richiamo più grande e una tinta leggera sul paragrafo; Windows mostra anche la parola **Nota**.
+Il riepilogo del capitolo conta note, segnalibri e segni. Un breve messaggio conferma il salvataggio.
+In **Organizza** sono disponibili **Elimina solo la nota…** e **Elimina tutti gli appunti del versetto…**:
+la conferma chiarisce cosa verrà rimosso. La prima scelta conserva segnalibro e segni; la seconda rimuove
+anche la cartella e le etichette assegnate al versetto. Le raccolte e gli altri versetti restano disponibili.
+
 ## Piani di lettura
 
 Aprire **Piani di lettura** dalla navigazione Windows/GNOME o dal pulsante calendario nella barra macOS.
@@ -81,6 +95,13 @@ ed evidenzia i giorni completati. Una spunta si può togliere. **Leggi** apre il
 il proprio punto di ripresa: gli altri mantengono il loro. Alla riapertura l'app ripristina
 l'ultima lettura. I dati restano offline in SQLite e i calendari si costruiscono quando servono.
 Eliminare un piano rimuove i suoi progressi, conservando tutti gli appunti sui versetti.
+
+**Apri nel calendario di sistema** prepara un file `.ics` e lo apre nell'app associata dal sistema:
+confermare lì l'importazione nel calendario desiderato. **Salva calendario .ics…** permette di scegliere
+il file da importare anche se non c'è un'app associata. Sono eventi giornalieri con capitoli e progressi
+al momento dell'esportazione, senza bloccare la disponibilità della giornata. L'importazione è una copia;
+le modifiche successive richiedono una nuova importazione. Nessun account o servizio di sincronizzazione
+è necessario nell'app Bibbia. I testi dei versetti e le note personali non vengono inclusi nel calendario.
 
 ## Appunti organizzati
 
@@ -183,13 +204,13 @@ testi e lo stesso schema delle annotazioni; si può trasferire un backup a app c
 
 Pacchetti **x86-64** per Debian 12+, Ubuntu 24.04+ e Fedora 43+:
 
-- [bibbia_0.13.0-1_amd64.deb](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.13.0/bibbia_0.13.0-1_amd64.deb)
-- [bibbia-0.13.0-1.x86_64.rpm](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.13.0/bibbia-0.13.0-1.x86_64.rpm)
+- [bibbia_0.14.0-1_amd64.deb](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/bibbia_0.14.0-1_amd64.deb)
+- [bibbia-0.14.0-1.x86_64.rpm](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/bibbia-0.14.0-1.x86_64.rpm)
 
 ```sh
-sudo apt install ./bibbia_0.13.0-1_amd64.deb
+sudo apt install ./bibbia_0.14.0-1_amd64.deb
 # Su Fedora:
-sudo dnf install ./bibbia-0.13.0-1.x86_64.rpm
+sudo dnf install ./bibbia-0.14.0-1.x86_64.rpm
 ```
 
 Aprire **Bibbia** dal menu delle applicazioni oppure eseguire `bibbia`.
@@ -213,7 +234,7 @@ sono piccoli popover nativi.
 
 ## Installare su Windows
 
-[Scarica **Bibbia-Setup-0.13.0-x64.exe**](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.13.0/Bibbia-Setup-0.13.0-x64.exe): un solo installer offline,
+[Scarica **Bibbia-Setup-0.14.0-x64.exe**](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/Bibbia-Setup-0.14.0-x64.exe): un solo installer offline,
 con interfaccia italiana. Non richiede Rust, .NET, Visual Studio, account o
 download aggiuntivi sul PC destinatario. Supporta Windows 10 versione 2004 o
 successiva e Windows 11 a 64 bit.
@@ -224,7 +245,7 @@ successiva e Windows 11 a 64 bit.
 4. Per rimuovere l'app usare **Impostazioni Windows → App → Bibbia → Disinstalla**.
    Note, segnalibri e traduzioni importate vengono conservati.
 
-La [release v0.13.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.13.0)
+La [release v0.14.0](https://github.com/Michele-Serafini/Bibbia/releases/tag/v0.14.0)
 contiene l'installer e il checksum SHA-256. Per le nuove build il workflow
 GitHub Actions **Check and build** produce anche l'artefatto **Bibbia-Installer-x64**.
 Il workflow manuale **Publish verified packages** richiede due build riuscite,
@@ -274,7 +295,7 @@ tutti i prerequisiti, dalla radice del repository:
 pwsh -File ./scripts/package.ps1
 ```
 
-Il risultato è `artifacts/installer/Bibbia-Setup-0.13.0-x64.exe`, con un file
+Il risultato è `artifacts/installer/Bibbia-Setup-0.14.0-x64.exe`, con un file
 `.sha256` accanto. Il flag `-SkipBuild` riutilizza una pubblicazione già completata.
 La cartella `artifacts/Bibbia/` viene sempre rigenerata da una pubblicazione pulita,
 per evitare di includere file rimasti da vecchie build.
@@ -287,7 +308,7 @@ Su un runner Windows pulito, per provare installazione, aggiornamento, interfacc
 reale, blocco con app aperta, disinstallazione e conservazione dei dati:
 
 ```powershell
-pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.13.0-x64.exe
+pwsh -File ./scripts/test-installer.ps1 -Installer ./artifacts/installer/Bibbia-Setup-0.14.0-x64.exe
 ```
 
 Il test rifiuta di avviarsi se trova dati o un'installazione Bibbia preesistenti.

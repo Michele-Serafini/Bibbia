@@ -177,8 +177,10 @@ impl Ui {
                             .iter()
                             .enumerate()
                             .find(|(i, span)| {
-                                iter.offset() == span.prefix + 1
-                                    && !s.verses[*i].annotation.note.is_empty()
+                                (iter.offset() == span.prefix + 1
+                                    && !s.verses[*i].annotation.note.is_empty())
+                                    || (iter.offset() == span.prefix
+                                        && s.verses[*i].annotation.bookmark)
                             })
                             .map(|(i, _)| i)
                     };
@@ -190,7 +192,12 @@ impl Ui {
                         drop(s);
                         view.buffer().place_cursor(&iter);
                         click.set_state(gtk::EventSequenceState::Claimed);
-                        ui.show_note();
+                        let bookmark = iter.offset() == ui.state.borrow().spans[index].prefix;
+                        if bookmark {
+                            ui.show_bookmark(index);
+                        } else {
+                            ui.show_note();
+                        }
                     }
                 }
             }

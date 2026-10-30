@@ -47,6 +47,8 @@ pub struct Hit {
     pub organization: serde_json::Value,
     #[serde(skip)]
     pub organize_label: String,
+    #[serde(skip)]
+    pub annotation_summary: String,
 }
 #[derive(Clone, Debug)]
 pub struct Span {

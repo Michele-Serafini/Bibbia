@@ -127,6 +127,8 @@ def exercise(app):
         finally:
             print((DIAGNOSTICS / 'ui.log').read_text())
             run(sys.executable, ROOT / 'scripts/check-export-pdf.py', profile / 'notes.pdf')
+            run(sys.executable, ROOT / 'scripts/check-export-calendar.py', profile / 'plan.ics')
+            shutil.copyfile(profile / 'plan.ics', DIAGNOSTICS / 'reading-plan.ics')
             shutil.copyfile(profile / 'notes.pdf', DIAGNOSTICS / 'notes-export.pdf')
             for screenshot in (profile / 'screenshots').glob('*.png'):
                 shutil.copyfile(screenshot, DIAGNOSTICS / screenshot.name)

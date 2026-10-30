@@ -176,8 +176,10 @@ public actor BibleStore {
 
     public func toggleBookmark(at position: Position) throws -> [Verse] {
         _ = try corpus(position.edition).verse(position.book, position.chapter, position.verse)
-        var value = try annotation(position); value.bookmark.toggle()
-        try save(value, at: position)
+        try database.transaction {
+            var value = try annotation(position); value.bookmark.toggle()
+            try save(value, at: position)
+        }
         return try chapter(position)
     }
 

@@ -196,6 +196,21 @@ impl Ui {
         page.append(&summary);
         page.append(&progress);
         page.append(&actions);
+        let export_actions = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+        let system_calendar = gtk::Button::with_label(
+            &self.t("Apri nel calendario di sistema", "Open in system calendar"),
+        );
+        system_calendar.set_widget_name("open-plan-calendar");
+        let save_calendar =
+            gtk::Button::with_label(&self.t("Salva calendario .ics…", "Save calendar .ics…"));
+        save_calendar.set_widget_name("save-plan-calendar");
+        export_actions.append(&system_calendar);
+        export_actions.append(&save_calendar);
+        page.append(&export_actions);
+        let explanation=gtk::Label::new(Some(&self.t("Conferma l’importazione nella tua app calendario. È una copia del piano con i progressi attuali; puoi importarla di nuovo quando il piano cambia.","Confirm the import in your calendar app. This is a snapshot of the plan and current progress; import it again when the plan changes.")));
+        explanation.set_wrap(true);
+        explanation.add_css_class("dim-label");
+        page.append(&explanation);
         page.append(&calendar);
         page.append(&rows);
         let help=gtk::Label::new(Some(&self.t("Il punto di lettura si salva automaticamente. Segna i capitoli letti per aggiornare i progressi. I giorni completati sono marcati nel calendario.","Your reading position is saved automatically. Mark finished chapters to update progress. Completed days are marked in the calendar.")));
@@ -212,6 +227,22 @@ impl Ui {
             ids: RefCell::new(Vec::new()),
             blocked: Cell::new(false),
             generation: Cell::new(0),
+        });
+        let this = p.clone();
+        system_calendar.connect_clicked(move |_| {
+            if let Some(id) = this.selected()
+                && let Some(ui) = this.ui.upgrade()
+            {
+                ui.plan_calendar(id, false);
+            }
+        });
+        let this = p.clone();
+        save_calendar.connect_clicked(move |_| {
+            if let Some(id) = this.selected()
+                && let Some(ui) = this.ui.upgrade()
+            {
+                ui.plan_calendar(id, true);
+            }
         });
         let weak = Rc::downgrade(&p);
         p.picker.connect_selected_notify(move |_| {

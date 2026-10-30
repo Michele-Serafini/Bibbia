@@ -1035,3 +1035,97 @@ fn reading_appearance_is_validated_persistent_and_portable() {
     assert_eq!(boot["settings"]["readingMargin"], 64);
     assert_eq!(boot["settings"]["focusMode"], true);
 }
+
+#[test]
+fn selective_annotation_removal_preserves_other_data_and_rolls_back_failures() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    e.request(json!({"op":"note","edition":"KJV","book":0,"chapter":0,"verse":0,"text":"Luce 🌅","color":"pink","style":"sticky"})).unwrap();
+    e.request(json!({"op":"mark","edition":"KJV","book":0,"chapter":0,"verse":0,"start":0,"length":2,"action":"underline"})).unwrap();
+    e.request(json!({"op":"bookmark","edition":"KJV","book":0,"chapter":0,"verse":0}))
+        .unwrap();
+    e.request(json!({"op":"organize","edition":"KJV","book":0,"chapter":0,"verse":0,"folder":"Studio","tags":["luce"]})).unwrap();
+    let a=e.request(json!({"op":"delete_annotation","kind":"note","edition":"KJV","book":0,"chapter":0,"verse":0})).unwrap();
+    assert_eq!(a["note"], "");
+    assert_eq!(a["bookmark"], true);
+    assert_eq!(a["ranges"][0]["length"], 2);
+    assert!(a.get("noteColor").is_none());
+    e.db.execute_batch("CREATE TRIGGER deny_remove BEFORE DELETE ON annotations BEGIN SELECT RAISE(ABORT,'keep data'); END;").unwrap();
+    assert!(e.request(json!({"op":"delete_annotation","kind":"all","edition":"KJV","book":0,"chapter":0,"verse":0})).is_err());
+    let row = e.request(json!({"op":"saved","edition":"KJV"})).unwrap();
+    assert_eq!(row[0]["organization"]["folder"], "Studio");
+    assert_eq!(row[0]["annotation"], a);
+    e.db.execute_batch("DROP TRIGGER deny_remove;").unwrap();
+    assert!(e.request(json!({"op":"delete_annotation","kind":"invalid","edition":"KJV","book":0,"chapter":0,"verse":0})).is_err());
+    e.request(json!({"op":"delete_annotation","kind":"marks","edition":"KJV","book":0,"chapter":0,"verse":0})).unwrap();
+    let a = e
+        .request(json!({"op":"bookmark","edition":"KJV","book":0,"chapter":0,"verse":0}))
+        .unwrap();
+    assert_eq!(a["bookmark"], false);
+    assert_eq!(
+        e.request(json!({"op":"saved","edition":"KJV"})).unwrap(),
+        json!([])
+    );
+    assert_eq!(
+        e.db.query_row("SELECT count(*) FROM note_organization", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+}
+
+#[test]
+fn calendar_snapshots_have_stable_ids_utf8_folding_and_civil_dates() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path()).unwrap();
+    let path = dir.path().join("Piano Ω.ics");
+    let id=e.request(json!({"op":"reading","action":"create","edition":"KJV","book":0,"title":"Lettura 🌅 Ω, speranza; \\ domani\nBEGIN:VEVENT","start":"2028-02-28","daily":1})).unwrap();
+    assert_eq!(
+        e.request(json!({"op":"reading","action":"calendar","id":id,"path":path,"language":"it"}))
+            .unwrap()["events"],
+        50
+    );
+    let bytes = std::fs::read(&path).unwrap();
+    let text = std::str::from_utf8(&bytes).unwrap();
+    assert!(text.ends_with("END:VCALENDAR\r\n"));
+    assert!(text.split("\r\n").all(|line| line.len() <= 75));
+    let unfolded = text.replace("\r\n ", "");
+    assert_eq!(
+        unfolded
+            .split("\r\n")
+            .filter(|line| *line == "BEGIN:VEVENT")
+            .count(),
+        50
+    );
+    for date in ["20280228", "20280229", "20280301", "20280326", "20280327"] {
+        assert!(unfolded.contains(&format!("DTSTART;VALUE=DATE:{date}\r\n")));
+    }
+    assert!(unfolded.contains("\\, speranza\\;") && unfolded.contains("\\nBEGIN:VEVENT"));
+    let ids: Vec<_> = unfolded
+        .lines()
+        .filter(|l| l.starts_with("UID:"))
+        .map(str::to_owned)
+        .collect();
+    e.request(json!({"op":"reading","action":"complete","id":id,"index":0,"complete":true}))
+        .unwrap();
+    e.request(json!({"op":"reading","action":"calendar","id":id,"path":path,"language":"en"}))
+        .unwrap();
+    let second = std::fs::read_to_string(&path).unwrap().replace("\r\n ", "");
+    assert_eq!(
+        ids,
+        second
+            .lines()
+            .filter(|l| l.starts_with("UID:"))
+            .collect::<Vec<_>>()
+    );
+    assert!(second.contains("Completed: 1/1"));
+    assert!(e.request(json!({"op":"reading","action":"calendar","id":id,"path":dir.path().join("bible.sqlite3")})).is_err());
+    assert!(
+        e.request(json!({"op":"reading","action":"calendar","id":99999,"path":path}))
+            .is_err()
+    );
+    assert_eq!(
+        std::fs::read_to_string(path).unwrap().replace("\r\n ", ""),
+        second
+    );
+}

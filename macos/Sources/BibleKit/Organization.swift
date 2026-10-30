@@ -80,3 +80,21 @@ extension BibleStore {
         return result
     }
 }
+
+extension BibleStore {
+    public func deleteAnnotation(at position:Position,kind:String) throws -> [Verse] {
+        _ = try corpus(position.edition).verse(position.book,position.chapter,position.verse)
+        try database.transaction {
+            var a=try annotation(position)
+            switch kind {
+            case "note":a.note="";a.noteColor=nil;a.noteStyle=nil
+            case "marks":a.highlight=nil;a.underline=false;a.ranges=[]
+            case "bookmark":a.bookmark=false
+            case "all":a=Annotation()
+            default:throw BibleError.invalid("Tipo appunto non valido / Invalid annotation kind")
+            }
+            try save(a,at:position)
+        }
+        return try chapter(position)
+    }
+}

@@ -23,7 +23,7 @@
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Leggi" Tag="read" AutomationProperties.AutomationId="ReadNavigation" Icon="Read" IsSelected="True" />
                 <NavigationViewItem Content="Cerca" Tag="search" Icon="Find" AutomationProperties.AutomationId="SearchNavigation" />
-                <NavigationViewItem Content="La mia raccolta" AutomationProperties.AutomationId="SavedNavigation" Tag="saved" Icon="Bookmarks" />
+                <NavigationViewItem Content="La mia raccolta" AutomationProperties.AutomationId="SavedNavigation" Tag="saved" Icon="Edit" />
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem Content="Aspetto e traduzioni" Tag="settings" AutomationProperties.AutomationId="SettingsNavigation" Icon="Setting" />
@@ -67,13 +67,16 @@
                             <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" /><Setter Property="MinHeight" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="BorderThickness" Value="0" /></Style></ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:VerseRow">
-                                    <Border Padding="12,8" Margin="0,3" CornerRadius="6">
+                                    <Border Padding="12,8" Margin="0,3" CornerRadius="6" Background="{x:Bind NoteBackground, Mode=OneWay}" BorderBrush="{x:Bind AnnotationAccent, Mode=OneWay}" BorderThickness="3,0,0,0">
                                         <Grid ColumnSpacing="10">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="32" /></Grid.ColumnDefinitions>
-                                            <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{x:Bind Number}" FontSize="12" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <Button Content="★" FontSize="17" Padding="0" MinWidth="24" MinHeight="26" Visibility="{x:Bind BookmarkVisibility, Mode=OneWay}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="{x:Bind BookmarkHint, Mode=OneWay}" AutomationProperties.Name="{x:Bind BookmarkHint, Mode=OneWay}" AutomationProperties.AutomationId="{x:Bind BookmarkId}" Click="BookmarkIndicatorClick" />
+                                            </StackPanel>
                                             <RichTextBlock Grid.Column="1" Loaded="VerseEditorLoaded" Unloaded="VerseEditorUnloaded" DataContextChanged="VerseEditorDataContextChanged" SelectionChanged="VerseSelectionChanged"
                                                 IsTextSelectionEnabled="True" FontFamily="{StaticResource ReadingFontFamily}" FontSize="{x:Bind TextSize}" TextWrapping="Wrap" Padding="0" />
-                                            <Button Grid.Column="2" Content="✎" Visibility="{x:Bind NoteVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.Name="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.AutomationId="{x:Bind NoteId}" Click="NoteIndicatorClick" Padding="5" MinWidth="28" VerticalAlignment="Top" Background="Transparent" BorderThickness="0" />
+                                            <Button Grid.Column="2" Content="{x:Bind NoteBadge, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Visibility="{x:Bind NoteVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.Name="{x:Bind NoteHint, Mode=OneWay}" AutomationProperties.AutomationId="{x:Bind NoteId}" Click="NoteIndicatorClick" Padding="5" MinWidth="28" VerticalAlignment="Top" Background="Transparent" BorderThickness="0" />
                                             <Button Grid.Column="3" Content="⋯" Visibility="{x:Bind MenuVisibility, Mode=OneWay}" Tag="{x:Bind Index}" Click="VerseMenuClick" VerticalAlignment="Top" AutomationProperties.AutomationId="{x:Bind MenuId}"
                                                 Padding="6" MinWidth="28" Background="Transparent" BorderThickness="0" />
                                         </Grid>
@@ -182,5 +185,8 @@
                 <TextBlock x:Name="StatusLabel" Grid.Row="3" FontSize="12" Text="Caricamento della Bibbia…" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </Grid>
         </NavigationView>
+        <Border x:Name="AnnotationToast" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="20" Padding="14,9" CornerRadius="9" Background="{ThemeResource BookPaperBrush}" BorderBrush="{ThemeResource BookEdgeBrush}" BorderThickness="1" Visibility="Collapsed" IsHitTestVisible="False">
+            <TextBlock x:Name="AnnotationToastText" MaxWidth="420" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        </Border>
     </Grid>
 </Window>

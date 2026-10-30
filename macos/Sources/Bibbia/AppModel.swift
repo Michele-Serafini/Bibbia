@@ -29,6 +29,8 @@ final class AppModel: ObservableObject {
     @Published var loading = true
     @Published var searching = false
     @Published var error: String?
+    @Published var annotationFeedback=""
+    var feedbackTask:Task<Void,Never>?
     @Published var revision = 0
     @Published var scrollTarget: Int?
     @Published var showNotices = false
@@ -210,7 +212,7 @@ final class AppModel: ObservableObject {
     func mark(_ selection: [SelectedSpan], action: String, at target: Position) {
         guard let store else { return }
         Task {
-            do { apply(try await store.mark(target, selection: selection, action: action), at: target) }
+            do { apply(try await store.mark(target, selection: selection, action: action), at: target);announceAnnotation(t("Annotazione salvata · La ritrovi negli appunti.","Annotation saved · Find it in your collection.")) }
             catch { self.error = error.localizedDescription }
         }
     }
@@ -218,7 +220,7 @@ final class AppModel: ObservableObject {
     func bookmark(at target: Position) {
         guard let store else { return }
         Task {
-            do { apply(try await store.toggleBookmark(at: target), at: target) }
+            do { let verses=try await store.toggleBookmark(at:target);apply(verses,at:target);announceAnnotation(verses[target.verse].annotation.bookmark ? t("Segnalibro aggiunto · Apri Segnalibri per ritrovarlo.","Bookmark added · Open Bookmarks to find it.") : t("Segnalibro rimosso.","Bookmark removed.")) }
             catch { self.error = error.localizedDescription }
         }
     }
@@ -266,6 +268,7 @@ final class AppModel: ObservableObject {
     func flush() async {
         if !comparing { readingSurface?.pager.save() }
         comparisonTask?.cancel()
+        feedbackTask?.cancel()
         savedTask?.cancel()
         positionTask?.cancel(); preferencesTask?.cancel(); searchTask?.cancel()
         do {

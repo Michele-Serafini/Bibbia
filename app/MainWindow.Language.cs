@@ -110,6 +110,7 @@ public sealed partial class MainWindow
     private void ApplyLanguage()
     {
         RelabelTransfer();
+        RelabelAnnotationExperience();
         RelabelFocus();
         for (int i=0;i<3;i++) ((NavigationViewItem)Navigation.MenuItems[i]).Content = T(new[]{"Leggi","Cerca","La mia raccolta"}[i]);
         ((NavigationViewItem)Navigation.FooterMenuItems[0]).Content = T("Aspetto e traduzioni");
@@ -146,7 +147,7 @@ public sealed partial class MainWindow
         RelabelOrganization();
         AboutLabel.Text = T("Bibbia · {0}\nInterfaccia Windows nativa · Motore Rust\nProgetto indipendente, non affiliato a YouVersion.",typeof(App).Assembly.GetName().Version?.ToString(3)??"0.10.0");
         UpdatePageTitle();
-        if (books.Count > book) ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
+        if (books.Count > book) UpdateAnnotationSummary();
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(BookPicker,T("Libro"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ChapterPicker,T("Capitolo"));
     }

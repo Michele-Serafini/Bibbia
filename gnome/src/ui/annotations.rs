@@ -245,7 +245,7 @@ impl Ui {
         self.point_popup(&self.popup);
         self.popup.popup();
     }
-    fn point_popup(&self, popup: &gtk::Popover) {
+    pub(super) fn point_popup(&self, popup: &gtk::Popover) {
         let reader = if self.active_right.get() {
             &self.reader_right
         } else {
@@ -320,7 +320,7 @@ impl Ui {
         }
         Ok(())
     }
-    fn update_annotation(
+    pub(super) fn update_annotation(
         &self,
         position: &Position,
         index: usize,
@@ -335,10 +335,15 @@ impl Ui {
             let mut s = self.state.borrow_mut();
             s.verses[index].annotation = annotation;
             (
-                s.spans[index].prefix,
+                s.spans.get(index).map(|s| s.prefix),
                 s.verses[index].annotation.bookmark,
                 !s.verses[index].annotation.note.is_empty(),
             )
+        };
+        self.update_annotation_summary();
+        let Some(prefix) = prefix else {
+            self.changing.set(false);
+            return Ok(());
         };
         let buffer = self.reader.buffer();
         let mut a = buffer.iter_at_offset(prefix);
@@ -357,21 +362,25 @@ impl Ui {
         Ok(())
     }
     async fn bookmark(self: &Rc<Self>) -> Result<(), String> {
-        let (position, index, mut annotation) = {
+        let (position, index) = {
             let s = self.state.borrow();
             let index = s
                 .selection
                 .first()
                 .map(|p| p.verse)
                 .unwrap_or(s.position.verse);
-            (
-                s.position.clone(),
-                index,
-                s.verses[index].annotation.clone(),
-            )
+            (s.position.clone(), index)
         };
-        annotation.bookmark = !annotation.bookmark;
-        let value=self.core.call(json!({"op":"annotate","edition":position.edition,"book":position.book,"chapter":position.chapter,"verse":index,"annotation":annotation})).await?;
+        let value=self.core.call(json!({"op":"bookmark","edition":position.edition,"book":position.book,"chapter":position.chapter,"verse":index})).await?;
+        self.toast
+            .add_toast(adw::Toast::new(&if value["bookmark"] == true {
+                self.t(
+                    "Segnalibro aggiunto · Apri Segnalibri per ritrovarlo.",
+                    "Bookmark added · Open Bookmarks to find it.",
+                )
+            } else {
+                self.t("Segnalibro rimosso.", "Bookmark removed.")
+            }));
         self.popup.popdown();
         self.update_annotation(&position, index, value)
     }
@@ -420,6 +429,14 @@ impl Ui {
         };
         let value=self.core.call(json!({"op":"note","edition":position.edition,"book":position.book,"chapter":position.chapter,"verse":index,"text":text,"color":color,"style":style})).await?;
         self.note_popup.popdown();
+        self.toast.add_toast(adw::Toast::new(&if text.is_empty() {
+            self.t("Nota rimossa.", "Note removed.")
+        } else {
+            self.t(
+                "Nota salvata · Premi la matita accanto al versetto per riaprirla.",
+                "Note saved · Click the pencil beside the verse to reopen it.",
+            )
+        }));
         self.update_annotation(&position, index, value)
     }
 }

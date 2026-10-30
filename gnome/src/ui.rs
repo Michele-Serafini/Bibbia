@@ -13,9 +13,11 @@ use std::{
     time::Duration,
 };
 
+mod annotation_experience;
 mod annotations;
 mod book;
 mod book_math;
+mod calendar;
 mod comparison;
 mod focus;
 mod organization;
@@ -80,6 +82,7 @@ pub struct Ui {
     focus: gtk::ToggleButton,
     focus_bar: gtk::Box,
     menu: gtk::MenuButton,
+    bookmarks: gtk::Button,
     verse_menu: gtk::MenuButton,
     edition: gtk::DropDown,
     book: gtk::DropDown,
@@ -227,7 +230,7 @@ fn results() -> (gio::ListStore, gtk::ListView) {
             .map(|s| format!("#{s}"))
             .collect::<Vec<_>>()
             .join(" ");
-        let detail = [message, folder, &tags]
+        let detail = [hit.annotation_summary.as_str(), message, folder, &tags]
             .into_iter()
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
@@ -302,6 +305,9 @@ impl Ui {
             .tooltip_text("Menu")
             .build();
         header.pack_end(&menu);
+        let bookmarks = icon_button("user-bookmarks-symbolic", "Segnalibri");
+        bookmarks.set_widget_name("show-bookmarks");
+        header.pack_end(&bookmarks);
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root.append(&header);
         let toast = adw::ToastOverlay::new();
@@ -382,8 +388,35 @@ impl Ui {
         table.add(&number_tag);
         table.add(
             &gtk::TextTag::builder()
+                .name("annotation-icons")
+                .family("Adwaita Sans")
+                .size_points(12.0)
+                .weight(700)
+                .build(),
+        );
+        table.add(
+            &gtk::TextTag::builder()
+                .name("bookmark-link")
+                .foreground("#3584e4")
+                .underline(pango::Underline::Single)
+                .build(),
+        );
+        for (name, color) in [
+            ("yellow", "rgba(225,191,65,0.12)"),
+            ("green", "rgba(151,207,145,0.12)"),
+            ("blue", "rgba(142,192,237,0.12)"),
+            ("pink", "rgba(236,168,195,0.12)"),
+        ] {
+            table.add(
+                &gtk::TextTag::builder()
+                    .name(format!("note-paper-{name}"))
+                    .paragraph_background(color)
+                    .build(),
+            );
+        }
+        table.add(
+            &gtk::TextTag::builder()
                 .name("note-link")
-                .foreground("#91621c")
                 .underline(pango::Underline::Single)
                 .build(),
         );
@@ -676,6 +709,7 @@ impl Ui {
             focus,
             focus_bar,
             menu,
+            bookmarks,
             verse_menu: verse_menu.clone(),
             edition,
             book,
@@ -812,6 +846,7 @@ impl Ui {
         });
         ui.book_surface.add_controller(keys);
         ui.connect_focus(app);
+        ui.connect_annotation_experience();
         ui.connect(app, &verse_menu);
         ui.relabel();
         ui.window.set_sensitive(false);
@@ -1284,6 +1319,7 @@ impl Ui {
             .set_visible(s.position.edition == "CEI 2008");
         drop(s);
         self.changing.set(false);
+        self.update_annotation_summary();
         self.schedule_book();
         if self.comparison.is_active() {
             self.refresh_comparison();
@@ -1299,12 +1335,20 @@ impl Ui {
             .verses
             .iter()
             .map(|v| {
-                layout.set_text(&format!("★✎ {} ", v.label));
+                layout.set_text(&format!("{} ", v.label));
                 layout.pixel_size().0
             })
             .max()
             .unwrap_or(24)
             + 8;
+        let marker_size = (s.font_size * 0.75 * 0.78).max(12.0);
+        if let Some(tag) = self.reader.buffer().tag_table().lookup("annotation-icons") {
+            tag.set_size_points(marker_size);
+        }
+        font.set_size((marker_size * f64::from(pango::SCALE)) as i32);
+        layout.set_font_description(Some(&font));
+        layout.set_text("★✎");
+        let width = width + layout.pixel_size().0;
         let mut tabs = pango::TabArray::new(1, true);
         tabs.set_tab(0, pango::TabAlign::Left, width);
         self.reader.set_tabs(&tabs);
@@ -1321,6 +1365,27 @@ impl Ui {
         let b = buffer.iter_at_offset(span.end);
         let prefix = buffer.iter_at_offset(span.prefix);
         buffer.apply_tag(&self.number_tag, &prefix, &a);
+        let icon_end = buffer.iter_at_offset(span.prefix + 2);
+        buffer.remove_tag(&self.number_tag, &prefix, &icon_end);
+        buffer.apply_tag_by_name("annotation-icons", &prefix, &icon_end);
+        let after_bookmark = buffer.iter_at_offset(span.prefix + 1);
+        buffer.remove_tag_by_name("bookmark-link", &prefix, &after_bookmark);
+        if v.annotation.bookmark {
+            buffer.apply_tag_by_name("bookmark-link", &prefix, &after_bookmark);
+        }
+        for name in ["yellow", "green", "blue", "pink"] {
+            buffer.remove_tag_by_name(&format!("note-paper-{name}"), &a, &b);
+        }
+        if !v.annotation.note.is_empty() {
+            buffer.apply_tag_by_name(
+                &format!(
+                    "note-paper-{}",
+                    v.annotation.note_color.as_deref().unwrap_or("yellow")
+                ),
+                &a,
+                &b,
+            );
+        }
         let note = buffer.iter_at_offset(span.prefix + 1);
         let after_note = buffer.iter_at_offset(span.prefix + 2);
         buffer.remove_tag_by_name("note-link", &note, &after_note);
@@ -1355,6 +1420,10 @@ impl Ui {
     fn relabel(&self) {
         self.relabel_notes();
         self.relabel_annotations();
+        self.update_annotation_summary();
+        self.bookmarks.set_tooltip_text(Some(
+            &self.t("Mostra tutti i segnalibri", "Show all bookmarks"),
+        ));
         self.relabel_book();
         self.relabel_focus();
         self.comparison.set_label(&self.t("Confronta", "Compare"));
@@ -1487,6 +1556,16 @@ impl Ui {
         let mut hits: Vec<Hit> = serde_json::from_value(value).map_err(|e| e.to_string())?;
         for hit in &mut hits {
             hit.organize_label = self.t("Organizza…", "Organize…");
+            let mut labels = Vec::new();
+            if let Some(a) = &hit.annotation {
+                if a.bookmark {
+                    labels.push(self.t("★ Segnalibro", "★ Bookmark"));
+                }
+                if a.underline || a.highlight.is_some() || !a.ranges.is_empty() {
+                    labels.push(self.t("Evidenziato o sottolineato", "Highlighted or underlined"));
+                }
+            }
+            hit.annotation_summary = labels.join(" · ");
         }
         let count = hits.len();
         self.saved_store.remove_all();
@@ -1496,7 +1575,7 @@ impl Ui {
         self.saved_status.set_text(&if count == 0 {
             format!(
                 "{} · {}",
-                self.t("Nessun appunto corrispondente.", "No matching annotations."),
+                if self.saved_kind.selected()==3{self.t("Nessun segnalibro corrispondente. Seleziona un versetto e aggiungi un segnalibro per ritrovarlo qui.","No matching bookmarks. Select a verse and add a bookmark to find it here.")}else{self.t("Nessun appunto corrispondente.", "No matching annotations.")},
                 p.edition
             )
         } else {

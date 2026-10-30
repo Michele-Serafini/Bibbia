@@ -34,6 +34,7 @@ extension AppModel {
             _ = try await store.exportNotes(to:directory.appendingPathComponent("notes.md"),markdown:true)
             try await store.createBackup(to:directory.appendingPathComponent("fixture.bibbia-backup"))
             let readingID=try await store.createReadingPlan(title:"Native calendar",edition:position.edition,start:ReadingDates.key(Date()),daily:2,book:0)
+            try await store.exportReadingCalendar(readingID,to:directory.appendingPathComponent("plan.ics"),language:"it")
             showReadingPlans=true
             try await Task.sleep(for:.milliseconds(400))
             showReadingPlans=false
@@ -158,6 +159,11 @@ extension AppModel {
             try await Task.sleep(for:.milliseconds(300))
             let saved = try await store.saved(edition: position.edition)
             try check(saved.count == 1 && saved[0].annotation.bookmark, "Saved collection populated")
+            let bookmarkIndex=text.readingLayout.spans[0].location-String(verses[0].label).utf16.count-4
+            try check(text.textStorage?.attribute(.link,at:bookmarkIndex,effectiveRange:nil) != nil,"Saved bookmark is visibly marked with a native link")
+            try check(text.textView(text,clickedOnLink:"bibbia-bookmark:0",at:bookmarkIndex),"Bookmark marker opens its management popover")
+            try check(text.annotationPopover?.isShown == true,"Bookmark actions are available from the verse")
+            text.closePopover()
             let cei = try await store.books(edition: "CEI 2008")
             try check(cei.count == 73, "CEI Catholic 73 books")
             let result = try await store.search(edition: "CEI 2008", query: "ha tanto amato il mondo")

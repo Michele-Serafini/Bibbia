@@ -152,6 +152,8 @@ try {
     $pdfDeadline = [DateTime]::UtcNow.AddSeconds(45)
     while (-not (Test-Path (Join-Path $transferFixture 'passed.txt')) -and [DateTime]::UtcNow -lt $pdfDeadline) { Start-Sleep -Milliseconds 200 }
     if (-not (Test-Path (Join-Path $transferFixture 'passed.txt'))) { throw 'Native PDF export fixture failed.' }
+    python (Join-Path $PSScriptRoot 'check-export-calendar.py') (Join-Path $transferFixture 'plan.ics')
+    if($LASTEXITCODE -ne 0){throw 'Native calendar fixture failed.'}
     python "$PSScriptRoot/check-export-pdf.py" (Join-Path $transferFixture 'notes.pdf')
     if ($LASTEXITCODE -ne 0) { throw 'PDF content validation failed.' }
     New-Item (Join-Path $PSScriptRoot '../artifacts/diagnostics') -ItemType Directory -Force | Out-Null
@@ -238,6 +240,8 @@ try {
     Write-Host 'WinUI: persistent note marker reopens its note and focus mode exits correctly.'
     Invoke-Control (Wait-Control $window 'VerseMenu_0')
     Invoke-Control (Wait-Control $window 'BookmarkVerse' -Popup)
+    $bookmarkMarker=Wait-Control $window 'VerseBookmark_0'
+    if($bookmarkMarker.Current.IsOffscreen){throw 'Saved bookmark is not visibly marked beside the verse.'}
     Write-Host 'WinUI: compact note popup and bookmark actions invoked.'
 
     Select-Page 'SearchNavigation'
@@ -317,6 +321,8 @@ try {
     }
     Select-Page 'ReadingPlansNavigation'
     Wait-Control $window 'PlanCalendar' | Out-Null
+    Wait-Control $window 'OpenPlanCalendar' | Out-Null
+    Wait-Control $window 'SavePlanCalendar' | Out-Null
     Invoke-Control (Wait-Control $window 'NewPlan')
     Invoke-Control (Wait-Control $window 'CreatePlan' -Popup)
     $planSummary = Wait-Control $window 'PlanSummary'
@@ -328,6 +334,8 @@ try {
     Select-Page 'SavedNavigation'
     Wait-Text (Wait-Control $window 'ResultList') 'Genesi 1:1' | Out-Null
     Invoke-Control (Wait-Control $window 'OrganizeSaved')
+    Wait-Control $window 'DeleteNoteOnly' -Popup | Out-Null
+    Wait-Control $window 'DeleteAnnotation' -Popup | Out-Null
     $folderCombo = Wait-Control $window 'OrganizeFolder' -Popup
     $editCondition = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Edit)
     $folderEdit = $folderCombo.FindFirst([Windows.Automation.TreeScope]::Descendants,$editCondition)

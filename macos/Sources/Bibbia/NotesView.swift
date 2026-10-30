@@ -58,6 +58,7 @@ struct NoteOrganizationSheet: View {
                 TextField(model.t("Etichette", "Tags"), text: $tags).accessibilityIdentifier("organizeTags")
             }
             Text(model.t("Scrivi nomi nuovi per crearli. Separa le etichette con virgole; lascia la cartella vuota per rimuoverla.", "Type new names to create them. Separate tags with commas; leave the folder empty to remove it.")).font(.caption).foregroundStyle(.secondary)
+            AnnotationDeleteControls(model:model,hit:hit,completion:{dismiss()}).disabled(saving)
             if !error.isEmpty { Text(error).font(.caption).foregroundStyle(.red) }
             HStack {
                 Button(model.t("Annulla", "Cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
@@ -130,6 +131,7 @@ struct SavedNoteEditor: View {
             Text(hit.reference).font(.headline)
             NoteStylePicker(model:model,color:$color,style:$style)
             TextEditor(text:$text).frame(height:180).padding(6).background(noteTint(color).opacity(style=="sticky" ? 0.25:0.08)).accessibilityIdentifier("savedNoteText")
+            AnnotationDeleteControls(model:model,hit:hit,completion:{dismiss()})
             if !error.isEmpty{Text(error).foregroundStyle(.red)}
             HStack{Button(model.t("Annulla","Cancel")){dismiss()};Spacer();Button(model.t("Salva","Save")){Task{do{if let verses=try await model.store?.writeNote(text,color:color,style:style,at:hit.position){model.apply(verses,at:hit.position)};dismiss()}catch{self.error=error.localizedDescription}}}.disabled(text.utf8.count>32768)}
         }.padding(24).frame(width:420).onAppear{text=hit.annotation.note;color=hit.annotation.noteColor ?? "yellow";style=hit.annotation.noteStyle ?? "plain"}

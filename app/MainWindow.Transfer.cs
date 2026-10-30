@@ -37,6 +37,8 @@ public sealed partial class MainWindow {
         await Task.Run(()=>{
             BibleEngine.Call(new{op="transfer",action="backup",path=Path.Combine(root,"fixture.bibbia-backup")});
             BibleEngine.Call(new{op="export",format="markdown",path=Path.Combine(root,"notes.md")});
+            var plan=BibleEngine.Call(new{op="reading",action="create",edition="KJV",book=0,title="Calendario Ω 🌅",start="2028-02-28",daily=2}).GetInt32();
+            BibleEngine.Call(new{op="reading",action="calendar",id=plan,path=Path.Combine(root,"plan.ics"),language="it"});BibleEngine.Call(new{op="reading",action="delete",id=plan});
             var text=Path.Combine(root,"pages.txt");File.WriteAllLines(text,Enumerable.Range(0,360).Select(i=>$"Riga {i:000} · perché · Ω · luce 🌅 · una nota da leggere."));
             var pages=NotesPdf.Write(text,Path.Combine(root,"notes.pdf"));if(pages<3)throw new InvalidOperationException("PDF did not paginate the document.");File.WriteAllText(Path.Combine(root,"passed.txt"),"passed");
         });

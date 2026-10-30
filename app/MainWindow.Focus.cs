@@ -112,6 +112,6 @@ public sealed partial class MainWindow
         foreach(var (element,label) in new (FrameworkElement,string)[]{(FocusToggle,N("Concentrazione · Ctrl+Shift+F","Focus · Ctrl+Shift+F")),(FocusPrevious,N("Pagina precedente","Previous page")),(FocusNext,N("Pagina successiva","Next page")),(FocusExit,N("Esci dalla concentrazione · Esc","Leave focus · Esc"))}){
             ToolTipService.SetToolTip(element,label);AutomationProperties.SetName(element,label);
         }
-        foreach(var row in readerRows)row.NoteLabel=N("Apri nota","Open note");
+        foreach(var row in readerRows)row.English=language=="en";
     }
 }

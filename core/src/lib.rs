@@ -10,6 +10,7 @@ use std::{
 };
 
 type Result<T> = std::result::Result<T, String>;
+mod calendar;
 mod comparison;
 mod corpus;
 mod organization;
@@ -470,6 +471,8 @@ impl Engine {
             "export" => self.export_notes(&request),
             "reading" => self.reading(&request),
             "note" => self.write_note(&request,edition),
+            "bookmark" => self.change_annotation(&request,edition,true),
+            "delete_annotation" => self.change_annotation(&request,edition,false),
             "saved" => self.saved_notes(&request,edition),
             "collections" => self.collections(),
             "collection" => self.collection(&request),

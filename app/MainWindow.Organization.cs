@@ -53,6 +53,7 @@ public sealed partial class MainWindow {
     }
     private void NotesFilterChanged() {
         if(!ready || notesChanging || section!="saved")return;
+        if(bookmarkFilterFromShortcut && notesKind.SelectedIndex!=3){bookmarkFilterFromShortcut=false;Navigation.SelectedItem=Navigation.MenuItems[2];return;}
         notesGeneration++;savedOffset=0;
         notesTimer??=DispatcherQueue.CreateTimer();notesTimer.Stop();notesTimer.IsRepeating=false;notesTimer.Interval=TimeSpan.FromMilliseconds(250);
         notesTimer.Tick-=NotesFilterTick;notesTimer.Tick+=NotesFilterTick;notesTimer.Start();
@@ -72,7 +73,7 @@ public sealed partial class MainWindow {
         noteFolders=result.groups.GetProperty("folders").EnumerateArray().Select(x=>x.GetString()!).ToArray();
         noteTags=result.groups.GetProperty("tags").EnumerateArray().Select(x=>x.GetString()!).ToArray();RefreshCollectionChoices();
         var rows=result.items.EnumerateArray().Select(x=>ToSearchRow(x,true)).ToList();ResultList.ItemsSource=rows;
-        ResultStatus.Text=rows.Count==0?N($"Nessun appunto corrispondente · {edition}",$"No matching annotations · {edition}"):T("Appunti {0}–{1} · {2}",offset+1,offset+rows.Count,edition);
+        ResultStatus.Text=rows.Count==0?(kind=="bookmark"?N("Nessun segnalibro corrispondente. Seleziona un versetto e premi Aggiungi segnalibro per ritrovarlo qui.","No matching bookmarks. Select a verse and choose Add bookmark to find it here."):N($"Nessun appunto corrispondente · {edition}",$"No matching annotations · {edition}")):T("Appunti {0}–{1} · {2}",offset+1,offset+rows.Count,edition);
         SavedPreviousPage.IsEnabled=offset>0;SavedNextPage.IsEnabled=rows.Count==200;
     }
     private void OrganizeSavedClick(object sender,RoutedEventArgs e)=>Guard(()=>{
@@ -91,8 +92,11 @@ public sealed partial class MainWindow {
             var a=BibleEngine.Call(new{op="note",edition=selected,book=row.Book,chapter=row.Chapter,verse=row.Verse,text=input.Text,color=NoteColors[Math.Max(0,color.SelectedIndex)],style=style.SelectedIndex==1?"sticky":"plain"});
             if(input.Text.Length>0 || a.GetProperty("bookmark").GetBoolean() || a.GetProperty("highlight").ValueKind==JsonValueKind.String || a.GetProperty("underline").GetBoolean() || a.GetProperty("ranges").GetArrayLength()>0)
             BibleEngine.Call(new{op="organize",edition=selected,book=row.Book,chapter=row.Chapter,verse=row.Verse,folder=folder.Text,tags=tags.Text.Split(',',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries)});
-            flyout.Hide();LoadSaved();
-        });content.Children.Add(save);flyout.Content=content;flyout.ShowAt(button);
+            RefreshCurrentAnnotation(selected,row.Book,row.Chapter,row.Verse,a);
+            AnnotationFeedback(N("Appunto aggiornato.","Annotation updated."));flyout.Hide();LoadSaved();
+        });content.Children.Add(save);
+        AddAnnotationDeletion(content,row,selected,flyout);
+        flyout.Content=new ScrollViewer{Content=content,MaxHeight=540,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};flyout.ShowAt(button);
     });
     private void ShowCollectionManager(Button anchor)=>Guard(()=>{
         var flyout=new Flyout();var box=new StackPanel{Width=310,Spacing=12};

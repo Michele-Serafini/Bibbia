@@ -247,3 +247,47 @@ impl Engine {
         Ok(json!(result))
     }
 }
+
+impl Engine {
+    /// Read the latest payload, changing only the requested kind. Deleting the
+    /// final annotation also removes its organization in the same transaction.
+    pub(crate) fn change_annotation(
+        &self,
+        request: &Value,
+        edition: &str,
+        bookmark: bool,
+    ) -> Result<Value> {
+        let (b, c, v) = (
+            index(request, "book")?,
+            index(request, "chapter")?,
+            index(request, "verse")?,
+        );
+        self.chapter(edition, b, c)?
+            .get(v)
+            .ok_or("Versetto non disponibile")?;
+        let tx = self.db.unchecked_transaction().map_err(error)?;
+        let mut a = self.annotation(edition, b, c, v)?;
+        if bookmark {
+            a.bookmark = !a.bookmark;
+        } else {
+            match field(request, "kind")? {
+                "note" => {
+                    a.note.clear();
+                    a.note_color = None;
+                    a.note_style = None;
+                }
+                "marks" => {
+                    a.highlight = None;
+                    a.underline = false;
+                    a.ranges.clear();
+                }
+                "bookmark" => a.bookmark = false,
+                "all" => a = Annotation::default(),
+                _ => return Err("Tipo appunto non valido".into()),
+            }
+        }
+        self.save_annotation(edition, b, c, v, &a)?;
+        tx.commit().map_err(error)?;
+        Ok(json!(a))
+    }
+}

@@ -31,7 +31,7 @@ extension BibleStore {
         _ = try database.rows("INSERT INTO reading_plans(payload) VALUES(?)",[.text(String(decoding:try JSONEncoder().encode(p),as:UTF8.self))])
         return try database.rows("SELECT last_insert_rowid()")[0][0].integer!
     }
-    private func readingPlan(_ id:Int) throws -> StoredPlan {
+    func readingPlan(_ id:Int) throws -> StoredPlan {
         guard let text=try database.rows("SELECT payload FROM reading_plans WHERE id=?",[.integer(id)]).first?.first?.string else {throw BibleError.invalid("Piano non disponibile / Plan unavailable")}
         return try JSONDecoder().decode(StoredPlan.self,from:Data(text.utf8))
     }
@@ -42,7 +42,7 @@ extension BibleStore {
         let value=String(decoding:try JSONEncoder().encode(position),as:UTF8.self)
         _ = try database.rows("UPDATE reading_plans SET payload=json_set(payload,'$.resume',json(?1)) WHERE id=COALESCE((SELECT CAST(payload AS INTEGER) FROM settings WHERE key='activeReadingPlan'),-1) AND json_extract(payload,'$.edition')=?2 AND (json_extract(payload,'$.book') IS NULL OR json_extract(payload,'$.book')=?3) AND (json_extract(payload,'$.resume.book')<>json_extract(?1,'$.book') OR json_extract(payload,'$.resume.chapter')<>json_extract(?1,'$.chapter') OR json_extract(payload,'$.resume.verse')<>json_extract(?1,'$.verse'))",[.text(value),.text(position.edition),.integer(position.book)])
     }
-    private func readingChapters(_ p:StoredPlan) throws -> [(Int,Int,String)] {
+    func readingChapters(_ p:StoredPlan) throws -> [(Int,Int,String)] {
         let source=try corpus(p.edition)
         return source.books.enumerated().filter {p.book==nil || p.book==$0.offset}.flatMap {b,book in book.chapters.indices.map{(b,$0,book.name)} }
     }

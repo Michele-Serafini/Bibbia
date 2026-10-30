@@ -15,26 +15,6 @@ public sealed class BookRow
     public required int[] ChapterNumbers { get; init; }
 }
 
-public sealed class VerseRow : System.ComponentModel.INotifyPropertyChanged
-{
-    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
-    private JsonElement annotation;
-    private bool focused;
-    public bool Focused {get=>focused;set{if(focused==value)return;focused=value;PropertyChanged?.Invoke(this,new(nameof(MenuVisibility)));}}
-    public Visibility MenuVisibility=>focused?Visibility.Collapsed:Visibility.Visible;
-    public Visibility NoteVisibility => Annotation.TryGetProperty("note",out var note) && note.GetString() is {Length:>0} ? Visibility.Visible : Visibility.Collapsed;
-    public string NoteHint => NoteVisibility==Visibility.Visible ? NoteLabel + " · " + Annotation.GetProperty("note").GetString()![..Math.Min(120,Annotation.GetProperty("note").GetString()!.Length)] : NoteLabel;
-    private string noteLabel="Apri nota";
-    public string NoteLabel {get=>noteLabel;set{if(noteLabel==value)return;noteLabel=value;PropertyChanged?.Invoke(this,new(nameof(NoteHint)));}}
-    public string NoteId => $"VerseNote_{Index}";
-    public int Index { get; init; }
-    public required string Number { get; init; }
-    public string MenuId => $"VerseMenu_{Index}";
-    public required string Text { get; init; }
-    public double TextSize {get;set;}
-    public required JsonElement Annotation { get => annotation; set { annotation=value; PropertyChanged?.Invoke(this,new(nameof(NoteVisibility))); PropertyChanged?.Invoke(this,new(nameof(NoteHint))); } }
-}
-
 public sealed class SearchRow
 {
     public int Book { get; init; }
@@ -70,6 +50,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         InitializeBookMotion();
         InitializeOrganization();
+        InitializeAnnotationExperience();
         InitializeReadingPlans();
         InitializeTransfer();
         InitializeBookPagination();
@@ -215,7 +196,7 @@ public sealed partial class MainWindow : Window
         displayedChapter=target;
         VerseList.IsHitTestVisible=true;
         currentVerse = Math.Clamp(focusVerse, 0, rows.Count - 1);
-        ReadingLabel.Text = T("Capitolo {0} di {1}",chapter+1,books[book].Chapters);
+        UpdateAnnotationSummary();
         UpdatePageTitle();
         if (animate && section == "read") AnimateReveal(PageTitle,160);
         UpdateReadingStatus(rows.Count);
@@ -299,6 +280,7 @@ public sealed partial class MainWindow : Window
     }
     private void ShowSection(string tag)
     {
+        if(tag=="bookmarks"){SelectBookmarkFilter();tag="saved";}else if(tag=="saved"&&bookmarkFilterFromShortcut){bookmarkFilterFromShortcut=false;notesChanging=true;notesKind.SelectedIndex=0;notesChanging=false;}
         CancelBookTurn();
         var changed = section != tag;
         section = tag;

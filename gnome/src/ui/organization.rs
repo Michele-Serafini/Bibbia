@@ -240,12 +240,13 @@ impl Ui {
         save.set_widget_name("save-organization");
         save.add_css_class("suggested-action");
         content.append(&save);
+        self.add_annotation_deletion(&content, &popup, hit);
         let weak = self.weak();
         let weak_popup = popup.downgrade();
         let p = self.position();
         let (b, c, v) = (hit.book, hit.chapter, hit.verse);
-        save.connect_clicked(move |_|{if let Some(ui)=weak.upgrade(){let ui2=ui.clone();let popup=weak_popup.clone();let req=json!({"op":"organize","edition":p.edition,"book":b,"chapter":c,"verse":v,"folder":input.text().to_string(),"tags":tags.text().split(',').map(str::trim).filter(|s|!s.is_empty()).collect::<Vec<_>>()});let buffer=note.buffer();let text=buffer.text(&buffer.start_iter(),&buffer.end_iter(),false).to_string();let note_req=json!({"op":"note","edition":p.edition,"book":b,"chapter":c,"verse":v,"text":text,"color":(["yellow","green","blue","pink"][color.selected().min(3) as usize]),"style":if style.selected()==1{"sticky"}else{"plain"}});ui.launch(async move{let a=ui2.core.call(note_req).await?;if !a["note"].as_str().unwrap_or("").is_empty() || a["bookmark"]==true || a["underline"]==true || a["highlight"].is_string() || a["ranges"].as_array().is_some_and(|r|!r.is_empty()){ui2.core.call(req).await?;}
-if let Some(popup)=popup.upgrade(){popup.popdown()}ui2.load_saved().await})}});
+        save.connect_clicked(move |_|{if let Some(ui)=weak.upgrade(){let ui2=ui.clone();let popup=weak_popup.clone();let req=json!({"op":"organize","edition":p.edition,"book":b,"chapter":c,"verse":v,"folder":input.text().to_string(),"tags":tags.text().split(',').map(str::trim).filter(|s|!s.is_empty()).collect::<Vec<_>>()});let buffer=note.buffer();let text=buffer.text(&buffer.start_iter(),&buffer.end_iter(),false).to_string();let note_req=json!({"op":"note","edition":p.edition,"book":b,"chapter":c,"verse":v,"text":text,"color":(["yellow","green","blue","pink"][color.selected().min(3) as usize]),"style":if style.selected()==1{"sticky"}else{"plain"}});let mut p=p.clone();p.book=b;p.chapter=c;p.verse=v;ui.launch(async move{let a=ui2.core.call(note_req).await?;if !a["note"].as_str().unwrap_or("").is_empty() || a["bookmark"]==true || a["underline"]==true || a["highlight"].is_string() || a["ranges"].as_array().is_some_and(|r|!r.is_empty()){ui2.core.call(req).await?;}
+ui2.update_annotation(&p,v,a)?;if let Some(popup)=popup.upgrade(){popup.popdown()}ui2.load_saved().await})}});
         popup.set_child(Some(&content));
         popup.popup();
     }

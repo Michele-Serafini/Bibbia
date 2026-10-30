@@ -22,7 +22,7 @@ fn ordinal(y: i32, m: i32, d: i32) -> i32 {
     let mm = m + if m > 2 { -3 } else { 9 };
     era * 146097 + yy * 365 + yy / 4 - yy / 100 + (153 * mm + 2) / 5 + d - 1
 }
-fn day(s: &str) -> Result<i32> {
+pub(crate) fn day(s: &str) -> Result<i32> {
     let b = s.as_bytes();
     if b.len() != 10
         || b[4] != b'-'
@@ -190,6 +190,28 @@ impl Engine {
             .filter(|(b, _)| p.book.is_none_or(|i| i == *b))
             .flat_map(|(b, book)| (0..book.chapters).map(move |c| (b, c, book.name)))
             .collect();
+        if action == "calendar" {
+            let completed = self
+                .db
+                .prepare_cached("SELECT chapter_index FROM reading_progress WHERE plan_id=?")
+                .map_err(error)?
+                .query_map([id], |row| row.get::<_, u32>(0).map(|v| v as usize))
+                .map_err(error)?
+                .collect::<std::result::Result<BTreeSet<_>, _>>()
+                .map_err(error)?;
+            let plan = crate::calendar::CalendarPlan {
+                id,
+                title: &p.title,
+                edition: &p.edition,
+                start: &p.start,
+                daily: p.daily,
+                book: p.book,
+                chapters: &chapters,
+                completed: &completed,
+                english: r["language"].as_str() == Some("en"),
+            };
+            return crate::calendar::export(self, std::path::Path::new(field(r, "path")?), plan);
+        }
         let mut q = self
             .db
             .prepare_cached(

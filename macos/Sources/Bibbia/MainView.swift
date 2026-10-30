@@ -42,6 +42,10 @@ struct MainView: View {
                     .onChange(of: model.comparing) { _ in model.comparisonChanged() }
             }
             ToolbarItem {
+                Button { model.showBookmarks() } label: { Label(model.t("Segnalibri","Bookmarks"),systemImage:"bookmark.fill") }
+                    .help(model.t("Mostra tutti i segnalibri","Show all bookmarks")).accessibilityIdentifier("showBookmarks")
+            }
+            ToolbarItem {
                 Button { model.showReadingPlans = true } label: { Label(model.t("Piani di lettura","Reading plans"),systemImage:"calendar") }.accessibilityIdentifier("readingPlans")
             }
             ToolbarItem {
@@ -61,6 +65,7 @@ struct MainView: View {
                     .accessibilityIdentifier("focusToggle")
             }
         }
+        .overlay(alignment:.bottom) { AnnotationFeedbackView(model:model) }
         .alert(model.t("Impossibile completare l’operazione", "Unable to complete the operation"),
                isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
             Button("OK") { model.error = nil }
@@ -121,7 +126,7 @@ struct MainView: View {
                 if model.truncated { Text(model.t("Primi 200 risultati: affina la ricerca.", "First 200 results: refine your search.")).font(.caption).foregroundStyle(.secondary).padding(10) }
             case .saved:
                 NoteFiltersView(model: model)
-                results(model.saved, empty: model.t("Le tue note, sottolineature e segnalibri appariranno qui.", "Your notes, highlights and bookmarks will appear here."))
+                results(model.saved, empty: model.noteFilter.kind=="bookmark" ? model.t("Seleziona un versetto e premi Aggiungi segnalibro: potrai ritrovarlo e riaprirlo qui.","Select a verse and choose Add bookmark: find and reopen it here.") : model.t("Le tue note, sottolineature e segnalibri appariranno qui.", "Your notes, highlights and bookmarks will appear here."))
                 HStack {
                     Button { model.savedPage -= 1; model.loadSaved() } label: { Image(systemName: "chevron.left") }.disabled(model.savedPage == 0)
                     Spacer()
@@ -157,6 +162,8 @@ struct MainView: View {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(hit.reference).font(.headline).foregroundStyle(.primary)
                             Text(hit.text).font(.callout).foregroundStyle(.secondary).lineLimit(3)
+                            if hit.annotation.underline || hit.annotation.highlight != nil || !hit.annotation.ranges.isEmpty { Label(model.t("Evidenziato o sottolineato","Highlighted or underlined"),systemImage:"highlighter").font(.caption).foregroundStyle(.secondary) }
+                            if hit.annotation.bookmark { Label(model.t("Segnalibro salvato","Saved bookmark"),systemImage:"bookmark.fill").font(.caption.bold()).foregroundStyle(Color.accentColor) }
                             if !hit.annotation.note.isEmpty { Label(hit.annotation.note, systemImage: hit.annotation.noteStyle == "sticky" ? "pin.fill":"note.text").font(.caption).lineLimit(3).padding(7).frame(maxWidth:.infinity,alignment:.leading).background(noteTint(hit.annotation.noteColor).opacity(hit.annotation.noteStyle == "sticky" ? 0.25:0.10),in:RoundedRectangle(cornerRadius:7)) }
                             if !hit.organization.summary.isEmpty { Text(hit.organization.summary).font(.caption2).foregroundStyle(.secondary).lineLimit(2) }
                         }.padding(.vertical, 5).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
@@ -180,7 +187,7 @@ struct MainView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(model.title).font(.system(size: 30, weight: .semibold, design: .serif))
                         .id(model.title).transition(.opacity)
-                    Text(model.position.edition).font(.subheadline).foregroundStyle(.secondary)
+                    Text(model.position.edition+(model.annotationSummary.isEmpty ? "":" · "+model.annotationSummary)).font(.subheadline).foregroundStyle(.secondary)
                 }.animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.title)
                 Spacer()
                 if model.loading { ProgressView().controlSize(.small) }
@@ -201,7 +208,7 @@ struct MainView: View {
                     .toggleStyle(.switch).controlSize(.small).accessibilityIdentifier("bookMode")
                     .disabled(model.comparing)
                     .onChange(of: model.bookMode) { _ in model.bookModeChanged() }
-                Text(model.t("Seleziona una frase per annotarla", "Select a phrase to annotate it"))
+                Text(model.annotationSummary.isEmpty ? model.t("Seleziona una frase per annotarla", "Select a phrase to annotate it") : model.annotationSummary)
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24).padding(.vertical, 10)
             }
                 if model.preferences.focusMode {

@@ -54,6 +54,8 @@ def native_ui(prefix, work, name):
     with (OUT / f'{name}-smoke.log').open('w') as log:
         run(binary, '--smoke-test', '--data-dir', data, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=90)
     run(sys.executable, ROOT / 'scripts/check-export-pdf.py', data / 'notes.pdf')
+    run(sys.executable, ROOT / 'scripts/check-export-calendar.py', data / 'plan.ics')
+    shutil.copyfile(data / 'plan.ics', OUT / 'reading-plan.ics')
     shutil.copyfile(data / 'notes.pdf', OUT / 'notes-export.pdf')
     with (OUT / f'{name}-reopen.log').open('w') as log:
         run(binary, '--smoke-reopen', '--data-dir', data, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=45)

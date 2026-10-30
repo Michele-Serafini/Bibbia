@@ -78,7 +78,12 @@ extension Database {
     func checkDestination(_ file:URL) throws {
         let url=file.resolvingSymlinksInPath(),parent=url.deletingLastPathComponent().standardizedFileURL
         let reserved=["bible.sqlite3","bible.sqlite3-wal","bible.sqlite3-shm",pendingName,"reader.json"]
-        guard !(parent==directory.resolvingSymlinksInPath().standardizedFileURL && reserved.contains(url.lastPathComponent.lowercased())) else{throw BibleError.invalid("Scegli un file diverso dai dati dell’app / Choose another destination")}
+        let folder=directory.resolvingSymlinksInPath().standardizedFileURL
+        let parentID=(try? parent.resourceValues(forKeys:[.fileResourceIdentifierKey]))?.fileResourceIdentifier as? NSObject
+        let directoryID=(try? folder.resourceValues(forKeys:[.fileResourceIdentifierKey]))?.fileResourceIdentifier as? NSObject
+        let sameFolder=parent.path==folder.path || (parentID != nil && directoryID != nil && parentID!.isEqual(directoryID!))
+        let symlink=(try? file.resourceValues(forKeys:[.isSymbolicLinkKey]))?.isSymbolicLink==true
+        guard file.isFileURL,!symlink,!(sameFolder && reserved.contains(url.lastPathComponent.lowercased())) else{throw BibleError.invalid("Scegli un file diverso dai dati dell’app / Choose another destination")}
     }
     func backup(to url:URL) throws {try checkDestination(url);try snapshot(handle,to:url)}
     func backupInfo(_ url:URL) throws -> BackupSummary {let(db,summary)=try inspect(url);sqlite3_close(db);return summary}
@@ -125,5 +130,16 @@ extension BibleStore {
         if count==0{try write("Nessun appunto salvato / No saved annotations.\n")}
         if cei{try write("CEI 2008 · © Fondazione di Religione Santi Francesco d’Assisi e Caterina da Siena. Uso formativo e didattico non commerciale. Fonte: BibbiaEDU.\n")}
         try out.synchronize();try out.close();try publish(temp,file);return count
+    }
+}
+
+extension BibleStore {
+    func writeDocument(to file:URL,write:(FileHandle)throws->Void) throws {
+        try validateExportDestination(file)
+        let temp=file.deletingLastPathComponent().appendingPathComponent(".bibbia-\(UUID().uuidString).tmp")
+        defer{try? FileManager.default.removeItem(at:temp)}
+        guard FileManager.default.createFile(atPath:temp.path,contents:Data(),attributes:[.posixPermissions:0o600]) else{throw BibleError.invalid("Impossibile creare il file / Cannot create file")}
+        let handle=try FileHandle(forWritingTo:temp);defer{try? handle.close()}
+        try write(handle);try handle.synchronize();try handle.close();try publish(temp,file)
     }
 }

@@ -407,3 +407,26 @@ fn escape(s: &str) -> String {
 pub(super) fn test_inspect(path: &Path) -> Result<(Connection, Value)> {
     inspect(path)
 }
+
+impl Engine {
+    pub(crate) fn write_document(
+        &self,
+        path: &Path,
+        write: impl FnOnce(&mut dyn Write) -> Result<()>,
+    ) -> Result<()> {
+        reserved(path, &self.directory)?;
+        let temp = temporary(path);
+        let result = (|| {
+            let mut out = BufWriter::new(create_file(&temp)?);
+            write(&mut out)?;
+            out.flush().map_err(error)?;
+            out.get_ref().sync_all().map_err(error)?;
+            drop(out);
+            publish(&temp, path)
+        })();
+        if result.is_err() {
+            let _ = fs::remove_file(&temp);
+        }
+        result
+    }
+}

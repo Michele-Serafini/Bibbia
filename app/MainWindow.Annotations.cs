@@ -59,7 +59,7 @@ public sealed partial class MainWindow
     private void BindVerseEditor(object sender)
     {
         if (sender is not RichTextBlock editor || !editor.IsLoaded || editor.DataContext is not VerseRow row) return;
-        row.NoteLabel=N("Apri nota","Open note");
+        row.English=language=="en";
         liveEditors.Add(editor);
         if (ReferenceEquals(editor.Tag,row)) return;
         editor.Tag = row;
@@ -136,6 +136,7 @@ public sealed partial class MainWindow
                 length = end-start;
                 if (length == 0) { start = 0; length = row.Text.Length; }
             }
+            if(flyout.PrimaryCommands.OfType<AppBarButton>().FirstOrDefault(b=>AutomationProperties.GetAutomationId(b)=="BookmarkVerse") is {} bookmarkButton)bookmarkButton.Label=row.HasBookmark?N("Rimuovi segnalibro","Remove bookmark"):N("Aggiungi segnalibro","Add bookmark");
             currentVerse = row.Index;
             Guard(SavePosition);
         };
@@ -148,7 +149,7 @@ public sealed partial class MainWindow
         }
         void Mark(string action) => Guard(() => {
             row.Annotation = BibleEngine.Call(new {op="mark",edition,book,chapter,verse=row.Index,start,length,action});
-            ApplyTextStyles(editor,row); flyout.Hide();
+            ApplyTextStyles(editor,row); UpdateAnnotationSummary(); AnnotationFeedback(N("Annotazione salvata · La ritrovi nella raccolta.","Annotation saved · Find it in your collection.")); flyout.Hide();
         });
         var underline = Button("Sottolinea",Symbol.Underline,"UnderlineSelection");
         underline.Click += (_,_) => Mark("underline");
@@ -162,9 +163,9 @@ public sealed partial class MainWindow
         highlight.Flyout = colors; flyout.PrimaryCommands.Add(highlight);
         var bookmark = Button("Segnalibro",Symbol.Bookmarks,"BookmarkVerse");
         bookmark.Click += (_,_) => Guard(() => {
-            var a = row.Annotation;
-            row.Annotation = BibleEngine.Call(new {op="annotate",edition,book,chapter,verse=row.Index,annotation=new {
-                highlight=a.GetProperty("highlight"),underline=a.GetProperty("underline"),bookmark=!a.GetProperty("bookmark").GetBoolean(),note=a.GetProperty("note"),ranges=a.GetProperty("ranges")}});
+            row.Annotation = BibleEngine.Call(new {op="bookmark",edition,book,chapter,verse=row.Index});
+            ApplyTextStyles(editor,row); UpdateAnnotationSummary();
+            AnnotationFeedback(row.HasBookmark ? N("Segnalibro aggiunto · Apri Segnalibri per ritrovarlo.","Bookmark added · Open Bookmarks to find it.") : N("Segnalibro rimosso.","Bookmark removed."));
             flyout.Hide();
         }); flyout.PrimaryCommands.Add(bookmark);
         var copy = Button("Copia",Symbol.Copy,"CopySelection");
@@ -203,6 +204,7 @@ public sealed partial class MainWindow
         save.Click += (_,_) => Guard(() => {
             row.Annotation=BibleEngine.Call(new {op="note",edition=targetEdition,book=targetBook,chapter=targetChapter,verse=row.Index,text=input.Text,color=NoteColors[Math.Max(0,noteColor.SelectedIndex)],style=noteStyle.SelectedIndex==1?"sticky":"plain"});
             if(edition==targetEdition && book==targetBook && chapter==targetChapter)ApplyTextStyles(editor,row);
+            UpdateAnnotationSummary(); AnnotationFeedback(!string.IsNullOrEmpty(input.Text)?N("Nota salvata · Premi «Nota» accanto al versetto per riaprirla.","Note saved · Click Note beside the verse to reopen it."):N("Nota rimossa.","Note removed."));
             flyout.Hide();
         }); content.Children.Add(save); flyout.Content=content;
         DispatcherQueue.TryEnqueue(() => flyout.ShowAt(editor));

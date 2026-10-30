@@ -28,6 +28,7 @@ if a.phase=='prepare':
  plan=call(op='reading',action='create',edition=position['edition'],title='Lettura',start='2026-10-29',daily=1,book=0)
  call(op='reading',action='complete',id=plan,index=0,complete=True)
  call(op='settings',key='position',value=position)
+ call(op='reading',action='calendar',id=plan,path=str(root/'rust.ics'),language='it')
  call(op='transfer',action='backup',path=str(root/'rust.bibbia-backup'))
  call(op='close')
  print('Rust backup ready for the Swift fixture.')
@@ -42,4 +43,7 @@ else:
  assert row['organization']==dict(folder='Studio',tags=['speranza'])
  assert call(op='reading',action='detail',id=1,**{'from':'2026-10-29'},selected='2026-10-29')['completed']==1
  assert call(op='bootstrap')['settings']['position']['edition']=='Traduzione personale'
+ if (root/'swift.ics').exists():
+  def calendar_lines(path):return [line for line in path.read_text().replace('\n ', '').splitlines() if not line.startswith('DTSTAMP:')]
+  assert calendar_lines(root/'rust.ics')==calendar_lines(root/'swift.ics')
  call(op='close');print('Rust -> Swift -> Rust: imported corpus, Unicode, UTF-16 marks, colors, organization, position and reading progress preserved.')

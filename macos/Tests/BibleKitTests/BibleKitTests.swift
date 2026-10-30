@@ -324,6 +324,7 @@ private struct Fixture {
     #expect(notes[0].organization.folder=="Studio" && notes[0].annotation.ranges[0].start==5 && notes[0].annotation.ranges[0].length==2 && notes[0].annotation.bookmark)
     _ = try await restored.writeNote("Aggiornata Swift 🌅",color:"green",style:"sticky",at:notes[0].position)
     try await restored.createBackup(to:root.appendingPathComponent("swift.bibbia-backup"))
+    try await restored.exportReadingCalendar(1,to:root.appendingPathComponent("swift.ics"),language:"it")
 }
 
 @Test func readingAppearanceAndNoteMarkersPreservePortableData() async throws {
@@ -345,4 +346,47 @@ private struct Fixture {
     let reopened=try BibleStore(directory:f.directory), snapshot=try await reopened.bootstrap()
     #expect(snapshot.preferences == prefs)
     #expect(snapshot.verses[0].annotation.note == "Nota ritrovabile 🌅")
+}
+
+@Test func selectiveAnnotationRemovalIsAtomicAndKeepsOtherKinds() async throws {
+    let f=try Fixture();defer{f.cleanup()};let p=Position(edition:"KJV")
+    _ = try await f.store.writeNote("Luce 🌅",color:"pink",style:"sticky",at:p)
+    _ = try await f.store.mark(p,selection:[SelectedSpan(verse:0,start:0,length:2)],action:"underline")
+    _ = try await f.store.toggleBookmark(at:p)
+    _ = try await f.store.organize(p,folder:"Studio",tags:["luce"])
+    let a=try await f.store.deleteAnnotation(at:p,kind:"note")[0].annotation
+    #expect(a.note.isEmpty && a.noteColor==nil && a.noteStyle==nil && a.bookmark && a.ranges[0].length==2)
+    let db=try Database(directory:f.directory)
+    _ = try db.rows("CREATE TRIGGER deny_remove BEFORE DELETE ON annotations BEGIN SELECT RAISE(ABORT,'keep data'); END;")
+    await #expect(throws:BibleError.self){try await f.store.deleteAnnotation(at:p,kind:"all")}
+    let row=try await f.store.saved(edition:"KJV")[0]
+    #expect(row.organization.folder=="Studio" && row.annotation==a)
+    _ = try db.rows("DROP TRIGGER deny_remove")
+    await #expect(throws:BibleError.self){try await f.store.deleteAnnotation(at:p,kind:"invalid")}
+    _ = try await f.store.deleteAnnotation(at:p,kind:"marks")
+    _ = try await f.store.toggleBookmark(at:p)
+    #expect(try await f.store.saved(edition:"KJV").isEmpty)
+    #expect(try db.rows("SELECT count(*) FROM note_organization")[0][0].integer==0)
+}
+
+@Test func calendarSnapshotEscapesTextAndKeepsCivilDatesAndStableIDs() async throws {
+    let f=try Fixture();defer{f.cleanup()}
+    let id=try await f.store.createReadingPlan(title:"Lettura 🌅 Ω, speranza; \\ domani\nBEGIN:VEVENT",edition:"KJV",start:"2028-02-28",daily:1,book:0)
+    let file=f.directory.appendingPathComponent("Piano Ω.ics")
+    #expect(try await f.store.exportReadingCalendar(id,to:file,language:"it")==50)
+    let physical=try String(contentsOf:file,encoding:.utf8)
+    #expect(physical.components(separatedBy:"\r\n").allSatisfy{$0.utf8.count<=75})
+    let text=physical.replacingOccurrences(of:"\r\n ",with:"")
+    #expect(text.components(separatedBy:"\r\n").filter{$0=="BEGIN:VEVENT"}.count==50)
+    for date in ["20280228","20280229","20280301","20280326","20280327"]{#expect(text.contains("DTSTART;VALUE=DATE:\(date)\r\n"))}
+    #expect(text.contains("\\, speranza\\;") && text.contains("\\nBEGIN:VEVENT"))
+    let ids=text.components(separatedBy:"\r\n").filter{$0.hasPrefix("UID:")}
+    try await f.store.completeReadingChapter(id,index:0,complete:true)
+    try await f.store.exportReadingCalendar(id,to:file,language:"en")
+    let second=try String(contentsOf:file,encoding:.utf8).replacingOccurrences(of:"\r\n ",with:"")
+    #expect(ids==second.components(separatedBy:"\r\n").filter{$0.hasPrefix("UID:")})
+    #expect(second.contains("Completed: 1/1"))
+    await #expect(throws:BibleError.self){try await f.store.exportReadingCalendar(id,to:f.directory.appendingPathComponent("bible.sqlite3"),language:"it")}
+    await #expect(throws:BibleError.self){try await f.store.exportReadingCalendar(99999,to:file,language:"it")}
+    #expect(try String(contentsOf:file,encoding:.utf8).replacingOccurrences(of:"\r\n ",with:"")==second)
 }
