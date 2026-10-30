@@ -1424,6 +1424,10 @@ impl Ui {
         self.bookmarks.set_tooltip_text(Some(
             &self.t("Mostra tutti i segnalibri", "Show all bookmarks"),
         ));
+        self.bookmarks
+            .update_property(&[gtk::accessible::Property::Label(
+                &self.t("Segnalibri", "Bookmarks"),
+            )]);
         self.relabel_book();
         self.relabel_focus();
         self.comparison.set_label(&self.t("Confronta", "Compare"));

@@ -94,7 +94,7 @@ pub(crate) fn export(engine: &Engine, path: &Path, p: CalendarPlan<'_>) -> Resul
         sec % 60
     );
     engine.write_document(path,|out|{
-        for header in ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Bibbia//Reading Plans//IT","CALSCALE:GREGORIAN","METHOD:PUBLISH"]{line(out,header)?;}
+        for header in ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Bibbia//Reading Plans//IT","CALSCALE:GREGORIAN"]{line(out,header)?;}
         line(out,&format!("X-WR-CALNAME:{}",text(p.title)))?;
         for (day,chapters) in p.chapters.chunks(p.daily).enumerate(){
             let references=chapters.iter().map(|(_,c,name)|format!("{name} {}",c+1)).collect::<Vec<_>>().join(" · ");
