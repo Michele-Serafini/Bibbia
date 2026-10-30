@@ -91,7 +91,7 @@ impl Engine {
         self.db.prepare_cached("UPDATE reading_plans SET payload=json_set(payload,'$.resume',json(?1)) WHERE id=COALESCE((SELECT CAST(payload AS INTEGER) FROM settings WHERE key='activeReadingPlan'),-1) AND json_extract(payload,'$.edition')=?2 AND (json_extract(payload,'$.book') IS NULL OR json_extract(payload,'$.book')=?3) AND (json_extract(payload,'$.resume.book')<>json_extract(?1,'$.book') OR json_extract(payload,'$.resume.chapter')<>json_extract(?1,'$.chapter') OR json_extract(payload,'$.resume.verse')<>json_extract(?1,'$.verse'))").map_err(error)?.execute(params![p.to_string(),field(p,"edition")?,index(p,"book")? as i64]).map_err(error)?;
         Ok(())
     }
-    pub(crate) fn reading(&self, r: &Value) -> Result<Value> {
+    pub(crate) fn reading(&mut self, r: &Value) -> Result<Value> {
         let action = field(r, "action")?;
         if action == "list" {
             let mut q = self
@@ -135,6 +135,7 @@ impl Engine {
                 .filter(|v| !v.is_null())
                 .map(|_| index(r, "book"))
                 .transpose()?;
+            self.keep_imported(edition);
             let books = self.books(edition)?;
             if book.is_some_and(|b| b >= books.len()) {
                 return Err("Libro non disponibile".into());
@@ -183,6 +184,7 @@ impl Engine {
                 json!(true)
             });
         }
+        self.keep_imported(&p.edition);
         let books = self.books(&p.edition)?;
         let chapters: Vec<_> = books
             .iter()
@@ -316,5 +318,15 @@ mod tests {
             assert!(day(s).is_err(), "{s}");
         }
         assert!(day("2000-02-29").is_ok());
+    }
+}
+
+impl Engine {
+    fn keep_imported(&mut self, edition: &str) {
+        for (id, data) in &mut self.editions {
+            if id != edition && data.builtin.is_none() {
+                data.release();
+            }
+        }
     }
 }

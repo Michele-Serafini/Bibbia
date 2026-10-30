@@ -468,6 +468,16 @@ fn imported_texts_are_lazy_and_only_one_edition_is_retained() {
         .unwrap();
     assert!(engine.editions["First"].loaded.get().is_some());
     assert!(engine.editions["Second"].loaded.get().is_none());
+    for edition in ["Second", "First"] {
+        let id=engine.request(json!({"op":"reading","action":"create","title":"Calendar","edition":edition,"start":"2026-10-30","daily":1})).unwrap();
+        engine.request(json!({"op":"reading","action":"calendar","id":id,"path":dir.path().join("plan.ics")})).unwrap();
+        assert!(
+            engine
+                .editions
+                .iter()
+                .all(|(name, e)| e.loaded.get().is_none() || name == edition)
+        );
+    }
 }
 
 #[test]

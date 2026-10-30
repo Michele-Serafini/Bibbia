@@ -136,7 +136,7 @@ public sealed partial class MainWindow
                 length = end-start;
                 if (length == 0) { start = 0; length = row.Text.Length; }
             }
-            if(flyout.PrimaryCommands.OfType<AppBarButton>().FirstOrDefault(b=>AutomationProperties.GetAutomationId(b)=="BookmarkVerse") is {} bookmarkButton)bookmarkButton.Label=row.HasBookmark?N("Rimuovi segnalibro","Remove bookmark"):N("Aggiungi segnalibro","Add bookmark");
+            if(flyout.PrimaryCommands.OfType<AppBarButton>().FirstOrDefault(b=>AutomationProperties.GetAutomationId(b)=="BookmarkVerse") is {} bookmarkButton){bookmarkButton.Label=row.HasBookmark?N("Rimuovi segnalibro","Remove bookmark"):N("Aggiungi segnalibro","Add bookmark");ToolTipService.SetToolTip(bookmarkButton,bookmarkButton.Label);}
             currentVerse = row.Index;
             Guard(SavePosition);
         };

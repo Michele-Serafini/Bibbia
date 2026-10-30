@@ -353,7 +353,17 @@ impl Engine {
             .get("edition")
             .and_then(Value::as_str)
             .unwrap_or("KJV");
-        if ["books", "chapter", "search", "saved", "compare"].contains(&op) {
+        if [
+            "books",
+            "chapter",
+            "search",
+            "saved",
+            "compare",
+            "bookmark",
+            "delete_annotation",
+        ]
+        .contains(&op)
+        {
             for (id, data) in &mut self.editions {
                 if id != edition
                     && (op != "compare"
