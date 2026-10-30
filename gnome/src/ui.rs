@@ -1374,7 +1374,7 @@ impl Ui {
             buffer.apply_tag_by_name("bookmark-link", &prefix, &after_bookmark);
         }
         for name in ["yellow", "green", "blue", "pink"] {
-            buffer.remove_tag_by_name(&format!("note-paper-{name}"), &a, &b);
+            buffer.remove_tag_by_name(&format!("note-paper-{name}"), &prefix, &b);
         }
         if !v.annotation.note.is_empty() {
             buffer.apply_tag_by_name(
@@ -1382,7 +1382,7 @@ impl Ui {
                     "note-paper-{}",
                     v.annotation.note_color.as_deref().unwrap_or("yellow")
                 ),
-                &a,
+                &prefix,
                 &b,
             );
         }
