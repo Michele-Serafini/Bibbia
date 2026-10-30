@@ -1,0 +1,625 @@
+{
+  "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.36",
+  "architecture": "x86_64",
+  "method": "Same runner, native release apps, fresh marked profiles, alternating order, 3 samples. Same fixture hooks in v0.9.0 baseline and candidate. 1000x720 narrow / 1500x900 wide, CEI Psalm 119, KJV comparison, 8 navigation/comparison cycles. First-ready includes a 120ms one-shot layout settle; ordinary idle benchmarks are separate. No forced GC, heap purge or working-set trimming. CPU is one core; excludes display server and GPU allocations. RSS/private/PSS are different metrics; do not compare totals between operating systems.",
+  "binaries": {
+    "baseline": {
+      "path": "artifacts/performance-baseline/native/bibbia",
+      "sha256": "b85a7bd27f756c5861e67c204c43bae1a51c6bae32b06904c0bbb815f5a4eb34"
+    },
+    "candidate": {
+      "path": "/tmp/bibbia-benchmark/usr/bin/bibbia",
+      "sha256": "15e197413e42e8366c9e3ee60270cd4cabb10f38dce47bfb72a37f77aac494bd"
+    }
+  },
+  "medians": {
+    "baseline": {
+      "initial": {
+        "elapsed_ms": 189.244,
+        "widgets": 792,
+        "startup_ready_ms": 394.635,
+        "rss_mib": 107.711,
+        "pss_mib": 79.4,
+        "private_mib": 53.008,
+        "cpu_percent": 0.0
+      },
+      "long_chapter": {
+        "elapsed_ms": 186.496,
+        "widgets": 792,
+        "rss_mib": 114.102,
+        "pss_mib": 85.811,
+        "private_mib": 59.438,
+        "cpu_percent": 0.0
+      },
+      "comparison": {
+        "elapsed_ms": 1073.782,
+        "widgets": 2920,
+        "rss_mib": 127.758,
+        "pss_mib": 98.219,
+        "private_mib": 70.621,
+        "cpu_percent": 0.0
+      },
+      "returned": {
+        "elapsed_ms": 160.887,
+        "widgets": 808,
+        "rss_mib": 130.27,
+        "pss_mib": 100.73,
+        "private_mib": 73.133,
+        "cpu_percent": 0.0
+      },
+      "wide": {
+        "elapsed_ms": 120.973,
+        "widgets": 808,
+        "rss_mib": 136.352,
+        "pss_mib": 104.871,
+        "private_mib": 75.332,
+        "cpu_percent": 0.0
+      },
+      "narrow": {
+        "elapsed_ms": 120.822,
+        "widgets": 808,
+        "rss_mib": 128.164,
+        "pss_mib": 101.027,
+        "private_mib": 75.832,
+        "cpu_percent": 0.0
+      },
+      "cycled": {
+        "elapsed_ms": 7623.066,
+        "widgets": 808,
+        "rss_mib": 137.441,
+        "pss_mib": 105.676,
+        "private_mib": 75.852,
+        "cpu_percent": 0.0
+      },
+      "animation": {
+        "elapsed_ms": 475.396,
+        "widgets": 808,
+        "rss_mib": 142.203,
+        "pss_mib": 110.438,
+        "private_mib": 80.613,
+        "cpu_percent": 99.94
+      },
+      "settled": {
+        "elapsed_ms": 1421.217,
+        "widgets": 808,
+        "rss_mib": 142.188,
+        "pss_mib": 110.422,
+        "private_mib": 80.598,
+        "cpu_percent": 0.0
+      }
+    },
+    "candidate": {
+      "initial": {
+        "elapsed_ms": 188.852,
+        "widgets": 1058,
+        "startup_ready_ms": 424.689,
+        "rss_mib": 108.949,
+        "pss_mib": 80.367,
+        "private_mib": 53.676,
+        "cpu_percent": 0.0
+      },
+      "long_chapter": {
+        "elapsed_ms": 192.385,
+        "widgets": 1058,
+        "rss_mib": 115.262,
+        "pss_mib": 86.705,
+        "private_mib": 60.039,
+        "cpu_percent": 0.0
+      },
+      "comparison": {
+        "elapsed_ms": 145.515,
+        "widgets": 1102,
+        "rss_mib": 118.461,
+        "pss_mib": 88.686,
+        "private_mib": 60.801,
+        "cpu_percent": 0.0
+      },
+      "returned": {
+        "elapsed_ms": 173.246,
+        "widgets": 1074,
+        "rss_mib": 118.461,
+        "pss_mib": 88.686,
+        "private_mib": 60.801,
+        "cpu_percent": 0.0
+      },
+      "wide": {
+        "elapsed_ms": 121.664,
+        "widgets": 1074,
+        "rss_mib": 123.863,
+        "pss_mib": 92.135,
+        "private_mib": 62.297,
+        "cpu_percent": 0.0
+      },
+      "narrow": {
+        "elapsed_ms": 120.312,
+        "widgets": 1074,
+        "rss_mib": 115.656,
+        "pss_mib": 88.271,
+        "private_mib": 62.777,
+        "cpu_percent": 0.0
+      },
+      "cycled": {
+        "elapsed_ms": 3923.934,
+        "widgets": 1074,
+        "rss_mib": 124.957,
+        "pss_mib": 92.959,
+        "private_mib": 62.852,
+        "cpu_percent": 0.0
+      },
+      "animation": {
+        "elapsed_ms": 471.172,
+        "widgets": 1074,
+        "rss_mib": 129.688,
+        "pss_mib": 97.689,
+        "private_mib": 67.582,
+        "cpu_percent": 100.405
+      },
+      "settled": {
+        "elapsed_ms": 1420.948,
+        "widgets": 1074,
+        "rss_mib": 129.688,
+        "pss_mib": 97.689,
+        "private_mib": 67.582,
+        "cpu_percent": 0.0
+      }
+    }
+  },
+  "samples": {
+    "baseline": [
+      {
+        "initial": {
+          "elapsed_ms": 188.63885399999998,
+          "widgets": 792,
+          "startup_ready_ms": 394.63520800001106,
+          "rss_mib": 107.7109375,
+          "pss_mib": 79.421875,
+          "private_mib": 53.01171875,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 186.02229,
+          "widgets": 792,
+          "rss_mib": 114.1015625,
+          "pss_mib": 85.83203125,
+          "private_mib": 59.44140625,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 1073.781989,
+          "widgets": 2920,
+          "rss_mib": 127.8359375,
+          "pss_mib": 98.310546875,
+          "private_mib": 70.6640625,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 161.053395,
+          "widgets": 808,
+          "rss_mib": 130.34375,
+          "pss_mib": 100.818359375,
+          "private_mib": 73.171875,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 122.396839,
+          "widgets": 808,
+          "rss_mib": 136.42578125,
+          "pss_mib": 104.958984375,
+          "private_mib": 75.37109375,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 120.821993,
+          "widgets": 808,
+          "rss_mib": 128.234375,
+          "pss_mib": 101.111328125,
+          "private_mib": 75.8671875,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 7569.838846,
+          "widgets": 808,
+          "rss_mib": 137.51171875,
+          "pss_mib": 105.759765625,
+          "private_mib": 75.88671875,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 475.93323300000003,
+          "widgets": 808,
+          "rss_mib": 142.27734375,
+          "pss_mib": 110.525390625,
+          "private_mib": 80.65234375,
+          "cpu_percent": 99.41202072105351
+        },
+        "settled": {
+          "elapsed_ms": 1421.641591,
+          "widgets": 808,
+          "rss_mib": 142.265625,
+          "pss_mib": 110.513671875,
+          "private_mib": 80.640625,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 190.214291,
+          "widgets": 792,
+          "startup_ready_ms": 394.39140599995426,
+          "rss_mib": 107.734375,
+          "pss_mib": 79.400390625,
+          "private_mib": 53.0078125,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 186.495821,
+          "widgets": 792,
+          "rss_mib": 114.125,
+          "pss_mib": 85.810546875,
+          "private_mib": 59.4375,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 1065.4599469999998,
+          "widgets": 2920,
+          "rss_mib": 127.7578125,
+          "pss_mib": 98.21875,
+          "private_mib": 70.62109375,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 160.453985,
+          "widgets": 808,
+          "rss_mib": 130.26953125,
+          "pss_mib": 100.73046875,
+          "private_mib": 73.1328125,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 120.972587,
+          "widgets": 808,
+          "rss_mib": 136.3515625,
+          "pss_mib": 104.87109375,
+          "private_mib": 75.33203125,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 120.71956899999999,
+          "widgets": 808,
+          "rss_mib": 128.1640625,
+          "pss_mib": 101.02734375,
+          "private_mib": 75.83203125,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 7623.066144,
+          "widgets": 808,
+          "rss_mib": 137.44140625,
+          "pss_mib": 105.67578125,
+          "private_mib": 75.8515625,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 475.396384,
+          "widgets": 808,
+          "rss_mib": 142.203125,
+          "pss_mib": 110.4375,
+          "private_mib": 80.61328125,
+          "cpu_percent": 99.94017504244327
+        },
+        "settled": {
+          "elapsed_ms": 1420.937523,
+          "widgets": 808,
+          "rss_mib": 142.1875,
+          "pss_mib": 110.421875,
+          "private_mib": 80.59765625,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 189.243826,
+          "widgets": 792,
+          "startup_ready_ms": 404.311147000044,
+          "rss_mib": 107.23046875,
+          "pss_mib": 78.5947265625,
+          "private_mib": 51.84375,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 187.809864,
+          "widgets": 792,
+          "rss_mib": 113.53515625,
+          "pss_mib": 84.9189453125,
+          "private_mib": 58.1875,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 1076.679127,
+          "widgets": 2920,
+          "rss_mib": 127.3046875,
+          "pss_mib": 97.4638671875,
+          "private_mib": 69.5078125,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 160.886716,
+          "widgets": 808,
+          "rss_mib": 129.73828125,
+          "pss_mib": 99.8974609375,
+          "private_mib": 71.94140625,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 120.962885,
+          "widgets": 808,
+          "rss_mib": 135.8203125,
+          "pss_mib": 104.0380859375,
+          "private_mib": 74.140625,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 121.004295,
+          "widgets": 808,
+          "rss_mib": 127.62890625,
+          "pss_mib": 100.1904296875,
+          "private_mib": 74.63671875,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 7661.982029,
+          "widgets": 808,
+          "rss_mib": 136.90625,
+          "pss_mib": 104.8388671875,
+          "private_mib": 74.65625,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 475.217067,
+          "widgets": 808,
+          "rss_mib": 141.71875,
+          "pss_mib": 109.634765625,
+          "private_mib": 79.4375,
+          "cpu_percent": 104.75126132113431
+        },
+        "settled": {
+          "elapsed_ms": 1421.216963,
+          "widgets": 808,
+          "rss_mib": 141.70703125,
+          "pss_mib": 109.623046875,
+          "private_mib": 79.42578125,
+          "cpu_percent": 0.0
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "initial": {
+          "elapsed_ms": 189.762455,
+          "widgets": 1058,
+          "startup_ready_ms": 424.87722300000996,
+          "rss_mib": 108.94921875,
+          "pss_mib": 80.3671875,
+          "private_mib": 53.67578125,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 192.432951,
+          "widgets": 1058,
+          "rss_mib": 115.26171875,
+          "pss_mib": 86.705078125,
+          "private_mib": 60.0390625,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 145.72586700000002,
+          "widgets": 1102,
+          "rss_mib": 118.4609375,
+          "pss_mib": 88.685546875,
+          "private_mib": 60.80078125,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 172.88934,
+          "widgets": 1074,
+          "rss_mib": 118.4609375,
+          "pss_mib": 88.685546875,
+          "private_mib": 60.80078125,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 121.664205,
+          "widgets": 1074,
+          "rss_mib": 123.86328125,
+          "pss_mib": 92.134765625,
+          "private_mib": 62.296875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 120.421068,
+          "widgets": 1074,
+          "rss_mib": 115.65625,
+          "pss_mib": 88.271484375,
+          "private_mib": 62.77734375,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 3923.5648269999997,
+          "widgets": 1074,
+          "rss_mib": 124.95703125,
+          "pss_mib": 92.958984375,
+          "private_mib": 62.8515625,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 470.69845100000003,
+          "widgets": 1074,
+          "rss_mib": 129.6875,
+          "pss_mib": 97.689453125,
+          "private_mib": 67.58203125,
+          "cpu_percent": 100.40462911061955
+        },
+        "settled": {
+          "elapsed_ms": 1420.947711,
+          "widgets": 1074,
+          "rss_mib": 129.6875,
+          "pss_mib": 97.689453125,
+          "private_mib": 67.58203125,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 188.851882,
+          "widgets": 1058,
+          "startup_ready_ms": 414.7835579999537,
+          "rss_mib": 109.3046875,
+          "pss_mib": 80.9951171875,
+          "private_mib": 54.61328125,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 192.385357,
+          "widgets": 1058,
+          "rss_mib": 115.68359375,
+          "pss_mib": 87.3994140625,
+          "private_mib": 61.04296875,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 145.514879,
+          "widgets": 1102,
+          "rss_mib": 118.93359375,
+          "pss_mib": 89.4306640625,
+          "private_mib": 61.85546875,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 173.246469,
+          "widgets": 1074,
+          "rss_mib": 118.93359375,
+          "pss_mib": 89.4306640625,
+          "private_mib": 61.85546875,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 120.175907,
+          "widgets": 1074,
+          "rss_mib": 124.3359375,
+          "pss_mib": 92.8798828125,
+          "private_mib": 63.3515625,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 120.165734,
+          "widgets": 1074,
+          "rss_mib": 116.12890625,
+          "pss_mib": 89.0166015625,
+          "private_mib": 63.83203125,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 3924.308855,
+          "widgets": 1074,
+          "rss_mib": 125.3671875,
+          "pss_mib": 93.6416015625,
+          "private_mib": 63.84375,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 471.587281,
+          "widgets": 1074,
+          "rss_mib": 130.09765625,
+          "pss_mib": 98.3720703125,
+          "private_mib": 68.57421875,
+          "cpu_percent": 105.4328659652424
+        },
+        "settled": {
+          "elapsed_ms": 1421.123119,
+          "widgets": 1074,
+          "rss_mib": 130.09765625,
+          "pss_mib": 98.3720703125,
+          "private_mib": 68.57421875,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 187.738707,
+          "widgets": 1058,
+          "startup_ready_ms": 424.68948600003387,
+          "rss_mib": 108.4140625,
+          "pss_mib": 79.9853515625,
+          "private_mib": 53.43359375,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 191.246989,
+          "widgets": 1058,
+          "rss_mib": 114.78515625,
+          "pss_mib": 86.3818359375,
+          "private_mib": 59.85546875,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 143.677736,
+          "widgets": 1102,
+          "rss_mib": 118.0078125,
+          "pss_mib": 88.3857421875,
+          "private_mib": 60.640625,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 173.341992,
+          "widgets": 1074,
+          "rss_mib": 118.0078125,
+          "pss_mib": 88.3857421875,
+          "private_mib": 60.640625,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 123.176149,
+          "widgets": 1074,
+          "rss_mib": 123.41015625,
+          "pss_mib": 91.8349609375,
+          "private_mib": 62.13671875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 120.31226000000001,
+          "widgets": 1074,
+          "rss_mib": 115.203125,
+          "pss_mib": 87.9716796875,
+          "private_mib": 62.6171875,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 3923.933942,
+          "widgets": 1074,
+          "rss_mib": 124.5078125,
+          "pss_mib": 92.6630859375,
+          "private_mib": 62.6953125,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 471.171887,
+          "widgets": 1074,
+          "rss_mib": 129.2421875,
+          "pss_mib": 97.3974609375,
+          "private_mib": 67.4296875,
+          "cpu_percent": 99.07793500853523
+        },
+        "settled": {
+          "elapsed_ms": 1420.777677,
+          "widgets": 1074,
+          "rss_mib": 129.2421875,
+          "pss_mib": 97.3974609375,
+          "private_mib": 67.4296875,
+          "cpu_percent": 0.0
+        }
+      }
+    ]
+  },
+  "source_commit": "6971b5158c59e0e9d699d1dd0a9b358929cea174",
+  "baseline_source_commit": "7d68ccedca8392ceccae99bbbd8b46b5dc60447a"
+}

@@ -83,6 +83,9 @@ In **Organizza** sono disponibili **Elimina solo la nota…** e **Elimina tutti 
 la conferma chiarisce cosa verrà rimosso. La prima scelta conserva segnalibro e segni; la seconda rimuove
 anche la cartella e le etichette assegnate al versetto. Le raccolte e gli altri versetti restano disponibili.
 
+Schermate della 0.14.0: [lettura Windows](docs/screenshots/v0.14.0-windows-sepia.png), [appunti](docs/screenshots/v0.14.0-windows-notes.png), [piani e calendario](docs/screenshots/v0.14.0-windows-plans.png),
+[GNOME](docs/screenshots/v0.14.0-gnome-focus-sepia.png), [macOS](docs/screenshots/v0.14.0-macos-focus-sepia.png).
+
 ## Piani di lettura
 
 Aprire **Piani di lettura** dalla navigazione Windows/GNOME o dal pulsante calendario nella barra macOS.
@@ -454,8 +457,8 @@ seconda pagina soltanto quando serve e riusa l'impaginazione. Le annotazioni
 macOS aggiornano soltanto i versetti cambiati. L'indice delle corrispondenze
 comune ai motori occupa 20 KB invece di 146 KB, senza perdere riferimenti.
 
-Rapporti grezzi della 0.13.0: [Windows](docs/performance/v0.13.0-windows.json),
-[Linux](docs/performance/v0.13.0-linux.json), [macOS](docs/performance/v0.13.0-macos.json).
+Rapporti grezzi della 0.14.0: [Windows](docs/performance/v0.14.0-windows.json),
+[Linux](docs/performance/v0.14.0-linux.json), [macOS](docs/performance/v0.14.0-macos.json).
 Riguardano la normale lettura e il confronto delle traduzioni; non misurano il costo delle schermate del calendario aperte.
 
 Le pipeline native eseguono anche un confronto A/B con la 0.9.0, compilata sulla

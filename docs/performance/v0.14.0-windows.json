@@ -1,0 +1,589 @@
+{
+  "platform": "Windows-2022Server-10.0.20348-SP0",
+  "architecture": "AMD64",
+  "method": "Same runner, native release apps, fresh marked profiles, alternating order, 3 samples. Same fixture hooks in v0.9.0 baseline and candidate. 1000x720 narrow / 1500x900 wide, CEI Psalm 119, KJV comparison, 8 navigation/comparison cycles. First-ready includes a 120ms one-shot layout settle; ordinary idle benchmarks are separate. No forced GC, heap purge or working-set trimming. CPU is one core; excludes display server and GPU allocations. RSS/private/PSS are different metrics; do not compare totals between operating systems.",
+  "binaries": {
+    "baseline": {
+      "path": "artifacts\\performance-baseline\\native\\Bibbia.Windows.exe",
+      "sha256": "22f9d5f43db5fc31d38e1e5fec23613ede020c7c3498ac84b79ffed4dea73764"
+    },
+    "candidate": {
+      "path": "artifacts\\Bibbia\\Bibbia.Windows.exe",
+      "sha256": "3ddda7867b3189866c5d3721fa75e2cbcd50a055269be4bc82b3c168af6bd519"
+    }
+  },
+  "medians": {
+    "baseline": {
+      "initial": {
+        "elapsed_ms": 364.468,
+        "editors": 31,
+        "startup_ready_ms": 976.469,
+        "rss_mib": 165.977,
+        "private_mib": 80.949,
+        "cpu_percent": 0.0
+      },
+      "long_chapter": {
+        "elapsed_ms": 1068.02,
+        "editors": 176,
+        "rss_mib": 269.426,
+        "private_mib": 200.133,
+        "cpu_percent": 0.0
+      },
+      "comparison": {
+        "elapsed_ms": 154.646,
+        "editors": 176,
+        "rss_mib": 272.619,
+        "private_mib": 202.879,
+        "cpu_percent": 0.0
+      },
+      "returned": {
+        "elapsed_ms": 264.144,
+        "editors": 176,
+        "rss_mib": 273.164,
+        "private_mib": 206.07,
+        "cpu_percent": 0.0
+      },
+      "wide": {
+        "elapsed_ms": 217.043,
+        "editors": 176,
+        "rss_mib": 278.086,
+        "private_mib": 207.402,
+        "cpu_percent": 0.0
+      },
+      "narrow": {
+        "elapsed_ms": 225.597,
+        "editors": 176,
+        "rss_mib": 280.992,
+        "private_mib": 207.719,
+        "cpu_percent": 0.0
+      },
+      "cycled": {
+        "elapsed_ms": 9276.96,
+        "editors": 176,
+        "rss_mib": 358.125,
+        "private_mib": 288.672,
+        "cpu_percent": 0.0
+      },
+      "animation": {
+        "elapsed_ms": 264.219,
+        "editors": 176,
+        "rss_mib": 354.777,
+        "private_mib": 278.309,
+        "cpu_percent": 12.835
+      },
+      "settled": {
+        "elapsed_ms": 1423.005,
+        "editors": 176,
+        "rss_mib": 356.469,
+        "private_mib": 279.777,
+        "cpu_percent": 0.0
+      }
+    },
+    "candidate": {
+      "initial": {
+        "elapsed_ms": 480.836,
+        "editors": 0,
+        "readers": 31,
+        "startup_ready_ms": 1019.697,
+        "rss_mib": 157.523,
+        "private_mib": 74.453,
+        "cpu_percent": 0.0
+      },
+      "long_chapter": {
+        "elapsed_ms": 724.772,
+        "editors": 0,
+        "readers": 176,
+        "rss_mib": 236.707,
+        "private_mib": 158.344,
+        "cpu_percent": 0.0
+      },
+      "comparison": {
+        "elapsed_ms": 184.346,
+        "editors": 0,
+        "readers": 0,
+        "rss_mib": 239.57,
+        "private_mib": 160.82,
+        "cpu_percent": 0.0
+      },
+      "returned": {
+        "elapsed_ms": 716.644,
+        "editors": 0,
+        "readers": 176,
+        "rss_mib": 277.227,
+        "private_mib": 202.086,
+        "cpu_percent": 0.0
+      },
+      "wide": {
+        "elapsed_ms": 132.198,
+        "editors": 0,
+        "readers": 176,
+        "rss_mib": 282.764,
+        "private_mib": 205.533,
+        "cpu_percent": 0.0
+      },
+      "narrow": {
+        "elapsed_ms": 124.54,
+        "editors": 0,
+        "readers": 176,
+        "rss_mib": 284.84,
+        "private_mib": 206.195,
+        "cpu_percent": 0.0
+      },
+      "cycled": {
+        "elapsed_ms": 9030.451,
+        "editors": 0,
+        "readers": 176,
+        "rss_mib": 358.129,
+        "private_mib": 280.953,
+        "cpu_percent": 0.0
+      },
+      "animation": {
+        "elapsed_ms": 204.173,
+        "editors": 0,
+        "readers": 176,
+        "rss_mib": 366.418,
+        "private_mib": 287.594,
+        "cpu_percent": 0.0
+      },
+      "settled": {
+        "elapsed_ms": 1430.189,
+        "editors": 0,
+        "readers": 176,
+        "rss_mib": 367.93,
+        "private_mib": 289.113,
+        "cpu_percent": 0.0
+      }
+    }
+  },
+  "samples": {
+    "baseline": [
+      {
+        "initial": {
+          "elapsed_ms": 364.4677,
+          "editors": 31,
+          "startup_ready_ms": 1626.69649999998,
+          "rss_mib": 166.1484375,
+          "private_mib": 81.96875,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 1143.5478,
+          "editors": 176,
+          "rss_mib": 270.46484375,
+          "private_mib": 201.703125,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 154.6457,
+          "editors": 176,
+          "rss_mib": 273.775390625,
+          "private_mib": 204.55078125,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 226.5334,
+          "editors": 176,
+          "rss_mib": 276.0625,
+          "private_mib": 206.0703125,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 244.4321,
+          "editors": 176,
+          "rss_mib": 278.359375,
+          "private_mib": 207.40234375,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 225.5971,
+          "editors": 176,
+          "rss_mib": 281.71875,
+          "private_mib": 207.71875,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 9315.1698,
+          "editors": 176,
+          "rss_mib": 358.125,
+          "private_mib": 288.671875,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 254.4802,
+          "editors": 176,
+          "rss_mib": 354.77734375,
+          "private_mib": 278.30859375,
+          "cpu_percent": 25.660880582898336
+        },
+        "settled": {
+          "elapsed_ms": 1423.005,
+          "editors": 176,
+          "rss_mib": 356.46875,
+          "private_mib": 279.77734375,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 444.8098,
+          "editors": 31,
+          "startup_ready_ms": 976.4689999999518,
+          "rss_mib": 165.9765625,
+          "private_mib": 79.24609375,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 1059.9359,
+          "editors": 176,
+          "rss_mib": 269.42578125,
+          "private_mib": 199.25,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 162.7746,
+          "editors": 176,
+          "rss_mib": 272.619140625,
+          "private_mib": 202.015625,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 274.9045,
+          "editors": 176,
+          "rss_mib": 272.25390625,
+          "private_mib": 203.921875,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 204.1909,
+          "editors": 176,
+          "rss_mib": 276.1796875,
+          "private_mib": 204.4296875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 229.6147,
+          "editors": 176,
+          "rss_mib": 279.421875,
+          "private_mib": 205.33984375,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 9276.9598,
+          "editors": 176,
+          "rss_mib": 382.15625,
+          "private_mib": 319.6796875,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 366.5026,
+          "editors": 176,
+          "rss_mib": 366.630859375,
+          "private_mib": 291.51953125,
+          "cpu_percent": 0.0
+        },
+        "settled": {
+          "elapsed_ms": 1421.6057,
+          "editors": 176,
+          "rss_mib": 367.78125,
+          "private_mib": 293.57421875,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 346.1318,
+          "editors": 31,
+          "startup_ready_ms": 838.9297999999599,
+          "rss_mib": 161.1875,
+          "private_mib": 80.94921875,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 1068.0199,
+          "editors": 176,
+          "rss_mib": 268.84375,
+          "private_mib": 200.1328125,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 152.6364,
+          "editors": 176,
+          "rss_mib": 271.8828125,
+          "private_mib": 202.87890625,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 264.1445,
+          "editors": 176,
+          "rss_mib": 273.1640625,
+          "private_mib": 206.55859375,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 217.0429,
+          "editors": 176,
+          "rss_mib": 278.0859375,
+          "private_mib": 208.35546875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 216.5299,
+          "editors": 176,
+          "rss_mib": 280.9921875,
+          "private_mib": 208.4296875,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 9131.1304,
+          "editors": 176,
+          "rss_mib": 330.125,
+          "private_mib": 258.140625,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 264.2193,
+          "editors": 176,
+          "rss_mib": 338.0546875,
+          "private_mib": 262.80859375,
+          "cpu_percent": 12.83508821505181
+        },
+        "settled": {
+          "elapsed_ms": 1436.0677,
+          "editors": 176,
+          "rss_mib": 338.83984375,
+          "private_mib": 264.07421875,
+          "cpu_percent": 0.0
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "initial": {
+          "elapsed_ms": 508.3601,
+          "editors": 0,
+          "readers": 31,
+          "startup_ready_ms": 1079.3599999999515,
+          "rss_mib": 158.22265625,
+          "private_mib": 74.453125,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 657.0214,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 236.70703125,
+          "private_mib": 158.34375,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 181.6833,
+          "editors": 0,
+          "readers": 0,
+          "rss_mib": 239.69921875,
+          "private_mib": 161.0546875,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 676.8223,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 277.2265625,
+          "private_mib": 202.0859375,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 261.2486,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 282.763671875,
+          "private_mib": 205.533203125,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 125.4492,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 284.83984375,
+          "private_mib": 206.1953125,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 8913.0187,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 358.12890625,
+          "private_mib": 280.953125,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 293.5996,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 366.41796875,
+          "private_mib": 287.59375,
+          "cpu_percent": 12.85561722596088
+        },
+        "settled": {
+          "elapsed_ms": 1430.1889,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 367.9296875,
+          "private_mib": 289.11328125,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 457.1105,
+          "editors": 0,
+          "readers": 31,
+          "startup_ready_ms": 998.1533999999783,
+          "rss_mib": 157.060546875,
+          "private_mib": 73.0625,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 724.772,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 236.4453125,
+          "private_mib": 156.8125,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 184.3462,
+          "editors": 0,
+          "readers": 0,
+          "rss_mib": 238.4921875,
+          "private_mib": 160.35546875,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 723.5141,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 274.61328125,
+          "private_mib": 198.0,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 132.1982,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 279.5703125,
+          "private_mib": 199.9296875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 124.5402,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 281.9296875,
+          "private_mib": 199.90234375,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 9340.999,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 368.83203125,
+          "private_mib": 287.65234375,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 188.8756,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 374.912109375,
+          "private_mib": 291.796875,
+          "cpu_percent": 0.0
+        },
+        "settled": {
+          "elapsed_ms": 1430.8293,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 375.84765625,
+          "private_mib": 293.34765625,
+          "cpu_percent": 0.0
+        }
+      },
+      {
+        "initial": {
+          "elapsed_ms": 480.8364,
+          "editors": 0,
+          "readers": 31,
+          "startup_ready_ms": 1019.697400000041,
+          "rss_mib": 157.5234375,
+          "private_mib": 74.6953125,
+          "cpu_percent": 0.0
+        },
+        "long_chapter": {
+          "elapsed_ms": 730.6629,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 236.953125,
+          "private_mib": 158.359375,
+          "cpu_percent": 0.0
+        },
+        "comparison": {
+          "elapsed_ms": 185.5551,
+          "editors": 0,
+          "readers": 0,
+          "rss_mib": 239.5703125,
+          "private_mib": 160.8203125,
+          "cpu_percent": 0.0
+        },
+        "returned": {
+          "elapsed_ms": 716.6441,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 281.8359375,
+          "private_mib": 206.07421875,
+          "cpu_percent": 0.0
+        },
+        "wide": {
+          "elapsed_ms": 123.6306,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 288.53125,
+          "private_mib": 210.21875,
+          "cpu_percent": 0.0
+        },
+        "narrow": {
+          "elapsed_ms": 123.6042,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 290.94921875,
+          "private_mib": 211.265625,
+          "cpu_percent": 0.0
+        },
+        "cycled": {
+          "elapsed_ms": 9030.451,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 341.08203125,
+          "private_mib": 258.42578125,
+          "cpu_percent": 0.0
+        },
+        "animation": {
+          "elapsed_ms": 204.1725,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 346.47265625,
+          "private_mib": 262.609375,
+          "cpu_percent": 0.0
+        },
+        "settled": {
+          "elapsed_ms": 1428.2865,
+          "editors": 0,
+          "readers": 176,
+          "rss_mib": 348.1171875,
+          "private_mib": 264.14453125,
+          "cpu_percent": 0.0
+        }
+      }
+    ]
+  },
+  "source_commit": "6971b5158c59e0e9d699d1dd0a9b358929cea174",
+  "baseline_source_commit": "7d68ccedca8392ceccae99bbbd8b46b5dc60447a"
+}
