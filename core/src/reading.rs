@@ -301,6 +301,17 @@ impl Engine {
         )
     }
 }
+
+impl Engine {
+    fn keep_imported(&mut self, edition: &str) {
+        for (id, data) in &mut self.editions {
+            if id != edition && data.builtin.is_none() {
+                data.release();
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -318,15 +329,5 @@ mod tests {
             assert!(day(s).is_err(), "{s}");
         }
         assert!(day("2000-02-29").is_ok());
-    }
-}
-
-impl Engine {
-    fn keep_imported(&mut self, edition: &str) {
-        for (id, data) in &mut self.editions {
-            if id != edition && data.builtin.is_none() {
-                data.release();
-            }
-        }
     }
 }

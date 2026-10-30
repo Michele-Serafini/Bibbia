@@ -46,12 +46,12 @@ impl Ui {
             format!("{label} {}", s.position.chapter + 1)
         } else if s.language == "en" {
             format!(
-                "{label} {} · {notes} notes · {bookmarks} bookmarks · {marks} marks",
+                "{label} {} · Notes: {notes} · Bookmarks: {bookmarks} · Marks: {marks}",
                 s.position.chapter + 1
             )
         } else {
             format!(
-                "{label} {} · {notes} note · {bookmarks} segnalibri · {marks} segni",
+                "{label} {} · Note: {notes} · Segnalibri: {bookmarks} · Segni: {marks}",
                 s.position.chapter + 1
             )
         });

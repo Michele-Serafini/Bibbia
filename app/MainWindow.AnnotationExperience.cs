@@ -30,7 +30,7 @@ public sealed partial class MainWindow {
     private void UpdateAnnotationSummary(){
         if(books.Count<=book)return;
         var notes=readerRows.Count(r=>r.HasNote);var bookmarks=readerRows.Count(r=>r.HasBookmark);var marks=readerRows.Count(r=>r.HasMarks);
-        ReadingLabel.Text=T("Capitolo {0} di {1}",chapter+1,books[book].Chapters)+(notes+bookmarks+marks==0?"":N($" · {notes} note · {bookmarks} segnalibri · {marks} segni",$" · {notes} notes · {bookmarks} bookmarks · {marks} marks"));
+        ReadingLabel.Text=T("Capitolo {0} di {1}",chapter+1,books[book].Chapters)+(notes+bookmarks+marks==0?"":N($" · Note: {notes} · Segnalibri: {bookmarks} · Segni: {marks}",$" · Notes: {notes} · Bookmarks: {bookmarks} · Marks: {marks}"));
     }
     private void RefreshCurrentAnnotation(string targetEdition,int targetBook,int targetChapter,int verse,JsonElement annotation){
         if(edition!=targetEdition||book!=targetBook||chapter!=targetChapter||verse<0||verse>=readerRows.Count)return;

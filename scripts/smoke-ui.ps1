@@ -66,6 +66,15 @@ function Wait-Text($parent, [string]$text) {
     } while ([DateTime]::UtcNow -lt $deadline)
     throw "Expected text not shown: $text"
 }
+function Wait-ReadingSummary([string]$prefix) {
+    $label=Wait-Control $window 'ReadingSummary'
+    $deadline=[DateTime]::UtcNow.AddSeconds(20)
+    do {
+        if($label.Current.Name.StartsWith($prefix)){return $label}
+        Start-Sleep -Milliseconds 100
+    } while([DateTime]::UtcNow -lt $deadline)
+    throw "Reading summary did not show chapter: $prefix / $($label.Current.Name)"
+}
 function Invoke-Control($control) {
     $control.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
     Start-Sleep -Milliseconds 200
@@ -354,14 +363,14 @@ try {
     if ((Wait-Control $window 'SavedPreviousPage').Current.IsEnabled) { throw 'First saved page has an enabled previous button.' }
     if ((Wait-Control $window 'SavedNextPage').Current.IsEnabled) { throw 'Single annotation unexpectedly has another page.' }
     Select-Page 'ReadNavigation'
-    Wait-Text $window 'Chapter 1 of 50' | Out-Null
+    Wait-ReadingSummary 'Chapter 1 of 50' | Out-Null
     $toggle.Toggle()
     Start-Sleep -Milliseconds 650
     $pageLabel = Wait-Control $window 'BookPageLabel'
     if ($pageLabel.Current.Name -notmatch '/ (\d+)' -or [int]$Matches[1] -lt 2) { throw 'Native book mode did not paginate Genesis.' }
     Invoke-Control (Wait-Control $window 'NextChapter')
     Start-Sleep -Milliseconds 350
-    Wait-Text $window 'Chapter 1 of 50' | Out-Null
+    Wait-ReadingSummary 'Chapter 1 of 50' | Out-Null
     if ($pageLabel.Current.Name -notmatch '^2') { throw 'Next page did not stay in the same chapter.' }
     Invoke-Control (Wait-Control $window 'PreviousChapter')
     Start-Sleep -Milliseconds 1300

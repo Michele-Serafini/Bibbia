@@ -6,7 +6,7 @@ extension AppModel {
     var annotationSummary:String {
         var notes=0,bookmarks=0,marks=0
         for verse in verses {if !verse.annotation.note.isEmpty{notes+=1};if verse.annotation.bookmark{bookmarks+=1};if verse.annotation.underline || verse.annotation.highlight != nil || !verse.annotation.ranges.isEmpty {marks+=1}}
-        return notes+bookmarks+marks==0 ? "":t("\(notes) note · \(bookmarks) segnalibri · \(marks) segni","\(notes) notes · \(bookmarks) bookmarks · \(marks) marks")
+        return notes+bookmarks+marks==0 ? "":t("Note: \(notes) · Segnalibri: \(bookmarks) · Segni: \(marks)","Notes: \(notes) · Bookmarks: \(bookmarks) · Marks: \(marks)")
     }
     func showBookmarks(){
         if preferences.focusMode{toggleFocus()};var filter=NoteFilter();filter.kind="bookmark";noteFilter=filter;panel = .saved;loadSaved(reset:true)

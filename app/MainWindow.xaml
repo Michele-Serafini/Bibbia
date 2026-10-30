@@ -113,7 +113,7 @@
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <StackPanel HorizontalAlignment="Center" Spacing="4" Margin="0,0,0,8">
                                 <TextBlock x:Name="BookPageLabel" HorizontalAlignment="Center" FontSize="12" AutomationProperties.AutomationId="BookPageLabel" />
-                                <TextBlock x:Name="ReadingLabel" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="ReadingLabel" AutomationProperties.AutomationId="ReadingSummary" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <Button x:Name="QuickEditionButton" AutomationProperties.AutomationId="QuickEditionButton" Padding="10,4" Background="Transparent" BorderThickness="0" FontSize="12" MaxWidth="400">
                                     <Button.Flyout><MenuFlyout Opening="QuickEditionsOpening" /></Button.Flyout>
                                 </Button>
