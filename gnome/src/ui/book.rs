@@ -209,10 +209,7 @@ impl BookSurface {
         click.connect_event(move |_, event| {
             if matches!(
                 event.event_type(),
-                gdk::EventType::ButtonPress
-                    | gdk::EventType::TouchBegin
-                    | gdk::EventType::Scroll
-                    | gdk::EventType::KeyPress
+                gdk::EventType::ButtonPress | gdk::EventType::TouchBegin
             ) && let Some(obj) = weak.upgrade()
             {
                 obj.cancel();
