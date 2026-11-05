@@ -301,6 +301,18 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         ui.pager.borrow().index == saved_page,
         "Precise book resume lost its page after deferred layout",
     )?;
+    if ui.book_surface.is_turning() {
+        ui.previous.emit_clicked();
+        check(
+            ui.pager.borrow().index == saved_page,
+            "Repeated input interrupted the active page",
+        )?;
+    }
+    until(
+        || !ui.book_surface.is_turning(),
+        "Book page did not finish before going back",
+    )
+    .await?;
     ui.previous.emit_clicked();
     check(
         ui.pager.borrow().index == 0,
