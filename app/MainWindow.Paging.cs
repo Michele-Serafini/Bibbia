@@ -49,7 +49,7 @@ public sealed partial class MainWindow
             if(e.Handled || !bookMode || comparing || section!="read")return;
             if(e.Key is not (VirtualKey.PageDown or VirtualKey.PageUp or VirtualKey.Left or VirtualKey.Right))return;
             foreach(var key in new[]{VirtualKey.Control,VirtualKey.Menu,VirtualKey.Shift,VirtualKey.LeftWindows,VirtualKey.RightWindows})
-                if((Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key)&Windows.UI.Core.CoreVirtualKeyStates.Down)!=0)return;
+                if((Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key)&global::Windows.UI.Core.CoreVirtualKeyStates.Down)!=0)return;
             for(DependencyObject? node=Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(Root.XamlRoot) as DependencyObject;node!=null;node=VisualTreeHelper.GetParent(node))
                 if(node is TextBox or RichEditBox or ComboBox or Slider or ToggleSwitch)return;
             if(e.Key is VirtualKey.PageDown or VirtualKey.Right)NextClick(this,new RoutedEventArgs());else PreviousClick(this,new RoutedEventArgs());
