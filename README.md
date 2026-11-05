@@ -1,6 +1,6 @@
 # Bibbia per Windows, GNOME e macOS
 
-**Versione 0.14.0 su Windows, Linux e macOS**, pubblicata in un’unica release.
+**Versione 0.14.1 su Windows, Linux e macOS**, pubblicata in un’unica release.
 Note e segnalibri più riconoscibili, eliminazione selettiva da Organizza e importazione dei piani nel calendario di sistema. Lettura, appunti, PDF/Markdown e backup restano disponibili offline.
 
 Lettura su una superficie carta con margini, dorso e ombre; al cambio di capitolo
@@ -9,11 +9,12 @@ il resto del foglio in 1.100 ms. Ombre mobili e retro opaco
 accompagnano la curvatura.
 La modalità Libro impagina anche i capitoli lunghi e il testo conserva selezione e annotazioni native.
 Le preferenze di sistema per ridurre le animazioni sono rispettate.
+In modalità Libro, **← / →** e **Pagina su / giù** sfogliano le pagine. Il titolo resta visibile in concentrazione; la rotella attende la fine della transizione senza sovrapporre animazioni.
 
-[EXE Windows](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/Bibbia-Setup-0.14.0-x64.exe) ·
-[DEB Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/bibbia_0.14.0-1_amd64.deb) ·
-[RPM Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/bibbia-0.14.0-1.x86_64.rpm) ·
-[DMG macOS Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.0/Bibbia-0.14.0-universal.dmg).
+[EXE Windows](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.1/Bibbia-Setup-0.14.1-x64.exe) ·
+[DEB Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.1/bibbia_0.14.1-1_amd64.deb) ·
+[RPM Linux](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.1/bibbia-0.14.1-1.x86_64.rpm) ·
+[DMG macOS Universal](https://github.com/Michele-Serafini/Bibbia/releases/download/v0.14.1/Bibbia-0.14.1-universal.dmg).
 
 macOS è sviluppato interamente in **Swift**, motore compreso, con **SwiftUI e AppKit**.
 Usa gli strumenti e i font Apple di sistema e il disegno serif per la lettura.

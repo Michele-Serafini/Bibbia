@@ -243,6 +243,7 @@ try {
     Invoke-Control (Wait-Control $window 'SaveNote' -Popup)
     (Wait-Control $window 'FocusToggle').GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle()
     Start-Sleep -Milliseconds 350
+    if ((Wait-Control $window 'PageTitle').Current.IsOffscreen) { throw 'Book title disappeared in focus mode.' }
     Save-WindowImage 'windows-focus.png'
     Invoke-Control (Wait-Control $window 'FocusExit')
     Wait-Control $window 'BookPicker' | Out-Null

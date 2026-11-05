@@ -86,7 +86,7 @@ impl Ui {
             .set_reveal(!active && self.header_title.is_title_visible());
         self.controls.set_visible(!active);
         self.footer.set_visible(!active);
-        self.reference.set_visible(!active);
+        self.reference.set_visible(true);
         self.subtitle.set_visible(!active);
         self.focus_bar.set_visible(active);
     }

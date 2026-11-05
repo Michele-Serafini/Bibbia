@@ -36,7 +36,7 @@
                 <StackPanel x:Name="ReaderHeading" Spacing="5" MaxWidth="1600" HorizontalAlignment="Stretch">
                     <TextBlock x:Name="EyebrowLabel" Text="UNO SPAZIO PER LA PAROLA" FontSize="11" CharacterSpacing="180"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="PageTitle" Text="Leggi con calma." Style="{ThemeResource TitleTextBlockStyle}" />
+                    <TextBlock x:Name="PageTitle" AutomationProperties.AutomationId="PageTitle" Text="Leggi con calma." Style="{ThemeResource TitleTextBlockStyle}" />
                 </StackPanel>
                 <InfoBar x:Name="ErrorBar" AutomationProperties.AutomationId="ErrorBar" Grid.Row="1" IsOpen="False" Severity="Error" IsClosable="True" />
                 <Grid x:Name="ContentPanels" Grid.Row="2">

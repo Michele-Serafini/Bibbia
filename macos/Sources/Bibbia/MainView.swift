@@ -182,10 +182,9 @@ struct MainView: View {
 
     private var reader: some View {
         VStack(spacing: 0) {
-            if !model.preferences.focusMode {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(model.title).font(.system(size: 30, weight: .semibold, design: .serif))
+                    Text(model.title).font(.system(size: model.preferences.focusMode ? 20 : 30, weight: .semibold, design: .serif))
                         .id(model.title).transition(.opacity)
                     Text(model.position.edition+(model.annotationSummary.isEmpty ? "":" · "+model.annotationSummary)).font(.subheadline).foregroundStyle(.secondary)
                 }.animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.title)
@@ -193,7 +192,6 @@ struct MainView: View {
                 if model.loading { ProgressView().controlSize(.small) }
             }.padding(.horizontal, 32).padding(.top, 26).padding(.bottom, 16)
                 .frame(maxWidth: 820)
-            }
             Group {
                 if model.comparing { ComparisonView(model: model) }
                 else { ChapterTextView(model: model).accessibilityIdentifier("chapterText") }

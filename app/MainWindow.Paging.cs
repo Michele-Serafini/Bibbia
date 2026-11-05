@@ -21,7 +21,8 @@ public sealed partial class MainWindow
     private readonly record struct PageLine(double Y,double Height,int Verse,int Offset);
     private readonly List<PageLine> bookPages=[];
     private ReaderPlace readerPlace=new();
-    private bool bookMode=true,bookSeek,bookLast,bookReflowing;
+    private bool bookMode=true,bookSeek,bookLast,bookReflowing,bookCapturePending,chapterLoading;
+    private bool PageNavigationBusy => bookCapturePending || chapterLoading || chapterSnapshot!=null || bookBatch!=null;
     private int bookPage,bookColumns=1,pageRequest;
     private string bookChapter="";
     private PageSnapshot? chapterSnapshot;
@@ -44,16 +45,25 @@ public sealed partial class MainWindow
         scrollingPanel=VerseList.ItemsPanel;
         fullChapterPanel=(ItemsPanelTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><StackPanel /></ItemsPanelTemplate>");
         BookStage.SizeChanged+=(_,_)=>ScheduleBookLayout();
-        Root.AddHandler(UIElement.KeyDownEvent,new Microsoft.UI.Xaml.Input.KeyEventHandler((_,e)=>{
-            if(bookMode && !comparing && section=="read" && e.Key is VirtualKey.PageDown or VirtualKey.PageUp){
-                if(e.Key==VirtualKey.PageDown) NextClick(this,new RoutedEventArgs());else PreviousClick(this,new RoutedEventArgs());e.Handled=true;
-            }
+        Root.AddHandler(UIElement.PreviewKeyDownEvent,new Microsoft.UI.Xaml.Input.KeyEventHandler((_,e)=>{
+            if(e.Handled || !bookMode || comparing || section!="read")return;
+            if(e.Key is not (VirtualKey.PageDown or VirtualKey.PageUp or VirtualKey.Left or VirtualKey.Right))return;
+            foreach(var key in new[]{VirtualKey.Control,VirtualKey.Menu,VirtualKey.Shift,VirtualKey.LeftWindows,VirtualKey.RightWindows})
+                if((Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key)&Windows.UI.Core.CoreVirtualKeyStates.Down)!=0)return;
+            for(DependencyObject? node=Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(Root.XamlRoot) as DependencyObject;node!=null;node=VisualTreeHelper.GetParent(node))
+                if(node is TextBox or RichEditBox or ComboBox or Slider or ToggleSwitch)return;
+            if(e.Key is VirtualKey.PageDown or VirtualKey.Right)NextClick(this,new RoutedEventArgs());else PreviousClick(this,new RoutedEventArgs());
+            e.Handled=true;
         }),true);
-        var wheelTime=DateTime.MinValue;
+        long wheelTime=0;
         BookViewport.AddHandler(UIElement.PointerWheelChangedEvent,new Microsoft.UI.Xaml.Input.PointerEventHandler((_,e)=>{
-            if(!bookMode)return;e.Handled=true;
-            if((DateTime.UtcNow-wheelTime).TotalMilliseconds<350)return;wheelTime=DateTime.UtcNow;
-            if(e.GetCurrentPoint(BookViewport).Properties.MouseWheelDelta<0) NextClick(this,new RoutedEventArgs());else PreviousClick(this,new RoutedEventArgs());
+            if(!bookMode || comparing || section!="read")return;
+            var properties=e.GetCurrentPoint(BookViewport).Properties;
+            if(properties.IsHorizontalMouseWheel || properties.MouseWheelDelta==0)return;
+            e.Handled=true;
+            var now=Environment.TickCount64;var quiet=wheelTime==0 || now-wheelTime>180;wheelTime=now;
+            if(!quiet || PageNavigationBusy)return;
+            if(properties.MouseWheelDelta<0) NextClick(this,new RoutedEventArgs());else PreviousClick(this,new RoutedEventArgs());
         }),true);
     }
     private void BookModeChanged(object sender,RoutedEventArgs e) {
@@ -145,10 +155,12 @@ public sealed partial class MainWindow
         var target=bookPage+direction*bookColumns;
         if(target<0 || target>=bookPages.Count){bookLast=direction<0;return false;}
         activeSelectionFlyout?.Hide();selectionTimer?.Stop();selectionEditor=null;
-        bookPage=target;var request=++pageRequest;
+        var request=++pageRequest;bookCapturePending=true;
         _=GuardAsync(async()=>{
-            var image=await CaptureBookPage();if(request!=pageRequest || closed)return;
-            ShowBookPages();SaveBookPlace();TurnBookPage(image,direction>0);
+            try {
+                var image=await CaptureBookPage();if(request!=pageRequest || closed)return;
+                bookPage=target;ShowBookPages();SaveBookPlace();TurnBookPage(image,direction>0);
+            } finally {bookCapturePending=false;}
         });return true;
     }
     private void SaveBookPlace() {

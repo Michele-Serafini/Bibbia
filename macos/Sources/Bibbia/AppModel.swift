@@ -135,7 +135,7 @@ final class AppModel: ObservableObject {
     }
 
     func step(_ delta: Int) {
-        if bookMode && loading { return }
+        if loading || readingSurface?.isTurning == true { return }
         if bookMode && !comparing, readingSurface?.pager.turn(delta) == true { return }
         var target = pendingPosition ?? position; target.verse = 0
         guard target.edition == position.edition, books.indices.contains(target.book) else { return }

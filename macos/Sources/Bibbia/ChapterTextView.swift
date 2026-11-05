@@ -103,7 +103,7 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
     }
     override func scrollWheel(with event: NSEvent) {
         if let model, model.bookMode {
-            (enclosingScrollView?.superview as? BookSurface)?.pageWheel(event.scrollingDeltaY)
+            (enclosingScrollView?.superview as? BookSurface)?.pageWheel(event)
         } else { super.scrollWheel(with: event) }
     }
 
@@ -252,8 +252,10 @@ final class ReadingTextView: NSTextView, NSTextViewDelegate {
     }
 
     override func keyDown(with event: NSEvent) {
-        if model?.bookMode == true, event.keyCode == 116 || event.keyCode == 121 {
-            model?.step(event.keyCode == 121 ? 1 : -1); return
+        if model?.bookMode == true, model?.comparing == false,
+           event.modifierFlags.intersection([.shift, .control, .option, .command]).isEmpty,
+           [UInt16(116), 121, 123, 124].contains(event.keyCode) {
+            model?.step(event.keyCode == 121 || event.keyCode == 124 ? 1 : -1); return
         }
         super.keyDown(with: event)
         if event.modifierFlags.contains(.shift) { showSelection() }

@@ -83,7 +83,9 @@ public sealed partial class MainWindow
             foreach(var row in readerRows)row.Focused=active;
             Navigation.IsPaneVisible=!active;Navigation.IsPaneToggleButtonVisible=!active;
             if(active)Navigation.IsPaneOpen=false;else if(leaving)Navigation.IsPaneOpen=paneBeforeFocus;
-            ReaderHeading.Visibility=ReaderControls.Visibility=ReaderFooter.Visibility=active?Visibility.Collapsed:Visibility.Visible;
+            ReaderHeading.Visibility=Visibility.Visible;
+            EyebrowLabel.Visibility=active?Visibility.Collapsed:Visibility.Visible;
+            ReaderControls.Visibility=ReaderFooter.Visibility=active?Visibility.Collapsed:Visibility.Visible;
             FocusBar.Visibility=active?Visibility.Visible:Visibility.Collapsed;
             // The CEI copyright remains available while concentrating.
             StatusLabel.Visibility=active&&edition!="CEI 2008"?Visibility.Collapsed:Visibility.Visible;

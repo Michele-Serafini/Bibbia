@@ -60,9 +60,9 @@ extension AppModel {
                 try await waitUntil { !book.isTurning }
                 try check(book.turnsStarted > 0, "Curved page animation completes and releases the image")
                 step(1); step(1)
-                try await waitUntil { self.position.chapter == 3 && !self.loading }
+                try await waitUntil { self.position.chapter == 2 && !self.loading }
                 try await waitUntil { !book.isTurning }
-                try check(position.chapter == 3, "Rapid page turns preserve the latest destination")
+                try check(position.chapter == 2, "Rapid page turns are consumed while the first destination loads")
                 let started = book.turnsStarted
                 book.allowsMotion = false
                 navigate(Position())
@@ -76,13 +76,19 @@ extension AppModel {
             try await Task.sleep(for: .milliseconds(120))
             try check(book.pager.pageCount > 1, "Book mode paginates the chapter using native line fragments")
             let chapterBeforePage = position.chapter
-            step(1)
+            guard let arrow = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, characters: "\u{F703}", charactersIgnoringModifiers: "\u{F703}", isARepeat: false, keyCode: 124) else { throw BibleError.invalid("Arrow fixture") }
+            text.keyDown(with: arrow)
             try check(position.chapter == chapterBeforePage && book.pager.index > 0, "Next page stays within the chapter")
             let savedPage = book.pager.index
+            if book.isTurning {
+                text.keyDown(with: arrow)
+                try check(book.pager.index == savedPage, "Repeated arrow does not interrupt the current page turn")
+            }
             book.pager.lastChapter = ""; book.pager.restored = false
             book.pager.configure(book, text, self, target: position.verse)
             book.pager.configure(book, text, self, target: position.verse)
             try check(book.pager.index == savedPage, "Precise book resume survives deferred native layout")
+            try await waitUntil { !book.isTurning }
             step(-1)
             try check(book.pager.index == 0, "Previous page restores the first spread")
             let originalFrame = window.frame

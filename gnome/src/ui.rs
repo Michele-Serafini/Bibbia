@@ -817,13 +817,14 @@ impl Ui {
                 && ui.book_mode.is_active()
                 && !ui.comparison.is_active()
             {
-                if last
-                    .get()
-                    .is_none_or(|t| t.elapsed() > Duration::from_millis(350))
-                    && dy.abs() > 0.01
-                {
+                if dy.abs() > 0.01 {
+                    let quiet = last
+                        .get()
+                        .is_none_or(|t| t.elapsed() > Duration::from_millis(180));
                     last.set(Some(std::time::Instant::now()));
-                    ui.step(if dy > 0.0 { 1 } else { -1 });
+                    if quiet {
+                        ui.step(if dy > 0.0 { 1 } else { -1 });
+                    }
                 }
                 return glib::Propagation::Stop;
             }
@@ -833,13 +834,28 @@ impl Ui {
         let keys = gtk::EventControllerKey::new();
         keys.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = ui.weak();
-        keys.connect_key_pressed(move |_, key, _, _| {
+        keys.connect_key_pressed(move |_, key, _, modifiers| {
             if let Some(ui) = weak.upgrade()
                 && ui.book_mode.is_active()
                 && !ui.comparison.is_active()
-                && (key == gdk::Key::Page_Down || key == gdk::Key::Page_Up)
+                && !ui.note_popup.is_visible()
+                && !ui.popup.is_visible()
+                && !modifiers.intersects(
+                    gdk::ModifierType::CONTROL_MASK
+                        | gdk::ModifierType::ALT_MASK
+                        | gdk::ModifierType::SHIFT_MASK
+                        | gdk::ModifierType::SUPER_MASK,
+                )
+                && matches!(
+                    key,
+                    gdk::Key::Page_Down | gdk::Key::Page_Up | gdk::Key::Left | gdk::Key::Right
+                )
             {
-                ui.step(if key == gdk::Key::Page_Down { 1 } else { -1 });
+                ui.step(if matches!(key, gdk::Key::Page_Down | gdk::Key::Right) {
+                    1
+                } else {
+                    -1
+                });
                 return glib::Propagation::Stop;
             }
             glib::Propagation::Proceed
@@ -1239,6 +1255,9 @@ impl Ui {
         Ok(())
     }
     fn step(self: &Rc<Self>, direction: i32) {
+        if self.book_surface.is_turning() || self.pending_position.borrow().is_some() {
+            return;
+        }
         if self.turn_book(direction) {
             return;
         }

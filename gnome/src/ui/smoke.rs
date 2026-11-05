@@ -256,8 +256,8 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         ui.next.emit_clicked();
         ui.next.emit_clicked();
         until(
-            || ui.position().chapter == 3,
-            "Rapid turns lost the latest destination",
+            || ui.position().chapter == 2,
+            "Repeated input overlapped the pending chapter",
         )
         .await?;
         until(
@@ -462,6 +462,8 @@ pub async fn run(ui: Rc<Ui>) -> Result<(), String> {
         ui.focus_bar.is_visible()
             && !ui.header.is_visible()
             && !ui.controls.is_visible()
+            && ui.reference.is_visible()
+            && !ui.reference.text().is_empty()
             && ui.reader.left_margin() == 64,
         "Focus mode or adjustable margins were not applied",
     )?;

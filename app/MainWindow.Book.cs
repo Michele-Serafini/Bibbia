@@ -28,8 +28,7 @@ public sealed partial class MainWindow
     {
         BookStage.SizeChanged += (_,_) => CancelBookTurn();
         Root.ActualThemeChanged += (_,_) => CancelBookTurn();
-        Root.AddHandler(UIElement.PointerPressedEvent,new Microsoft.UI.Xaml.Input.PointerEventHandler((_,_) => CancelBookTurn()),true);
-        BookStage.AddHandler(UIElement.PointerWheelChangedEvent,new Microsoft.UI.Xaml.Input.PointerEventHandler((_,_) => CancelBookTurn()),true);
+        BookViewport.AddHandler(UIElement.PointerPressedEvent,new Microsoft.UI.Xaml.Input.PointerEventHandler((_,_) => CancelBookTurn()),true);
         var owner=new WeakReference<MainWindow>(this);
         motionSettings.AnimationsEnabledChanged += (_,_) => {
             if (owner.TryGetTarget(out var window) && !window.closed) window.DispatcherQueue.TryEnqueue(() => {

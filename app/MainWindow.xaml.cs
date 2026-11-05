@@ -173,6 +173,8 @@ public sealed partial class MainWindow : Window
     private void LoadChapter(int focusVerse = -1) => _ = GuardAsync(() => LoadChapterAsync(focusVerse));
     private async Task LoadChapterAsync(int focusVerse)
     {
+        chapterLoading=true;
+        try {
         var generation=++chapterRenderGeneration;
         var target=(Edition:edition,Book:book,Chapter:chapter);
         selectionTimer?.Stop();
@@ -185,7 +187,7 @@ public sealed partial class MainWindow : Window
             new VerseRow { Index = x.GetProperty("verse").GetInt32(), Number=x.GetProperty("label").GetString()!, Text = x.GetProperty("text").GetString()!,
                 Focused=focusApplied, TextSize = fontSize, Annotation = x.GetProperty("annotation").Clone() }).ToList();
         VerseList.IsHitTestVisible=false;
-        if (animate) BookPicker.Focus(FocusState.Programmatic);
+        if (animate) VerseList.Focus(FocusState.Programmatic);
         var snapshot=animate ? await CaptureBookPage() : null;
         if (closed || generation!=chapterRenderGeneration) return;
         var forward=displayedChapter==null || displayedChapter.Value.Edition!=edition ||
@@ -211,6 +213,7 @@ public sealed partial class MainWindow : Window
                 catch { CancelBookTurn(); throw; }
             });
         });
+        } finally {chapterLoading=false;}
     }
 
     private void UpdateReadingStatus(int count)
@@ -260,14 +263,14 @@ public sealed partial class MainWindow : Window
     }
     private void PreviousClick(object sender, RoutedEventArgs e) => Guard(() =>
     {
-        if (!ready) return;
+        if (!ready || PageNavigationBusy) return;
         if(TryTurnBookPage(-1))return;
         if (chapter > 0) chapter--; else if (book > 0) { book--; chapter = books[book].Chapters - 1; }
         LoadBooks(); LoadChapter();
     });
     private void NextClick(object sender, RoutedEventArgs e) => Guard(() =>
     {
-        if (!ready) return;
+        if (!ready || PageNavigationBusy) return;
         if(TryTurnBookPage(1))return;
         if (chapter + 1 < books[book].Chapters) chapter++; else if (book + 1 < books.Count) { book++; chapter = 0; }
         LoadBooks(); LoadChapter();

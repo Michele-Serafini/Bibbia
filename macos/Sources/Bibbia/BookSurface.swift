@@ -10,11 +10,23 @@ final class BookSurface: NSView {
     let pager = BookPager()
     private var wheelDistance: CGFloat = 0
     private var wheelTime: TimeInterval = 0
-    func pageWheel(_ delta: CGFloat) {
+    private var wheelConsumed = false
+    func pageWheel(_ event: NSEvent) {
+        let now = ProcessInfo.processInfo.systemUptime
+        if event.phase.contains(.began) || now-wheelTime > 0.18 {
+            wheelDistance = 0; wheelConsumed = false
+        }
+        wheelTime = now
+        // Consume momentum from the same gesture; it must never turn another page.
+        guard event.momentumPhase.isEmpty, !wheelConsumed, !isTurning,
+              pager.model?.loading != true else { wheelConsumed = true; return }
+        let delta = event.scrollingDeltaY
+        if wheelDistance * delta < 0 { wheelDistance = 0 }
         wheelDistance += delta
-        if abs(wheelDistance) > 35, ProcessInfo.processInfo.systemUptime-wheelTime > 0.35 {
+        if abs(wheelDistance) >= (event.hasPreciseScrollingDeltas ? 35 : 1) {
+            wheelConsumed = true
             pager.model?.step(wheelDistance < 0 ? 1 : -1)
-            wheelDistance = 0; wheelTime = ProcessInfo.processInfo.systemUptime
+            wheelDistance = 0
         }
     }
     private var allocatedSize = CGSize.zero
