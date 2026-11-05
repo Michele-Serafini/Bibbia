@@ -373,6 +373,9 @@ try {
     Start-Sleep -Milliseconds 350
     Wait-ReadingSummary 'Chapter 1 of 50' | Out-Null
     if ($pageLabel.Current.Name -notmatch '^2') { throw 'Next page did not stay in the same chapter.' }
+    $turnDeadline = [DateTime]::UtcNow.AddSeconds(5)
+    while ($bookStage.Current.HelpText -ne 'page-turn-idle' -and [DateTime]::UtcNow -lt $turnDeadline) { Start-Sleep -Milliseconds 30 }
+    if ($bookStage.Current.HelpText -ne 'page-turn-idle') { throw 'Book page did not finish before going back.' }
     Invoke-Control (Wait-Control $window 'PreviousChapter')
     Start-Sleep -Milliseconds 1300
     Save-WindowImage 'windows-book.png'
